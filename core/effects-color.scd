@@ -1,0 +1,160 @@
+/*
+S-4 Rival: Color Effects Section
+Phase 3 - Distortion, Compression, Bit Crusher, Noise
+
+Features:
+- Dual-band distortion (separate lo/hi processing)
+- Drive amount per band
+- Crossover frequency
+- Bit crusher (sample rate + bit depth reduction)
+- Compressor/limiter
+- Noise generator with mix control
+
+This module provides inline UGen code for use in SynthDefs.
+All functions return audio signals for direct integration.
+*/
+
+(
+~s4ColorEffects = {
+
+	/*
+	Function: dualBandDistortion
+	Purpose: Split signal and apply separate distortion to low/high bands
+	Args:
+	  input: Audio signal
+	  crossover: Crossover frequency (Hz)
+	  loDrive: Low band drive amount (0-10)
+	  hiDrive: High band drive amount (0-10)
+	  mix: Dry/wet mix (0-1)
+	Returns: Processed audio signal
+	*/
+	var dualBandDistortion = { arg input, crossover = 500, loDrive = 1, hiDrive = 1, mix = 0.5;
+		var low, high, loProc, hiProc, wet;
+
+		// Split into bands
+		low = LPF.ar(input, crossover);
+		high = HPF.ar(input, crossover);
+
+		// Process each band
+		loProc = (low * loDrive).tanh;
+		hiProc = (high * hiDrive).tanh;
+
+		// Recombine
+		wet = loProc + hiProc;
+
+		// Mix with dry
+		XFade2.ar(input, wet, mix.linlin(0, 1, -1, 1));
+	};
+
+	/*
+	Function: bitCrusher
+	Purpose: Reduce sample rate and bit depth for lo-fi effect
+	Args:
+	  input: Audio signal
+	  sampleRate: Target sample rate (100-48000 Hz)
+	  bitDepth: Bit depth (1-16 bits)
+	  mix: Dry/wet mix (0-1)
+	Returns: Processed audio signal
+	*/
+	var bitCrusher = { arg input, sampleRate = 8000, bitDepth = 8, mix = 0.5;
+		var wet;
+
+		// Sample rate reduction
+		wet = Latch.ar(input, Impulse.ar(sampleRate));
+
+		// Bit depth reduction
+		wet = wet.round(0.5 ** bitDepth);
+
+		// Mix
+		XFade2.ar(input, wet, mix.linlin(0, 1, -1, 1));
+	};
+
+	/*
+	Function: compressor
+	Purpose: Dynamic range compression
+	Args:
+	  input: Audio signal
+	  threshold: Compression threshold (0-1)
+	  ratio: Compression ratio (1-20)
+	  attack: Attack time (seconds)
+	  release: Release time (seconds)
+	Returns: Processed audio signal
+	*/
+	var compressor = { arg input, threshold = 0.5, ratio = 4, attack = 0.01, release = 0.1;
+		var compressed;
+
+		// Use Compander for compression
+		compressed = Compander.ar(
+			input,
+			input, // control signal (same as input for standard compression)
+			thresh: threshold,
+			slopeBelow: 1.0,
+			slopeAbove: 1.0 / ratio,
+			clampTime: attack,
+			relaxTime: release
+		);
+
+		compressed;
+	};
+
+	/*
+	Function: noiseGenerator
+	Purpose: Add noise to signal
+	Args:
+	  input: Audio signal
+	  noiseType: 0=white, 1=pink, 2=brown
+	  amount: Noise level (0-1)
+	Returns: Mixed audio signal
+	*/
+	var noiseGenerator = { arg input, noiseType = 0, amount = 0;
+		var noise;
+
+		noise = Select.ar(noiseType, [
+			WhiteNoise.ar,
+			PinkNoise.ar,
+			BrownNoise.ar
+		]);
+
+		input + (noise * amount);
+	};
+
+	// Return API
+	(
+		dualBandDistortion: dualBandDistortion,
+		bitCrusher: bitCrusher,
+		compressor: compressor,
+		noiseGenerator: noiseGenerator
+	);
+};
+
+// Initialize
+~colorEffects = ~s4ColorEffects.value;
+)
+
+/*
+Usage examples (for testing):
+
+// Dual-band distortion
+(
+{
+	var sig = SinOsc.ar(200) * 0.3;
+	~colorEffects.dualBandDistortion.value(sig, 500, 5, 10, 0.7);
+}.play;
+)
+
+// Bit crusher
+(
+{
+	var sig = SinOsc.ar(440) * 0.3;
+	~colorEffects.bitCrusher.value(sig, 4000, 4, 1.0);
+}.play;
+)
+
+// Compressor
+(
+{
+	var sig = SinOsc.ar([200, 201]) * LFNoise1.kr(5).range(0.1, 0.8);
+	~colorEffects.compressor.value(sig, 0.3, 4, 0.01, 0.1);
+}.play;
+)
+*/

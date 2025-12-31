@@ -1,0 +1,34 @@
+# SuperCollider
+*.scd~
+*.sc~
+*_SCClassLibrary.rtf
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Audio files (optional - uncomment if you don't want to track audio)
+# *.wav
+# *.aif
+# *.aiff
+# *.mp3
+
+# Build artifacts
+*.o
+*.so
+*.dylib
