@@ -33,7 +33,7 @@ if(s.serverRunning.not, {
 
 	// Load main system
 	"Loading system...".postln;
-	thisProcess.nowExecutingPath.dirname +/+ "main.scd" load;
+	(thisProcess.nowExecutingPath.dirname +/+ "main.scd").load;
 
 	// Wait for system to initialize, then load test sound
 	fork {
