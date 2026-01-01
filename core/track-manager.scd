@@ -312,7 +312,7 @@ Public API:
 			});
 
 			// Create modulator synth
-			track.modulators[modNum] = ~s4Modulator.create(
+			track.modulators[modNum] = ~s4Modulator.value(server).create(
 				type,
 				track.modBusses[modNum].index,
 				rate,
@@ -349,7 +349,7 @@ Public API:
 				track.modMappers[modNum].free;
 			});
 
-			track.modMappers[modNum] = ~s4Modulator.createMapper(
+			track.modMappers[modNum] = ~s4Modulator.value(server).createMapper(
 				track.modBusses[modNum].index,
 				track.grainSynth,
 				targetParam,
