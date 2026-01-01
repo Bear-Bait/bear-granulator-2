@@ -159,6 +159,13 @@ Each track tab contains:
 				trackManager.setSolo(trackNum, btn.value.asBoolean);
 			});
 
+		// Modulation window button (Phase 5)
+		Button(parent, Rect(610, 10, 60, 40))
+			.states_([["MOD", Color.black, Color.cyan(0.6)]])
+			.action_({
+				~s4ModulationWindow.value(trackManager, server, trackNum).create;
+			});
+
 		// === COLUMN 1: RECORDING + GRAIN ===
 		yPos = 60;
 		StaticText(parent, Rect(col1X, yPos, 350, 20))

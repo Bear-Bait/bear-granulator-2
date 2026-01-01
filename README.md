@@ -52,12 +52,16 @@ Build a production-ready granular synthesis instrument with:
 - [x] Resonance/decay control
 - [x] Animation (modulated band gains)
 
-### Modulation System (Phase 5 - NOT YET IMPLEMENTED)
-- [ ] 4 modulators per track (20 total)
-- [ ] Types: LFO, Envelope, Random, Envelope Follower
-- [ ] Multiple waveforms per LFO
-- [ ] Route to any parameter
-- [ ] Modulation depth control
+### Modulation System (Phase 5 - COMPLETE ✅)
+- [x] 4 modulators per track (16 total)
+- [x] Types: LFO, Envelope Follower, Random, Envelope
+- [x] 6 LFO waveforms (Sine, Triangle, Saw, Square, Smooth/Stepped Random)
+- [x] Route to any parameter (grain, filter, FX)
+- [x] Modulation depth control (0-1)
+- [x] Rate control (0.01-20 Hz)
+- [x] Min/Max range mapping
+- [x] Dedicated modulation window per track
+- [x] Real-time parameter modulation via control busses
 
 ### Effects Chain
 

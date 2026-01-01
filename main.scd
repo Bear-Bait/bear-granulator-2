@@ -127,6 +127,11 @@ fork {
 		0.2.wait;
 		"  ✓ Buffer recorder loaded".postln;
 
+		// Load modulator system (Phase 5)
+		(~config.corePath +/+ "modulator.scd").load;
+		0.2.wait;
+		"  ✓ Modulator system loaded".postln;
+
 		// Load track manager (Phase 4)
 		(~config.corePath +/+ "track-manager.scd").load;
 		0.2.wait;
@@ -141,6 +146,11 @@ fork {
 		(~config.guiPath +/+ "visualizer.scd").load;
 		0.2.wait;
 		"  ✓ Visualizer module loaded".postln;
+
+		// Load modulation window (Phase 5)
+		(~config.guiPath +/+ "modulation-window.scd").load;
+		0.2.wait;
+		"  ✓ Modulation window loaded".postln;
 
 		// Load 4-track GUI (Phase 4)
 		(~config.guiPath +/+ "four-track-view.scd").load;

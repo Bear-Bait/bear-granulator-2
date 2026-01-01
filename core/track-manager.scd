@@ -35,7 +35,13 @@ Public API:
 			pan: 0.0,
 			mute: false,
 			solo: false,
-			params: IdentityDictionary.new
+			params: IdentityDictionary.new,
+			// Phase 5: Modulation system (4 modulators per track)
+			modulators: 4.collect({ nil }),           // Modulator synths
+			modBusses: 4.collect({ nil }),            // Control busses
+			modMappers: 4.collect({ nil }),           // Mapper synths
+			modTargets: 4.collect({ nil }),           // Target parameters
+			modRanges: 4.collect({ (min: 0, max: 1) }) // Min/max ranges
 		);
 	});
 
@@ -276,6 +282,118 @@ Public API:
 		setMasterBus: { arg self, bus;
 			masterBus = bus;
 			"Track manager: Master bus reference set".postln;
+		},
+
+		// === PHASE 5: MODULATION SYSTEM ===
+
+		// Create a modulator for a track
+		createModulator: { arg self, trackNum, modNum, type = 0, rate = 1.0, depth = 1.0, shape = 0;
+			var track = tracks[trackNum];
+
+			if(trackNum < 0 or: { trackNum > 3 }, {
+				"Track manager: Invalid track number %".format(trackNum).postln;
+				^nil;
+			});
+
+			if(modNum < 0 or: { modNum > 3 }, {
+				"Track manager: Invalid modulator number %".format(modNum).postln;
+				^nil;
+			});
+
+			// Free existing modulator if it exists
+			if(track.modulators[modNum].notNil, {
+				track.modulators[modNum].free;
+				track.modulators[modNum] = nil;
+			});
+
+			// Allocate control bus if needed
+			if(track.modBusses[modNum].isNil, {
+				track.modBusses[modNum] = Bus.control(server, 1);
+			});
+
+			// Create modulator synth
+			track.modulators[modNum] = ~s4Modulator.create(
+				type,
+				track.modBusses[modNum].index,
+				rate,
+				depth,
+				shape,
+				track.audioBus.index  // For envelope follower
+			);
+
+			"Track %: Modulator % created (type: %, bus: %)".format(
+				trackNum + 1,
+				modNum + 1,
+				type,
+				track.modBusses[modNum].index
+			).postln;
+
+			track.modulators[modNum];
+		},
+
+		// Route modulator to parameter
+		routeModulator: { arg self, trackNum, modNum, targetParam, minVal, maxVal;
+			var track = tracks[trackNum];
+
+			if(track.modulators[modNum].isNil, {
+				"Track %: Modulator % not created yet".format(trackNum + 1, modNum + 1).postln;
+				^nil;
+			});
+
+			// Store routing info
+			track.modTargets[modNum] = targetParam;
+			track.modRanges[modNum] = (min: minVal, max: maxVal);
+
+			// Create mapper synth if not exists
+			if(track.modMappers[modNum].notNil, {
+				track.modMappers[modNum].free;
+			});
+
+			track.modMappers[modNum] = ~s4Modulator.createMapper(
+				track.modBusses[modNum].index,
+				track.grainSynth,
+				targetParam,
+				minVal,
+				maxVal
+			);
+
+			"Track %: Mod % → % (range: % to %)".format(
+				trackNum + 1,
+				modNum + 1,
+				targetParam,
+				minVal,
+				maxVal
+			).postln;
+		},
+
+		// Update modulator parameter
+		setModParam: { arg self, trackNum, modNum, param, value;
+			var track = tracks[trackNum];
+
+			if(track.modulators[modNum].notNil, {
+				track.modulators[modNum].set(param, value);
+			}, {
+				"Track %: Modulator % not active".format(trackNum + 1, modNum + 1).postln;
+			});
+		},
+
+		// Free a modulator
+		freeModulator: { arg self, trackNum, modNum;
+			var track = tracks[trackNum];
+
+			if(track.modulators[modNum].notNil, {
+				track.modulators[modNum].free;
+				track.modulators[modNum] = nil;
+			});
+
+			if(track.modMappers[modNum].notNil, {
+				track.modMappers[modNum].free;
+				track.modMappers[modNum] = nil;
+			});
+
+			track.modTargets[modNum] = nil;
+
+			"Track %: Modulator % freed".format(trackNum + 1, modNum + 1).postln;
 		},
 
 		// Free all tracks
