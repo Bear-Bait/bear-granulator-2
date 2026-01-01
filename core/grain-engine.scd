@@ -162,67 +162,10 @@ SynthDef(\s4GrainEngine, {
 	// Combine stereo channels
 	sig = [panL, panR];
 
-	// === PHASE 2: FILTERBANK ===
-	// Apply 48-band morphing resonator if enabled
-	sig = Select.ar(filterOn > 0.5, [
-		// Filter off: pass through
-		sig,
-		// Filter on: process each channel through filterbank
-		[
-			// Left channel filterbank (inline implementation)
-			Mix.ar(48.collect({ arg i;
-				var harmonic = i + 1;
-				var freq = filterFreq * harmonic;
-				var rq = filterRes.linexp(0.01, 1, 0.5, 0.005);
-				var bandGain = 1.0 - ((i / 48) * (1.0 - filterDecay));
-				var phase = (i / 48) * 2pi;
-				var modulation = SinOsc.kr(filterAnimRate, phase);
-				var animGain = bandGain * (1 + (modulation * filterAnimate * 0.5));
-				var lp, bp, hp, lpAmt, bpAmt, hpAmt;
-
-				// Morph between filter types
-				lpAmt = (1 - (filterMorph * 2)).clip(0, 1);
-				bpAmt = (1 - ((filterMorph - 0.5).abs * 2)).clip(0, 1);
-				hpAmt = ((filterMorph - 0.5) * 2).clip(0, 1);
-
-				lp = RLPF.ar(sig[0], freq, rq);
-				bp = Resonz.ar(sig[0], freq, rq);
-				hp = RHPF.ar(sig[0], freq, rq);
-
-				((lp * lpAmt) + (bp * bpAmt) + (hp * hpAmt)) * animGain;
-			})) / 48.sqrt,
-
-			// Right channel filterbank (inline implementation)
-			Mix.ar(48.collect({ arg i;
-				var harmonic = i + 1;
-				var freq = filterFreq * harmonic;
-				var rq = filterRes.linexp(0.01, 1, 0.5, 0.005);
-				var bandGain = 1.0 - ((i / 48) * (1.0 - filterDecay));
-				var phase = (i / 48) * 2pi;
-				var modulation = SinOsc.kr(filterAnimRate, phase);
-				var animGain = bandGain * (1 + (modulation * filterAnimate * 0.5));
-				var lp, bp, hp, lpAmt, bpAmt, hpAmt;
-
-				// Morph between filter types
-				lpAmt = (1 - (filterMorph * 2)).clip(0, 1);
-				bpAmt = (1 - ((filterMorph - 0.5).abs * 2)).clip(0, 1);
-				hpAmt = ((filterMorph - 0.5) * 2).clip(0, 1);
-
-				lp = RLPF.ar(sig[1], freq, rq);
-				bp = Resonz.ar(sig[1], freq, rq);
-				hp = RHPF.ar(sig[1], freq, rq);
-
-				((lp * lpAmt) + (bp * bpAmt) + (hp * hpAmt)) * animGain;
-			})) / 48.sqrt
-		]
-	]);
-
-	// Dry/wet mix for filter
-	sig = XFade2.ar(
-		[panL, panR],  // dry signal
-		sig,           // filtered signal
-		filterMix.linlin(0, 1, -1, 1)  // convert 0-1 to -1 to 1
-	);
+	// === PHASE 2: FILTERBANK (MOVED TO MASTER BUS IN PHASE 4) ===
+	// The 48-band morphing resonator is now applied on the master bus
+	// (post-mix) to save CPU when running 4 tracks. Filter parameters
+	// are still accepted for backward compatibility but are ignored.
 
 	// === PHASE 3: COLOR EFFECTS ===
 	sig = Select.ar(colorOn > 0.5, [

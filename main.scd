@@ -12,7 +12,7 @@ A SuperCollider-based granular synthesis workstation
 inspired by the Torso Electronics S-4
 
 Author: [Your Name]
-Version: 0.3 (Phase 3)
+Version: 0.4 (Phase 4)
 Date: 2025-12-31
 
 ====================================
@@ -60,7 +60,7 @@ var basePath = thisProcess.nowExecutingPath.dirname;
 
 "============================================".postln;
 "S-4 RIVAL - GRANULAR SCULPTING SAMPLER".postln;
-"Phase 3: Granular + Resonator + Effects".postln;
+"Phase 4: 4-Track Architecture".postln;
 "============================================".postln;
 "".postln;
 
@@ -127,10 +127,20 @@ fork {
 		0.2.wait;
 		"  ✓ Buffer recorder loaded".postln;
 
-		// Load GUI (wide horizontal layout)
-		(~config.guiPath +/+ "wide-gui.scd").load;
+		// Load track manager (Phase 4)
+		(~config.corePath +/+ "track-manager.scd").load;
 		0.2.wait;
-		"  ✓ Wide GUI module loaded".postln;
+		"  ✓ Track manager loaded".postln;
+
+		// Load master mix bus (Phase 4)
+		(~config.corePath +/+ "mix-bus.scd").load;
+		0.2.wait;
+		"  ✓ Master mix bus loaded".postln;
+
+		// Load 4-track GUI (Phase 4)
+		(~config.guiPath +/+ "four-track-view.scd").load;
+		0.2.wait;
+		"  ✓ Four-track GUI module loaded".postln;
 
 		0.5.wait;
 
@@ -139,35 +149,45 @@ fork {
 		// ============================================
 
 		"".postln;
-		"Initializing system...".postln;
+		"Initializing 4-track system...".postln;
 
-		// Create buffer recorder
-		~recorder = ~s4BufferRecorder.value(s);
-		~recorder.init;
+		// Initialize track manager
+		~trackManager = ~s4TrackManager.value(s);
+		~trackManager.init;
 		0.2.wait;
-		"  ✓ Buffer recorder initialized".postln;
+		"  ✓ Track manager initialized".postln;
 
-		// Create grain synth
-		~grainSynth = Synth(\s4GrainEngine, [
-			\bufnum, ~recorder.getBufferNum,
-			\grainSize, 0.1,
-			\density, 30,
-			\position, 0.5,
-			\pitch, 0,
-			\posJitter, 0.1,
-			\pitchJitter, 0,
-			\envType, 1,
-			\stereoSpread, 0.5,
-			\amp, 0.5
-		]);
+		// Create 4 track instances (stagger to avoid CPU spike)
+		4.do({ |i|
+			~trackManager.createTrack(i);
+			0.1.wait;
+		});
+		"  ✓ 4 tracks created".postln;
+
+		// Create master bus synth (MUST use addToTail)
+		~masterBus = Synth(\s4MasterBus, [
+			\track1Bus, ~trackManager.getTracks[0].audioBus.index,
+			\track2Bus, ~trackManager.getTracks[1].audioBus.index,
+			\track3Bus, ~trackManager.getTracks[2].audioBus.index,
+			\track4Bus, ~trackManager.getTracks[3].audioBus.index,
+			\filterOn, 0,
+			\masterVol, 0.8
+		], addAction: \addToTail);
 		0.2.wait;
-		"  ✓ Grain synth created".postln;
+		"  ✓ Master bus created".postln;
 
-		// Create GUI (wide horizontal layout)
-		~gui = ~s4WideGUI.value(~grainSynth, ~recorder, s);
+		// Set master bus reference in track manager
+		~trackManager.setMasterBus(~masterBus);
+
+		// Create 4-track GUI
+		~gui = ~s4FourTrackGUI.value(~trackManager, ~masterBus, s);
 		{ ~gui.create; }.defer;
 		0.2.wait;
-		"  ✓ Wide GUI created".postln;
+		"  ✓ Four-track GUI created".postln;
+
+		// Backward compatibility: expose track 1 as ~grainSynth
+		~grainSynth = ~trackManager.getTracks[0].grainSynth;
+		~recorder = ~trackManager.getTracks[0].recorder;
 
 		// ============================================
 		// READY
@@ -194,7 +214,7 @@ fork {
 		"  • Band animation system".postln;
 		"  • Dry/wet mix control".postln;
 		"".postln;
-		"Phase 3 Features (NEW!):".postln;
+		"Phase 3 Features:".postln;
 		"  • COLOR: Dual-band distortion".postln;
 		"  • COLOR: Bit crusher (lo-fi)".postln;
 		"  • COLOR: Compressor/dynamics".postln;
@@ -203,28 +223,44 @@ fork {
 		"  • SPACE: Delay (ping-pong)".postln;
 		"  • SPACE: Shimmer (pitch-shift delay)".postln;
 		"".postln;
+		"Phase 4 Features (NEW!):".postln;
+		"  • 4 independent granular tracks".postln;
+		"  • 512 total grains (128 per track)".postln;
+		"  • Per-track Color + Space effects".postln;
+		"  • Shared 48-band resonator (master bus)".postln;
+		"  • Per-track volume/pan/mute/solo".postln;
+		"  • Optimized CPU usage (<50% target)".postln;
+		"".postln;
 		"Quick Start - GET SOUND NOW:".postln;
 		"  1. Click the cyan 'Load Test Sound' button (top-left)".postln;
-		"  2. You should immediately hear granular synthesis!".postln;
+		"  2. You should immediately hear granular synthesis on Track 1!".postln;
 		"  3. Adjust grain sliders to sculpt the sound".postln;
+		"".postln;
+		"Multi-Track Control (Phase 4):".postln;
+		"  • ~trackManager.setParam(trackNum, param, value)".postln;
+		"  • ~trackManager.setVolume(trackNum, 0-1)".postln;
+		"  • ~trackManager.setPan(trackNum, -1 to 1)".postln;
+		"  • ~trackManager.setMute(trackNum, true/false)".postln;
+		"  • ~trackManager.setSolo(trackNum, true/false)".postln;
+		"  • Example: ~trackManager.setParam(1, \\grainSize, 0.2)".postln;
 		"".postln;
 		"Live Recording (MOTU Mk5):".postln;
 		"  • Select input channel (1-8)".postln;
 		"  • Click green 'REC' button to record live input".postln;
 		"".postln;
 		"Effects:".postln;
-		"  • Enable Filter for 48-band morphing resonator".postln;
-		"  • Enable Color FX for distortion/crush/compression".postln;
-		"  • Enable Space FX for reverb/delay/shimmer".postln;
-		"  • Try reverb freeze or shimmer pitch-shift!".postln;
+		"  • Enable Color FX for distortion/crush/compression (per-track)".postln;
+		"  • Enable Space FX for reverb/delay/shimmer (per-track)".postln;
+		"  • Enable Filter on MASTER BUS for 48-band resonator (all tracks)".postln;
+		"  • Master filter: ~masterBus.set(\\filterOn, 1)".postln;
 		"".postln;
 		"Global Variables:".postln;
-		"  ~recorder - Buffer recording system".postln;
-		"  ~grainSynth - Main grain synthesis engine".postln;
+		"  ~trackManager - 4-track management system (Phase 4)".postln;
+		"  ~masterBus - Master mix bus with 48-band filter (Phase 4)".postln;
+		"  ~grainSynth - Track 1 synth (backward compatibility)".postln;
+		"  ~recorder - Track 1 recorder (backward compatibility)".postln;
 		"  ~gui - GUI controller".postln;
 		"  ~config - System configuration".postln;
-		"  ~filterShapes - Filter morphing functions".postln;
-		"  ~filterbank - 48-band resonator functions".postln;
 		"".postln;
 		"Cleanup (when done):".postln;
 		"  ~cleanup.value; // Stop everything and free resources".postln;
@@ -235,8 +271,8 @@ fork {
 		~cleanup = {
 			"Cleaning up...".postln;
 			if(~gui.notNil, { ~gui.close; });
-			if(~grainSynth.notNil, { ~grainSynth.free; });
-			if(~recorder.notNil, { ~recorder.free; });
+			if(~masterBus.notNil, { ~masterBus.free; });
+			if(~trackManager.notNil, { ~trackManager.free; });
 			"Cleanup complete.".postln;
 		};
 
