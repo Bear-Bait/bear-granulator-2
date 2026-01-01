@@ -50,11 +50,11 @@ var basePath = thisProcess.nowExecutingPath.dirname;
 	// Server options
 	serverOptions: (
 		numOutputBusChannels: 2,
-		numInputBusChannels: 2,
+		numInputBusChannels: 8,  // MOTU Mk5 has 8 inputs - enable all
 		sampleRate: 48000,
 		blockSize: 64,
 		numBuffers: 1024 * 16,
-		memSize: 8192 * 16
+		memSize: 8192 * 256  // Total memory: ~2GB for 4 tracks + delays/pitch-shift
 	)
 );
 
@@ -79,7 +79,7 @@ fork {
 	s.options.sampleRate = ~config.serverOptions.sampleRate;
 	s.options.blockSize = ~config.serverOptions.blockSize;
 	s.options.numBuffers = ~config.serverOptions.numBuffers;
-	s.options.memSize = ~config.serverOptions.memSize;
+	s.options.memSize = ~config.serverOptions.memSize;  // ~2GB total for all synth memory
 
 	// Check if server is running
 	if(s.serverRunning.not, {
@@ -136,6 +136,11 @@ fork {
 		(~config.corePath +/+ "mix-bus.scd").load;
 		0.2.wait;
 		"  ✓ Master mix bus loaded".postln;
+
+		// Load visualizer module (Phase 8 - early implementation)
+		(~config.guiPath +/+ "visualizer.scd").load;
+		0.2.wait;
+		"  ✓ Visualizer module loaded".postln;
 
 		// Load 4-track GUI (Phase 4)
 		(~config.guiPath +/+ "four-track-view.scd").load;
@@ -282,8 +287,8 @@ fork {
 			loop {
 				10.wait;
 				cpu = s.avgCPU;
-				if(cpu > 15, {
-					"Warning: CPU usage at %% (target <15%)".format(cpu.round(0.1)).postln;
+				if(cpu > 50, {
+					"Warning: CPU usage at %% (target <50%)".format(cpu.round(0.1)).postln;
 				});
 			};
 		};

@@ -81,6 +81,8 @@ Public API:
 				stereoSpread: 0.5,
 				amp: 0.5,
 				pan: 0,
+				loopStart: 0.0,  // Loop region start (0-1)
+				loopEnd: 1.0,    // Loop region end (0-1)
 
 				// Filter parameters (kept for backward compat, but ignored)
 				filterOn: 0,
@@ -226,7 +228,7 @@ Public API:
 			// Update master bus if it exists
 			if(masterBus.notNil, {
 				paramName = ("track" ++ (trackNum + 1) ++ "Mute").asSymbol;
-				masterBus.set(paramName, track.mute.asInt);
+				masterBus.set(paramName, track.mute.asInteger);
 			});
 		},
 
@@ -246,14 +248,14 @@ Public API:
 					tracks.do({ |t, i|
 						var shouldMute = t.solo.not;
 						var paramName = ("track" ++ (i + 1) ++ "Mute").asSymbol;
-						masterBus.set(paramName, shouldMute.asInt);
+						masterBus.set(paramName, shouldMute.asInteger);
 					});
 					"Track manager: Solo mode active".postln;
 				}, {
 					// No solo: restore original mute states
 					tracks.do({ |t, i|
 						var paramName = ("track" ++ (i + 1) ++ "Mute").asSymbol;
-						masterBus.set(paramName, t.mute.asInt);
+						masterBus.set(paramName, t.mute.asInteger);
 					});
 					"Track manager: Solo mode deactivated".postln;
 				});

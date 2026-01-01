@@ -52,12 +52,12 @@ Build a production-ready granular synthesis instrument with:
 - [x] Resonance/decay control
 - [x] Animation (modulated band gains)
 
-### Modulation System
-- [x] 4 modulators per track (20 total)
-- [x] Types: LFO, Envelope, Random, Envelope Follower
-- [x] Multiple waveforms per LFO
-- [x] Route to any parameter
-- [x] Modulation depth control
+### Modulation System (Phase 5 - NOT YET IMPLEMENTED)
+- [ ] 4 modulators per track (20 total)
+- [ ] Types: LFO, Envelope, Random, Envelope Follower
+- [ ] Multiple waveforms per LFO
+- [ ] Route to any parameter
+- [ ] Modulation depth control
 
 ### Effects Chain
 
@@ -73,18 +73,18 @@ Build a production-ready granular synthesis instrument with:
 - [x] Pitch-shifting delay (shimmer)
 - [x] Wet/dry mix controls
 
-### Material Modes
-- [x] Tape mode (looping with overdub)
-- [x] Poly mode (8-voice MIDI sampler)
-- [x] Live input processing
-- [x] Sample playback from disk
+### Material Modes (Phase 6 - NOT YET IMPLEMENTED)
+- [ ] Tape mode (looping with overdub)
+- [ ] Poly mode (8-voice MIDI sampler)
+- [x] Live input processing (basic recording only)
+- [ ] Sample playback from disk
 
-### Performance Features
-- [x] Scene/preset system
-- [x] Macro controls
-- [x] MIDI learn system
-- [x] Multi-track recording
-- [x] Real-time visualization
+### Performance Features (Phases 7-9 - NOT YET IMPLEMENTED)
+- [ ] Scene/preset system
+- [ ] Macro controls
+- [ ] MIDI learn system
+- [ ] Multi-track recording
+- [ ] Real-time visualization (planned for Phase 8)
 
 ## Technical Specifications
 

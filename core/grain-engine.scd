@@ -5,8 +5,8 @@ Phase 2 - Integrated 48-band Morphing Resonator
 
 Features:
 - Up to 128 grains
-- 4-second buffer playback
-- Grain size: 10ms-500ms
+- Variable buffer playback (any length)
+- Grain size: 1ms-60s (microtones to full loops, no upper limit)
 - Density: 1-200 grains/second
 - Pitch control: -2 to +2 octaves
 - 4 envelope shapes
@@ -18,7 +18,7 @@ Features:
 
 Args:
   bufnum: Buffer number for grain source
-  grainSize: Grain duration in seconds (0.01-0.5)
+  grainSize: Grain duration in seconds (0.001-60+, unlimited)
   density: Grains per second (1-200)
   position: Playback position in buffer (0-1)
   pitch: Pitch shift in semitones (-24 to +24)
@@ -55,6 +55,8 @@ SynthDef(\s4GrainEngine, {
 	    stereoSpread = 0.5,
 	    amp = 0.5,
 	    pan = 0,
+	    loopStart = 0.0,  // Loop region start (0-1)
+	    loopEnd = 1.0,    // Loop region end (0-1)
 	    // Filter parameters (Phase 2)
 	    filterOn = 0,
 	    filterFreq = 200,
@@ -108,15 +110,16 @@ SynthDef(\s4GrainEngine, {
 	// Grain triggering (using Dust for irregular triggering)
 	trig = Impulse.ar(density);
 
-	// Buffer position with jitter (0 to 1 normalized)
-	bufPos = position + LFNoise1.kr(10).range(posJitter.neg, posJitter);
-	bufPos = bufPos.wrap(0, 1);
+	// Buffer position with jitter mapped to loop region
+	// Position parameter (0-1) maps to loop region (loopStart-loopEnd)
+	bufPos = position.linlin(0, 1, loopStart, loopEnd) + LFNoise1.kr(10).range(posJitter.neg, posJitter);
+	bufPos = bufPos.wrap(loopStart, loopEnd);
 
 	// Convert pitch (semitones) to ratio
 	pitchRatio = (pitch + LFNoise1.kr(5).range(pitchJitter.neg, pitchJitter)).midiratio;
 
-	// Grain duration (clamped to valid range)
-	grainDur = grainSize.clip(0.01, 0.5);
+	// Grain duration (no upper limit - can be as long as buffer)
+	grainDur = grainSize.max(0.001);
 
 	// Create envelope buffer based on envType
 	envBuf = Select.kr(envType, [

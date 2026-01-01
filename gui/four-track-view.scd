@@ -16,8 +16,10 @@ Each track tab contains:
 
 ~s4FourTrackGUI = {
 	arg trackManager, masterBus, server;
-	var window, tabView, updateTasks;
+	var window, updateTasks;
 	var publicAPI;
+	var makeSlider, makeButton, makeMasterSlider, makeMasterButton;
+	var makeTrackTab, makeMasterTab;
 
 	// Track update tasks for waveform displays
 	updateTasks = Array.newClear(4);
@@ -25,31 +27,35 @@ Each track tab contains:
 	// ========================================
 	// HELPER: Create labeled slider
 	// ========================================
-	var makeSlider = { arg parent, x, y, label, spec, param, trackNum, default;
+	makeSlider = { arg parent, x, y, label, spec, param, trackNum, default;
+		var slider, numBox;
+
 		StaticText(parent, Rect(x, y, 120, 18))
 			.string_(label)
 			.font_(Font("Monaco", 10));
 
-		Slider(parent, Rect(x + 125, y, 150, 18))
-			.value_(spec.unmap(default))
-			.action_({ arg sl;
-				var val = spec.map(sl.value);
-				trackManager.setParam(trackNum, param, val);
-			});
-
-		NumberBox(parent, Rect(x + 280, y, 60, 18))
+		numBox = NumberBox(parent, Rect(x + 280, y, 60, 18))
 			.value_(default)
 			.decimals_(3)
 			.font_(Font("Monaco", 9))
 			.action_({ arg nb;
 				trackManager.setParam(trackNum, param, nb.value);
+				slider.value_(spec.unmap(nb.value));
+			});
+
+		slider = Slider(parent, Rect(x + 125, y, 150, 18))
+			.value_(spec.unmap(default))
+			.action_({ arg sl;
+				var val = spec.map(sl.value);
+				numBox.value_(val);
+				trackManager.setParam(trackNum, param, val);
 			});
 	};
 
 	// ========================================
 	// HELPER: Create toggle button
 	// ========================================
-	var makeButton = { arg parent, x, y, w, label, param, trackNum;
+	makeButton = { arg parent, x, y, w, label, param, trackNum;
 		Button(parent, Rect(x, y, w, 25))
 			.states_([
 				[label ++ " OFF", Color.black, Color.gray(0.5)],
@@ -63,7 +69,7 @@ Each track tab contains:
 	// ========================================
 	// HELPER: Create master bus slider
 	// ========================================
-	var makeMasterSlider = { arg parent, x, y, label, spec, param, default;
+	makeMasterSlider = { arg parent, x, y, label, spec, param, default;
 		StaticText(parent, Rect(x, y, 120, 18))
 			.string_(label)
 			.font_(Font("Monaco", 10));
@@ -87,7 +93,7 @@ Each track tab contains:
 	// ========================================
 	// HELPER: Create master bus button
 	// ========================================
-	var makeMasterButton = { arg parent, x, y, w, label, param;
+	makeMasterButton = { arg parent, x, y, w, label, param;
 		Button(parent, Rect(x, y, w, 25))
 			.states_([
 				[label ++ " OFF", Color.black, Color.gray(0.5)],
@@ -101,7 +107,7 @@ Each track tab contains:
 	// ========================================
 	// CREATE TRACK TAB (full controls)
 	// ========================================
-	var makeTrackTab = { arg parent, trackNum;
+	makeTrackTab = { arg parent, trackNum;
 		var track = trackManager.getTrack(trackNum);
 		var waveView, positionView;
 		var col1X = 10, col2X = 370, col3X = 730;
@@ -161,26 +167,114 @@ Each track tab contains:
 
 		yPos = yPos + 25;
 
-		// Load Test Sound button
+		// Load Audio File button
 		Button(parent, Rect(col1X, yPos, 150, 30))
-			.states_([["Load Test Sound", Color.black, Color.cyan(0.6)]])
+			.states_([["Load Audio File", Color.black, Color.cyan(0.6)]])
 			.action_({
-				track.recorder.loadTestSound;
-				fork {
-					0.1.wait;
-					{
-						waveView.soundfile_(track.recorder.buffer);
-						waveView.read(0, track.recorder.buffer.numFrames);
-						waveView.refresh;
-					}.defer;
-				};
+				"Opening file dialog...".postln;
+				FileDialog({ |path|
+					"FileDialog callback fired".postln;
+					"Path received: %".format(path).postln;
+					"Path type: %".format(path.class).postln;
+
+					if(path.notNil and: { path.size > 0 }, {
+						var soundFile = SoundFile.new;
+						var filePath;
+
+						// FileDialog with stripResult:true returns String, not Array
+						filePath = if(path.isString, { path }, { path[0] });
+
+						"Attempting to open: %".format(filePath).postln;
+
+						if(soundFile.openRead(filePath), {
+							var numFrames = soundFile.numFrames;
+							var duration = numFrames / server.sampleRate;
+							var numChannels = soundFile.numChannels;
+
+							"File opened successfully!".postln;
+							"  Frames: %".format(numFrames).postln;
+							"  Channels: %".format(numChannels).postln;
+							"  Duration: % sec".format(duration.round(0.01)).postln;
+
+							soundFile.close;
+
+							// Free old buffer and allocate new one matching file size
+							"Freeing old buffer...".postln;
+							track.recorder.buffer.free;
+
+							"Loading new buffer from file...".postln;
+							track.recorder.buffer = Buffer.readChannel(server, filePath, channels: [0]);
+
+							// CRITICAL: Update grain synth to point to new buffer!
+							fork {
+								0.3.wait; // Wait for buffer to load on server
+								"New buffer number: %".format(track.recorder.buffer.bufnum).postln;
+
+								if(track.grainSynth.notNil, {
+									track.grainSynth.set(\bufnum, track.recorder.buffer.bufnum);
+									"Track %: Grain synth updated to buffer %".format(
+										trackNum + 1,
+										track.recorder.buffer.bufnum
+									).postln;
+								}, {
+									"WARNING: Grain synth is nil!".postln;
+								});
+
+								// Update waveform
+								0.2.wait;
+								"Loading waveform data...".postln;
+								track.recorder.buffer.loadToFloatArray(action: { arg array;
+									{
+										waveView.setData(array);
+										waveView.refresh;
+										"✓ Loaded: % (% seconds, % frames)".format(
+											PathName(filePath).fileName,
+											duration.round(0.01),
+											numFrames
+										).postln;
+									}.defer;
+								});
+							};
+						}, {
+							"❌ Failed to open audio file: %".format(filePath).postln;
+						});
+					}, {
+						"File dialog cancelled or no file selected".postln;
+					});
+				}, fileMode: 1, acceptMode: 0, stripResult: true);
 			});
 
+		yPos = yPos + 35;
+
+		// Play/Stop buttons for grain engine
+		Button(parent, Rect(col1X, yPos, 70, 25))
+			.states_([
+				["PLAY", Color.black, Color.green(0.6)],
+				["STOP", Color.white, Color.red(0.7)]
+			])
+			.action_({ arg btn;
+				if(btn.value == 1, {
+					// Start grain synth if stopped
+					if(track.grainSynth.isNil or: { track.grainSynth.isPlaying.not }, {
+						trackManager.tracks[trackNum].grainSynth.run(true);
+						"Track % grain engine started".format(trackNum + 1).postln;
+					});
+				}, {
+					// Stop grain synth
+					if(track.grainSynth.notNil, {
+						trackManager.tracks[trackNum].grainSynth.run(false);
+						"Track % grain engine stopped".format(trackNum + 1).postln;
+					});
+				});
+			});
+
+		yPos = yPos + 30;
+
 		// Input selector
-		StaticText(parent, Rect(col1X + 160, yPos, 50, 20))
+		StaticText(parent, Rect(col1X, yPos, 50, 20))
 			.string_("Input")
 			.font_(Font("Monaco", 9));
-		PopUpMenu(parent, Rect(col1X + 210, yPos, 70, 20))
+		PopUpMenu(parent, Rect(col1X + 55, yPos, 70, 20))
 			.items_(["In 1", "In 2", "In 3", "In 4", "In 5", "In 6", "In 7", "In 8"])
 			.value_(2)
 			.action_({ arg menu;
@@ -188,7 +282,7 @@ Each track tab contains:
 			});
 
 		// Record button
-		Button(parent, Rect(col1X + 285, yPos, 70, 25))
+		Button(parent, Rect(col1X + 130, yPos, 70, 25))
 			.states_([
 				["REC", Color.black, Color.green(0.7)],
 				["STOP", Color.white, Color.red(0.7)]
@@ -199,12 +293,13 @@ Each track tab contains:
 				}, {
 					track.recorder.stopRecording;
 					fork {
-						0.1.wait;
-						{
-							waveView.soundfile_(track.recorder.buffer);
-							waveView.read(0, track.recorder.buffer.numFrames);
-							waveView.refresh;
-						}.defer;
+						0.2.wait;
+						track.recorder.buffer.loadToFloatArray(action: { arg array;
+							{
+								waveView.setData(array);
+								waveView.refresh;
+							}.defer;
+						});
 					};
 				});
 			});
@@ -212,9 +307,14 @@ Each track tab contains:
 		yPos = yPos + 40;
 
 		// Grain controls
-		makeSlider.value(parent, col1X, yPos, "Grain Size", ControlSpec(0.01, 0.5, \lin), \grainSize, trackNum, 0.1);
+		makeSlider.value(parent, col1X, yPos, "Grain Size", ControlSpec(0.001, 60.0, \exp), \grainSize, trackNum, 0.1);
 		yPos = yPos + 22;
 		makeSlider.value(parent, col1X, yPos, "Density", ControlSpec(1, 200, \lin), \density, trackNum, 30);
+		yPos = yPos + 22;
+		StaticText(parent, Rect(col1X, yPos, 350, 18))
+			.string_("(Max 128 grains: Size × Density should be < 128)")
+			.font_(Font("Monaco", 8))
+			.stringColor_(Color.gray(0.6));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col1X, yPos, "Position", ControlSpec(0, 1, \lin), \position, trackNum, 0.5);
 		yPos = yPos + 22;
@@ -353,15 +453,40 @@ Each track tab contains:
 		makeSlider.value(parent, col3X, yPos, "Shimmer Mix", ControlSpec(0, 1, \lin), \shimmerMix, trackNum, 0);
 
 		// === WAVEFORM DISPLAY ===
-		StaticText(parent, Rect(10, 540, 200, 20))
-			.string_("WAVEFORM")
+		StaticText(parent, Rect(10, 540, 350, 20))
+			.string_("WAVEFORM (Shift+Drag to set loop region)")
 			.font_(Font("Monaco", 10, true));
 
 		waveView = SoundFileView(parent, Rect(10, 565, 1420, 150))
 			.background_(Color.black)
 			.waveColors_([Color.cyan(0.8)])
 			.gridOn_(false)
-			.resize_(5);
+			.resize_(5)
+			.elasticMode_(true)  // Auto-scale amplitude
+			.timeCursorOn_(false)  // Disabled - using custom positionView instead
+			.gridColor_(Color.gray(0.2))
+			.drawsWaveForm_(true);
+
+		// Set selection color for loop point editing (drag to select region)
+		waveView.setSelectionColor(0, Color.yellow(0.3));
+
+		// Add mouse action to set loop points from selection
+		waveView.mouseUpAction_({ arg view;
+			var selection = view.selection(0); // [start, size]
+			var numFrames = view.numFrames;
+			if(numFrames > 0, {
+				var loopStart = selection[0] / numFrames;
+				var loopEnd = (selection[0] + selection[1]) / numFrames;
+				// Store loop points in track params
+				trackManager.setParam(trackNum, \loopStart, loopStart);
+				trackManager.setParam(trackNum, \loopEnd, loopEnd);
+				"Track %: Loop set to % - %".format(
+					trackNum + 1,
+					(loopStart * 100).round(0.1),
+					(loopEnd * 100).round(0.1)
+				).postln;
+			});
+		});
 
 		// Position indicator
 		positionView = UserView(parent, Rect(10, 565, 1420, 150))
@@ -385,19 +510,20 @@ Each track tab contains:
 
 		// Load initial waveform
 		fork {
-			0.2.wait;
-			{
-				waveView.soundfile_(track.recorder.buffer);
-				waveView.read(0, track.recorder.buffer.numFrames);
-				waveView.refresh;
-			}.defer;
+			0.3.wait;
+			track.recorder.buffer.loadToFloatArray(action: { arg array;
+				{
+					waveView.setData(array);
+					waveView.refresh;
+				}.defer;
+			});
 		};
 	};
 
 	// ========================================
 	// CREATE MASTER TAB
 	// ========================================
-	var makeMasterTab = { arg parent;
+	makeMasterTab = { arg parent;
 		var yPos = 10;
 
 		StaticText(parent, Rect(10, yPos, 400, 30))
@@ -511,7 +637,10 @@ Each track tab contains:
 		window: nil,
 
 		create: {
-			window = Window("S-4 Rival v0.4 - 4-Track Workstation", Rect(50, 50, 1450, 750))
+			var tabButtons, tabViews, currentTab = 0;
+			var buttonY = 10, buttonH = 30, contentY = 50;
+
+			window = Window("S-4 Rival v0.4 - 4-Track Workstation", Rect(50, 50, 1450, 800))
 				.onClose_({
 					updateTasks.do({ arg task;
 						if(task.notNil, { task.stop; });
@@ -519,19 +648,48 @@ Each track tab contains:
 					"Four-track GUI closed.".postln;
 				});
 
-			// Create tabbed view
-			tabView = TabbedView(window, Rect(0, 0, 1450, 750))
-				.font_(Font("Monaco", 11));
+			// Create tab buttons and views
+			tabButtons = Array.newClear(5);
+			tabViews = Array.newClear(5);
 
-			// Create 4 track tabs
-			4.do({ arg i;
-				var tab = tabView.add("TRACK " ++ (i + 1));
-				makeTrackTab.value(tab.view, i);
+			// Create buttons for each tab
+			5.do({ arg i;
+				var label = if(i < 4, { "TRACK " ++ (i + 1) }, { "MASTER" });
+				var buttonX = 10 + (i * 150);
+
+				tabButtons[i] = Button(window, Rect(buttonX, buttonY, 140, buttonH))
+					.states_([
+						[label, Color.white, Color.gray(0.3)],
+						[label, Color.black, Color.cyan(0.7)]
+					])
+					.value_(if(i == 0, 1, 0))
+					.action_({ arg btn;
+						// Update all buttons
+						tabButtons.do({ arg b, idx;
+							b.value_(if(idx == i, 1, 0));
+						});
+						// Show/hide views
+						tabViews.do({ arg v, idx;
+							v.visible_(idx == i);
+						});
+						currentTab = i;
+					});
 			});
 
-			// Create master tab
-			var masterTab = tabView.add("MASTER");
-			makeMasterTab.value(masterTab.view);
+			// Create composite views for each tab
+			5.do({ arg i;
+				tabViews[i] = CompositeView(window, Rect(0, contentY, 1450, 740))
+					.background_(Color.gray(0.15))
+					.visible_(i == 0); // Only first tab visible initially
+
+				if(i < 4, {
+					// Track tabs
+					makeTrackTab.value(tabViews[i], i);
+				}, {
+					// Master tab
+					makeMasterTab.value(tabViews[i]);
+				});
+			});
 
 			window.front;
 		},
@@ -545,4 +703,3 @@ Each track tab contains:
 
 	publicAPI;
 };
-)
