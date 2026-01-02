@@ -531,11 +531,6 @@ Each track tab contains:
 			});
 		};
 
-		// Give focus when clicking on waveform
-		waveView.mouseDownAction = { arg view;
-			view.focus(true);
-		};
-
 		// Mouse drag to set loop points
 		waveView.mouseUpAction = { arg view;
 			var sel = view.selection(0);
