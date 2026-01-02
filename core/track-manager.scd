@@ -344,11 +344,18 @@ Public API:
 			track.modTargets[modNum] = targetParam;
 			track.modRanges[modNum] = (min: minVal, max: maxVal);
 
-			// Create mapper synth if not exists
+			// Free old mapper if exists
 			if(track.modMappers[modNum].notNil, {
-				track.modMappers[modNum].free;
+				// modMappers[modNum] is now (synth: X, bus: Y)
+				if(track.modMappers[modNum].synth.notNil, {
+					track.modMappers[modNum].synth.free;
+				});
+				if(track.modMappers[modNum].bus.notNil, {
+					track.modMappers[modNum].bus.free;
+				});
 			});
 
+			// Create new mapper (returns (synth: X, bus: Y))
 			track.modMappers[modNum] = ~s4Modulator.value(server).createMapper(
 				track.modBusses[modNum].index,
 				track.grainSynth,

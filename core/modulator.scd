@@ -99,29 +99,29 @@ Each modulator outputs to a control bus (0-1 range)
 		Reads from control bus and applies to synth parameter with scaling
 		*/
 		createMapper: { arg self, modBus, targetSynth, targetParam, minVal, maxVal;
-			var synth;
+			var scaledBus, mapperSynth;
 
-			synth = {
-				arg inBus = 0, min = 0, max = 1;
-				var modValue = In.kr(inBus, 1);
-				var scaled = modValue.linlin(0, 1, min, max);
-				// Send to target synth parameter via set
-				SendReply.kr(Impulse.kr(30), '/modUpdate', [scaled]);
-			}.play(server, [
-				\inBus, modBus,
-				\min, minVal,
-				\max, maxVal
-			], addAction: \addToTail);
+			// Create a new control bus for the scaled output
+			scaledBus = Bus.control(server, 1);
 
-			// Listen for updates and apply to target
-			OSCdef('modMapper_' ++ modBus, { arg msg;
-				var value = msg[3];
-				if(targetSynth.notNil and: { targetSynth.isPlaying }, {
-					targetSynth.set(targetParam, value);
-				});
-			}, '/modUpdate');
+			// Create mapper synth that reads from modBus and scales to scaledBus
+			mapperSynth = {
+				// Use In.kr to read directly from the modulator's control bus
+				var rawMod = In.kr(modBus, 1);
+				// Scale from 0-1 to minVal-maxVal using arithmetic
+				var range = maxVal - minVal;
+				var scaled = (rawMod * range) + minVal;
+				Out.kr(scaledBus.index, scaled);
+			}.play(server, addAction: \addToTail);
 
-			synth;
+			// Map the target synth parameter to the scaled bus
+			if(targetSynth.notNil, {
+				targetSynth.map(targetParam, scaledBus.index);
+				("Mapped " ++ targetParam ++ " to bus " ++ scaledBus.index).postln;
+			});
+
+			// Return both synth and bus so caller can free both
+			(synth: mapperSynth, bus: scaledBus);
 		}
 	);
 
