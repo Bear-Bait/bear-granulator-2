@@ -16,7 +16,7 @@ Each track tab contains:
 
 ~s4FourTrackGUI = {
 	arg trackManager, masterBus, server;
-	var window, updateTasks;
+	var window, updateTasks, levelMeters, levelResponders;
 	var publicAPI;
 	var makeSlider, makeButton, makeMasterSlider, makeMasterButton;
 	var makeTrackTab, makeMasterTab;
@@ -41,6 +41,10 @@ Each track tab contains:
 
 	// Track update tasks for waveform displays
 	updateTasks = Array.newClear(4);
+
+	// Level meters and responders
+	levelMeters = Array.newClear(4);
+	levelResponders = Array.newClear(4);
 
 	// ========================================
 	// HELPER: Create labeled slider
@@ -819,6 +823,15 @@ Each track tab contains:
 				.string_("TRACK " ++ (i + 1))
 				.font_(Font("Monaco", 11, true));
 
+			// VU Meter
+			levelMeters[i] = LevelIndicator(parent, Rect(10, trackY + 20, 80, 12))
+				.warning_(0.7)
+				.critical_(0.9)
+				.style_(\led)
+				.numSteps_(12)
+				.numTicks_(0)
+				.numMajorTicks_(0);
+
 			// Mute
 			Button(parent, Rect(100, trackY, 60, 35))
 				.states_([
@@ -904,6 +917,9 @@ Each track tab contains:
 					updateTasks.do({ arg task;
 						if(task.notNil, { task.stop; });
 					});
+					levelResponders.do({ arg resp;
+						if(resp.notNil, { resp.free; });
+					});
 					"Four-track GUI closed.".postln;
 				});
 
@@ -948,6 +964,30 @@ Each track tab contains:
 					// Master tab
 					makeMasterTab.value(tabViews[i]);
 				});
+			});
+
+			// Create level monitoring synths for each track
+			4.do({ arg i;
+				var track = trackManager.getTrack(i);
+				var busIndex = track.audioBus.index;
+
+				// Create SendPeakRMS synth to monitor levels
+				{
+					var sig = In.ar(busIndex, 2);
+					SendPeakRMS.kr(sig, 20, 3, "/levels" ++ i);
+					0; // Silent output
+				}.play(server, addAction: \addToTail);
+
+				// Create OSC responder to update meter
+				levelResponders[i] = OSCFunc({ arg msg;
+					var peak = msg[3].max(msg[5]); // Max of left/right peaks
+					{
+						if(levelMeters[i].notNil, {
+							levelMeters[i].value_(peak.ampdb.linlin(-80, 0, 0, 1));
+							levelMeters[i].peakLevel_(peak.ampdb.linlin(-80, 0, 0, 1));
+						});
+					}.defer;
+				}, "/levels" ++ i);
 			});
 
 			window.front;
