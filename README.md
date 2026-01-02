@@ -6,7 +6,7 @@
                     ___
                   _/   \_
                  |  o_o  |
-                 |   ^   |   <- Jim
+                 |   ^   |  
                   \_____/
                     | |
                _____|_|_____
@@ -21,19 +21,19 @@ This is a 4-track granular synthesis sampler!
 
 ---
 
-## 🚀 QUICK START
+## QUICK START
 
 ### Step 1: Boot the SuperCollider Server
 
 **IMPORTANT**: Before running `main.scd`, you need to boot the audio server. Different systems require different setups:
 
-#### 🍎 Mac (Built-in Audio)
+#### Mac (Built-in Audio)
 ```supercollider
 // Default Mac audio - just boot it
 s.boot;
 ```
 
-#### 🍎 Mac with Audio Interface (MOTU, Focusrite, etc.)
+####  Mac with Audio Interface (MOTU, Focusrite, etc.)
 ```supercollider
 // Option 1: Use your interface as default
 s.boot;
@@ -62,7 +62,7 @@ s.boot;
 s.boot;  // Uses default ALSA device
 ```
 
-#### 🪟 Windows (ASIO or MME)
+#### Windows (ASIO or MME)
 ```supercollider
 // ASIO (recommended - low latency)
 (
@@ -146,7 +146,7 @@ The GUI will open automatically!
 
 ---
 
-## 🎚️ ESSENTIAL SC COMMANDS
+## ESSENTIAL SC COMMANDS
 
 See `generic-commands.scd` for a full cheat sheet. Here are the must-knows:
 
@@ -256,7 +256,7 @@ granular/
 The `samples/stock/` folder includes some great starter material:
 
 ### Apollo 11 Mission Audio 🚀
-- **a11wlk01.wav** - "Columbia, this is Houston. We've got you..."
+- **a11wlk01-44_1k.aiff** - "Columbia, this is Houston..."
 - Classic mission control transmission
 - Perfect for granular processing - rich textures with voice, static, and space
 - Try these settings:
@@ -274,7 +274,7 @@ The `samples/stock/` folder includes some great starter material:
 
 ---
 
-## 🎓 LEARNING PATH
+## LEARNING PATH
 
 1. **Start Simple**: Load one sample, hit play, adjust grain size
 2. **Explore Position**: Move the position slider while playing
@@ -301,7 +301,7 @@ The `samples/stock/` folder includes some great starter material:
 
 ---
 
-## 🐛 KNOWN ISSUES
+## KNOWN ISSUES
 
 - Waveform display uses temp files for recorded buffers
 - Modulation window is a separate popup (not integrated)
@@ -309,7 +309,7 @@ The `samples/stock/` folder includes some great starter material:
 
 ---
 
-## 🎉 HAVE FUN!
+## YES YES YES!
 
 Remember: There's no "right" way to use this. Granular synthesis is all about exploration.
 
@@ -321,18 +321,17 @@ Remember: There's no "right" way to use this. Granular synthesis is all about ex
 
 Questions? Check `generic-commands.scd` or holler at Forrest.
 
-Now go make some grape leaf sounds! 🍇🍃
 
 ```
       _____
      /     \
     | ^   ^ |
-    |   o   |   <- You, making sick sounds
+    |   o   |   
      \_____/
        | |
     ___| |___
    /         \
-  |  S-4 RIVAL |
+  |     x     |
    \_________/
 ```
 
