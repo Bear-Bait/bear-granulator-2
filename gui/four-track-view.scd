@@ -166,6 +166,18 @@ Each track tab contains:
 				~s4ModulationWindow.value(trackManager, server, trackNum).create;
 			});
 
+		// Viewfinder button (Phase 7)
+		Button(parent, Rect(675, 10, 70, 40))
+			.states_([["LOOP\nVIEW", Color.white, Color.new(0.2, 0.6, 0.8)]])
+			.font_(Font("Monaco", 9, true))
+			.action_({
+				if(~viewfinder.notNil, {
+					~viewfinder.createWindow(trackNum);
+				}, {
+					"Viewfinder not initialized. Run main.scd first.".warn;
+				});
+			});
+
 		// === COLUMN 1: RECORDING + GRAIN ===
 		yPos = 60;
 		StaticText(parent, Rect(col1X, yPos, 350, 20))
@@ -211,6 +223,9 @@ Each track tab contains:
 
 							"Loading new buffer from file...".postln;
 							track.recorder.buffer = Buffer.readChannel(server, filePath, channels: [0]);
+
+							// Store file path for viewfinder
+							track.filePath = filePath;
 
 							// CRITICAL: Update grain synth to point to new buffer!
 							fork {
@@ -316,10 +331,10 @@ Each track tab contains:
 		// Grain controls
 		makeSlider.value(parent, col1X, yPos, "Grain Size", ControlSpec(0.001, 60.0, \exp), \grainSize, trackNum, 0.1);
 		yPos = yPos + 22;
-		makeSlider.value(parent, col1X, yPos, "Density", ControlSpec(1, 200, \lin), \density, trackNum, 30);
+		makeSlider.value(parent, col1X, yPos, "Overlap", ControlSpec(1, 128, \lin), \overlap, trackNum, 4);
 		yPos = yPos + 22;
 		StaticText(parent, Rect(col1X, yPos, 350, 18))
-			.string_("(Max 128 grains: Size × Density should be < 128)")
+			.string_("(Overlap = simultaneous grains, auto-adjusts for grain size)")
 			.font_(Font("Monaco", 8))
 			.stringColor_(Color.gray(0.6));
 		yPos = yPos + 22;
@@ -344,6 +359,19 @@ Each track tab contains:
 			.value_(1)
 			.action_({ arg menu;
 				trackManager.setParam(trackNum, \envType, menu.value);
+			});
+
+		// Phase 6: Material Mode selector
+		yPos = yPos + 30;
+		StaticText(parent, Rect(col1X, yPos, 120, 20))
+			.string_("Material Mode")
+			.font_(Font("Monaco", 10, true))
+			.stringColor_(Color.new(0.3, 0.8, 1.0));  // Cyan highlight
+		PopUpMenu(parent, Rect(col1X + 125, yPos, 150, 20))
+			.items_(["TAPE (Loop)", "POLY (Sample)", "LIVE (Input)"])
+			.value_(0)  // Default to TAPE
+			.action_({ arg menu;
+				trackManager.setMode(trackNum, menu.value);
 			});
 
 		// === COLUMN 2: COLOR EFFECTS ===
@@ -617,6 +645,18 @@ Each track tab contains:
 				.value_(0.5)
 				.action_({ arg sl;
 					trackManager.setPan(i, sl.value.linlin(0, 1, -1, 1));
+				});
+
+			// Viewfinder button (Phase 7)
+			Button(parent, Rect(615, trackY, 50, 35))
+				.states_([["VIEW", Color.white, Color.new(0.2, 0.6, 0.8)]])
+				.font_(Font("Monaco", 8, true))
+				.action_({
+					if(~viewfinder.notNil, {
+						~viewfinder.createWindow(i);
+					}, {
+						"Viewfinder not initialized".warn;
+					});
 				});
 		});
 

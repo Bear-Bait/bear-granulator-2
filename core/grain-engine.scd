@@ -2,12 +2,14 @@
 S-4 Rival: Core Granular Engine
 Phase 1 - Main SynthDef with GrainBuf
 Phase 2 - Integrated 48-band Morphing Resonator
+Phase 6 - Material Modes (TAPE/POLY/LIVE)
+Phase 6b - Overlap Control (musical grain density)
 
 Features:
-- Up to 128 grains
+- Up to 256 grains (dynamic based on overlap setting)
 - Variable buffer playback (any length)
 - Grain size: 1ms-60s (microtones to full loops, no upper limit)
-- Density: 1-200 grains/second
+- Overlap control: 1-128 simultaneous grains (replaces density)
 - Pitch control: -2 to +2 octaves
 - 4 envelope shapes
 - Position jitter & pitch jitter
@@ -18,8 +20,11 @@ Features:
 
 Args:
   bufnum: Buffer number for grain source
+  mode: Material mode (0=TAPE loop, 1=POLY sample, 2=LIVE input)
   grainSize: Grain duration in seconds (0.001-60+, unlimited)
-  density: Grains per second (1-200)
+  overlap: Number of simultaneous grains (1-128) - RECOMMENDED
+  density: Grains per second (1-200) - LEGACY, use overlap instead
+  useOverlap: 1=use overlap mode (default), 0=use density mode
   position: Playback position in buffer (0-1)
   pitch: Pitch shift in semitones (-24 to +24)
   posJitter: Random position offset (0-1)
@@ -28,6 +33,8 @@ Args:
   stereoSpread: Stereo width (0-1)
   amp: Output amplitude (0-1)
   pan: Stereo pan (-1 to 1)
+  loopStart: Loop region start (0-1, TAPE mode only)
+  loopEnd: Loop region end (0-1, TAPE mode only)
 
   filterOn: Enable filterbank (0=off, 1=on)
   filterFreq: Filter fundamental frequency (20-2000 Hz)
@@ -45,8 +52,11 @@ Args:
 
 SynthDef(\s4GrainEngine, {
 	arg bufnum = 0,
+	    mode = 0,  // Phase 6: 0=TAPE, 1=POLY, 2=LIVE
 	    grainSize = 0.1,
-	    density = 20,
+	    density = 20,      // Legacy parameter (kept for compatibility)
+	    overlap = 4,       // Phase 6b: Number of simultaneous grains (1-128)
+	    useOverlap = 1,    // Phase 6b: 0=use density, 1=use overlap (default)
 	    position = 0.5,
 	    pitch = 0,
 	    posJitter = 0.0,
@@ -103,23 +113,41 @@ SynthDef(\s4GrainEngine, {
 	var sig, trig, bufPos, bufFrames, pitchRatio, env;
 	var grainDur, maxGrains, panL, panR, envBuf;
 	var delayL, delayR, shiftL, shiftR; // for effects
+	var actualDensity; // Calculated from overlap or direct
 
 	// Calculate buffer parameters
 	bufFrames = BufFrames.kr(bufnum);
 
-	// Grain triggering (using Dust for irregular triggering)
-	trig = Impulse.ar(density);
+	// Grain duration (no upper limit - can be as long as buffer)
+	grainDur = grainSize.max(0.001);
 
-	// Buffer position with jitter mapped to loop region
-	// Position parameter (0-1) maps to loop region (loopStart-loopEnd)
-	bufPos = position.linlin(0, 1, loopStart, loopEnd) + LFNoise1.kr(10).range(posJitter.neg, posJitter);
-	bufPos = bufPos.wrap(loopStart, loopEnd);
+	// Calculate actual density based on mode
+	// useOverlap=1: density = overlap / grainSize (musical control)
+	// useOverlap=0: use density directly (legacy mode)
+	actualDensity = Select.kr(useOverlap, [
+		density,                    // Legacy mode: use density as-is
+		(overlap / grainDur).max(0.1)  // Overlap mode: calculate from grain size
+	]);
+
+	// Grain triggering with calculated density
+	trig = Impulse.ar(actualDensity);
+
+	// Buffer position calculation depends on mode
+	// Mode 0 (TAPE): Looping playback position
+	// Mode 1 (POLY): Fixed start position per grain
+	// Mode 2 (LIVE): Lookback time from current write position
+	bufPos = Select.kr(mode, [
+		// TAPE mode: loop through buffer
+		(position.linlin(0, 1, loopStart, loopEnd) + LFNoise1.kr(10).range(posJitter.neg, posJitter)).wrap(loopStart, loopEnd),
+		// POLY mode: fixed position (no looping)
+		position + LFNoise1.kr(10).range(posJitter.neg, posJitter),
+		// LIVE mode: position represents "time ago" (0=now, 1=buffer start)
+		// In LIVE mode, grains read from recent past
+		(1.0 - position + LFNoise1.kr(10).range(posJitter.neg, posJitter)).wrap(0, 1)
+	]);
 
 	// Convert pitch (semitones) to ratio
 	pitchRatio = (pitch + LFNoise1.kr(5).range(pitchJitter.neg, pitchJitter)).midiratio;
-
-	// Grain duration (no upper limit - can be as long as buffer)
-	grainDur = grainSize.max(0.001);
 
 	// Create envelope buffer based on envType
 	envBuf = Select.kr(envType, [
@@ -134,6 +162,10 @@ SynthDef(\s4GrainEngine, {
 	]);
 
 	// Stereo grain clouds with spread
+	// Phase 6b: Fixed maxGrains allocation
+	// GrainBuf requires maxGrains to be a constant at compile time
+	// Set to 64 per channel (128 total) to support overlap up to 128
+
 	// Left channel: grains panned left
 	panL = GrainBuf.ar(
 		numChannels: 1,
@@ -145,7 +177,7 @@ SynthDef(\s4GrainEngine, {
 		interp: 2, // cubic interpolation
 		pan: stereoSpread.neg, // pan left
 		envbufnum: -1, // use default envelope for now
-		maxGrains: 64 // 64 grains per channel = 128 total
+		maxGrains: 64 // Fixed at compile time
 	);
 
 	// Right channel: grains panned right
@@ -159,11 +191,15 @@ SynthDef(\s4GrainEngine, {
 		interp: 2,
 		pan: stereoSpread, // pan right
 		envbufnum: -1,
-		maxGrains: 64
+		maxGrains: 64 // Fixed at compile time
 	);
 
 	// Combine stereo channels
 	sig = [panL, panR];
+
+	// Phase 6b: Volume boost for overlap mode
+	// 2x gain boost - GrainBuf output is quiet compared to hardware synths
+	sig = sig * 2.0;
 
 	// === PHASE 2: FILTERBANK (MOVED TO MASTER BUS IN PHASE 4) ===
 	// The 48-band morphing resonator is now applied on the master bus

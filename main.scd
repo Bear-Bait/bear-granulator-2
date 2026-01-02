@@ -157,6 +157,11 @@ fork {
 		0.2.wait;
 		"  ✓ Four-track GUI module loaded".postln;
 
+		// Load viewfinder module (Phase 7)
+		(~config.guiPath +/+ "viewfinder.scd").load;
+		0.2.wait;
+		"  ✓ Viewfinder module loaded".postln;
+
 		0.5.wait;
 
 		// ============================================
@@ -199,6 +204,10 @@ fork {
 		{ ~gui.create; }.defer;
 		0.2.wait;
 		"  ✓ Four-track GUI created".postln;
+
+		// Initialize viewfinder (Phase 7)
+		~viewfinder = ~s4Viewfinder.value(s, ~trackManager);
+		"  ✓ Viewfinder initialized".postln;
 
 		// Backward compatibility: expose track 1 as ~grainSynth
 		~grainSynth = ~trackManager.getTracks[0].grainSynth;
@@ -269,9 +278,22 @@ fork {
 		"  • Enable Filter on MASTER BUS for 48-band resonator (all tracks)".postln;
 		"  • Master filter: ~masterBus.set(\\filterOn, 1)".postln;
 		"".postln;
+		"Phase 7 Features (NEW!):".postln;
+		"  • Waveform viewfinder with loop window selection".postln;
+		"  • Real-time non-destructive loop windowing".postln;
+		"  • Visual drag-to-select interface (SoundFileView)".postln;
+		"".postln;
+		"Viewfinder Usage (Phase 7):".postln;
+		"  • ~viewfinder.createWindow(0)  - Open Track 1 viewfinder".postln;
+		"  • ~viewfinder.createWindow(1)  - Open Track 2 viewfinder".postln;
+		"  • ~viewfinder.createAll        - Open all viewfinders".postln;
+		"  • Drag on waveform to select loop region".postln;
+		"  • Loop updates engine in real-time!".postln;
+		"".postln;
 		"Global Variables:".postln;
 		"  ~trackManager - 4-track management system (Phase 4)".postln;
 		"  ~masterBus - Master mix bus with 48-band filter (Phase 4)".postln;
+		"  ~viewfinder - Waveform viewfinder module (Phase 7)".postln;
 		"  ~grainSynth - Track 1 synth (backward compatibility)".postln;
 		"  ~recorder - Track 1 recorder (backward compatibility)".postln;
 		"  ~gui - GUI controller".postln;

@@ -9,7 +9,7 @@ Run this FIRST before running main.scd
 
 // Configure BEFORE booting
 s.options.numInputBusChannels = 8;
-s.options.numOutputBusChannels = 2;
+s.options.numOutputBusChannels = 4;
 s.options.sampleRate = 48000;
 s.options.memSize = 8192 * 256;  // 2GB
 s.options.numBuffers = 1024 * 16;

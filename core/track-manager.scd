@@ -41,7 +41,9 @@ Public API:
 			modBusses: 4.collect({ nil }),            // Control busses
 			modMappers: 4.collect({ nil }),           // Mapper synths
 			modTargets: 4.collect({ nil }),           // Target parameters
-			modRanges: 4.collect({ (min: 0, max: 1) }) // Min/max ranges
+			modRanges: 4.collect({ (min: 0, max: 1) }), // Min/max ranges
+			// Phase 6: Material modes
+			mode: 0  // 0=TAPE, 1=POLY, 2=LIVE
 		);
 	});
 
@@ -77,8 +79,11 @@ Public API:
 			// Default parameters for grain synth
 			defaultParams = (
 				// Grain parameters
+				mode: 0,  // Phase 6: Default to TAPE mode
 				grainSize: 0.1,
-				density: 30,
+				density: 30,      // Legacy parameter
+				overlap: 4,       // Phase 6b: Default overlap count
+				useOverlap: 1,    // Phase 6b: Use overlap mode by default
 				position: 0.5,
 				pitch: 0,
 				posJitter: 0.1,
@@ -187,6 +192,35 @@ Public API:
 
 			// Send to synth
 			track.grainSynth.set(param, value);
+		},
+
+		// Set material mode (Phase 6: 0=TAPE, 1=POLY, 2=LIVE)
+		setMode: { arg self, trackNum, newMode;
+			var track = tracks[trackNum];
+			var modeNames = ["TAPE", "POLY", "LIVE"];
+
+			if(track.grainSynth.isNil, {
+				"Track manager: Track % not initialized".format(trackNum + 1).postln;
+				^nil;
+			});
+
+			// Validate mode
+			if((newMode < 0) or: { newMode > 2 }, {
+				"Track manager: Invalid mode %. Must be 0 (TAPE), 1 (POLY), or 2 (LIVE)".format(newMode).postln;
+				^nil;
+			});
+
+			// Update mode
+			track.mode = newMode;
+			track.grainSynth.set(\mode, newMode);
+
+			"Track %: Mode set to % (%)".format(trackNum + 1, newMode, modeNames[newMode]).postln;
+		},
+
+		// Get current mode
+		getMode: { arg self, trackNum;
+			var track = tracks[trackNum];
+			track.mode;
 		},
 
 		// Set track volume (also updates master bus)
