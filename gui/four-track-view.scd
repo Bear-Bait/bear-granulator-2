@@ -245,6 +245,18 @@ Each track tab contains:
 									"WARNING: Grain synth is nil!".postln;
 								});
 
+								// Load waveform into main GUI display
+								{
+									var sf = SoundFile.new;
+									if(sf.openRead(filePath), {
+										waveView.soundfile = sf;
+										waveView.read(0, sf.numFrames);
+										sf.close;
+										waveView.refresh;
+										"Waveform loaded into main view".postln;
+									});
+								}.defer;
+
 								"✓ Loaded: % (% seconds, % frames)".format(
 									PathName(filePath).fileName,
 									duration.round(0.01),
