@@ -37,7 +37,10 @@ Each track tab contains:
 		white: Color.fromHexString("#EEFFFF"),
 		brightBlack: Color.fromHexString("#37474F"),
 		orange: Color.fromHexString("#f78c6c"),
-		selection: Color.fromHexString("#cc7000")
+		selection: Color.fromHexString("#cc7000"),
+		// Button text colors (high contrast)
+		buttonText: Color.fromHexString("#EEFFFF"),
+		buttonTextActive: Color.fromHexString("#171F24")
 	);
 
 	// Track update tasks for waveform displays
@@ -55,12 +58,13 @@ Each track tab contains:
 
 		StaticText(parent, Rect(x, y, 120, 18))
 			.string_(label)
-			.font_(Font("Monaco", 10));
+			.font_(Font("DejaVu Sans Mono", 10))
+			.stringColor_(colors.fg);
 
 		numBox = NumberBox(parent, Rect(x + 280, y, 60, 18))
 			.value_(default)
 			.decimals_(3)
-			.font_(Font("Monaco", 9))
+			.font_(Font("DejaVu Sans Mono", 9))
 			.action_({ arg nb;
 				trackManager.setParam(trackNum, param, nb.value);
 				slider.value_(spec.unmap(nb.value));
@@ -81,8 +85,8 @@ Each track tab contains:
 	makeButton = { arg parent, x, y, w, label, param, trackNum;
 		Button(parent, Rect(x, y, w, 25))
 			.states_([
-				[label ++ " OFF", Color.black, Color.gray(0.5)],
-				[label ++ " ON", Color.white, Color.green(0.6)]
+				[label ++ " OFF", colors.buttonText, Color.gray(0.5)],
+				[label ++ " ON", colors.buttonTextActive, Color.green(0.6)]
 			])
 			.action_({ arg btn;
 				trackManager.setParam(trackNum, param, btn.value);
@@ -95,7 +99,8 @@ Each track tab contains:
 	makeMasterSlider = { arg parent, x, y, label, spec, param, default;
 		StaticText(parent, Rect(x, y, 120, 18))
 			.string_(label)
-			.font_(Font("Monaco", 10));
+			.font_(Font("DejaVu Sans Mono", 10))
+			.stringColor_(colors.fg);
 
 		Slider(parent, Rect(x + 125, y, 150, 18))
 			.value_(spec.unmap(default))
@@ -107,7 +112,7 @@ Each track tab contains:
 		NumberBox(parent, Rect(x + 280, y, 60, 18))
 			.value_(default)
 			.decimals_(3)
-			.font_(Font("Monaco", 9))
+			.font_(Font("DejaVu Sans Mono", 9))
 			.action_({ arg nb;
 				masterBus.set(param, nb.value);
 			});
@@ -119,8 +124,8 @@ Each track tab contains:
 	makeMasterButton = { arg parent, x, y, w, label, param;
 		Button(parent, Rect(x, y, w, 25))
 			.states_([
-				[label ++ " OFF", Color.black, Color.gray(0.5)],
-				[label ++ " ON", Color.white, Color.green(0.6)]
+				[label ++ " OFF", colors.buttonText, Color.gray(0.5)],
+				[label ++ " ON", colors.buttonTextActive, Color.green(0.6)]
 			])
 			.action_({ arg btn;
 				masterBus.set(param, btn.value);
@@ -139,13 +144,13 @@ Each track tab contains:
 		// === TOP: TRACK CONTROLS ===
 		StaticText(parent, Rect(10, 10, 200, 25))
 			.string_("TRACK " ++ (trackNum + 1))
-			.font_(Font("Monaco", 14, true))
+			.font_(Font("DejaVu Sans Mono", 14, true))
 			.stringColor_(colors.cyan);
 
 		// Volume
 		StaticText(parent, Rect(220, 10, 50, 20))
 			.string_("Volume")
-			.font_(Font("Monaco", 9));
+			.font_(Font("DejaVu Sans Mono", 9));
 		Slider(parent, Rect(220, 30, 120, 20))
 			.value_(0.8)
 			.action_({ arg sl;
@@ -155,7 +160,7 @@ Each track tab contains:
 		// Pan
 		StaticText(parent, Rect(350, 10, 50, 20))
 			.string_("Pan")
-			.font_(Font("Monaco", 9));
+			.font_(Font("DejaVu Sans Mono", 9));
 		Slider(parent, Rect(350, 30, 120, 20))
 			.value_(0.5)
 			.action_({ arg sl;
@@ -192,7 +197,7 @@ Each track tab contains:
 		// Viewfinder button (Phase 7)
 		Button(parent, Rect(675, 10, 70, 40))
 			.states_([["LOOP\nVIEW", colors.fg, colors.blue]])
-			.font_(Font("Monaco", 9, true))
+			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
 				if(~viewfinder.notNil, {
 					~viewfinder.createWindow(trackNum);
@@ -205,7 +210,7 @@ Each track tab contains:
 		yPos = 60;
 		StaticText(parent, Rect(col1X, yPos, 350, 20))
 			.string_("RECORDING + GRAIN")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 25;
 
@@ -326,7 +331,7 @@ Each track tab contains:
 		// Input selector
 		StaticText(parent, Rect(col1X, yPos, 50, 20))
 			.string_("Input")
-			.font_(Font("Monaco", 9));
+			.font_(Font("DejaVu Sans Mono", 9));
 		PopUpMenu(parent, Rect(col1X + 55, yPos, 70, 20))
 			.items_(["In 1", "In 2", "In 3", "In 4", "In 5", "In 6", "In 7", "In 8"])
 			.value_(2)
@@ -346,7 +351,15 @@ Each track tab contains:
 				}, {
 					track.recorder.stopRecording;
 					fork {
-						0.2.wait;
+						0.4.wait;  // Wait for temp file to be written
+
+						// Copy temp file path to track for viewfinder
+						if(track.recorder.tempFilePath.notNil, {
+							track.filePath = track.recorder.tempFilePath;
+							"Track %: Recorded buffer saved to temp file for waveform display".format(trackNum + 1).postln;
+						});
+
+						// Load waveform data into main view
 						track.recorder.buffer.loadToFloatArray(action: { arg array;
 							{
 								waveView.setData(array);
@@ -366,7 +379,7 @@ Each track tab contains:
 		yPos = yPos + 22;
 		StaticText(parent, Rect(col1X, yPos, 350, 18))
 			.string_("(Overlap = simultaneous grains, auto-adjusts for grain size)")
-			.font_(Font("Monaco", 8))
+			.font_(Font("DejaVu Sans Mono", 8))
 			.stringColor_(Color.gray(0.6));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col1X, yPos, "Position", ControlSpec(0, 1, \lin), \position, trackNum, 0.0);
@@ -384,7 +397,7 @@ Each track tab contains:
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col1X, yPos, 120, 18))
 			.string_("Envelope Type")
-			.font_(Font("Monaco", 10));
+			.font_(Font("DejaVu Sans Mono", 10));
 		PopUpMenu(parent, Rect(col1X + 125, yPos, 150, 20))
 			.items_(["Percussive", "Sine", "Triangle", "Welch"])
 			.value_(1)
@@ -396,7 +409,7 @@ Each track tab contains:
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col1X, yPos, 120, 20))
 			.string_("Material Mode")
-			.font_(Font("Monaco", 10, true))
+			.font_(Font("DejaVu Sans Mono", 10, true))
 			.stringColor_(Color.new(0.3, 0.8, 1.0));  // Cyan highlight
 		PopUpMenu(parent, Rect(col1X + 125, yPos, 150, 20))
 			.items_(["TAPE (Loop)", "POLY (Sample)", "LIVE (Input)"])
@@ -409,7 +422,7 @@ Each track tab contains:
 		yPos = 60;
 		StaticText(parent, Rect(col2X, yPos, 350, 20))
 			.string_("COLOR EFFECTS")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 25;
 		makeButton.value(parent, col2X, yPos, 100, "Color FX", \colorOn, trackNum);
@@ -417,7 +430,7 @@ Each track tab contains:
 		yPos = yPos + 35;
 		StaticText(parent, Rect(col2X, yPos, 350, 18))
 			.string_("DISTORTION")
-			.font_(Font("Monaco", 10, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col2X, yPos, "Crossover", ControlSpec(100, 2000, \exp), \distCrossover, trackNum, 500);
 		yPos = yPos + 22;
@@ -430,7 +443,7 @@ Each track tab contains:
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col2X, yPos, 350, 18))
 			.string_("BIT CRUSHER")
-			.font_(Font("Monaco", 10, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col2X, yPos, "Sample Rate", ControlSpec(100, 48000, \exp), \crushRate, trackNum, 8000);
 		yPos = yPos + 22;
@@ -441,7 +454,7 @@ Each track tab contains:
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col2X, yPos, 350, 18))
 			.string_("COMPRESSOR")
-			.font_(Font("Monaco", 10, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col2X, yPos, "Threshold", ControlSpec(0, 1, \lin), \compThresh, trackNum, 0.5);
 		yPos = yPos + 22;
@@ -450,7 +463,7 @@ Each track tab contains:
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col2X, yPos, 350, 18))
 			.string_("NOISE")
-			.font_(Font("Monaco", 10, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 		yPos = yPos + 22;
 		PopUpMenu(parent, Rect(col2X + 125, yPos, 150, 20))
 			.items_(["White", "Pink", "Brown"])
@@ -465,7 +478,7 @@ Each track tab contains:
 		yPos = 60;
 		StaticText(parent, Rect(col3X, yPos, 350, 20))
 			.string_("SPACE EFFECTS")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 25;
 		makeButton.value(parent, col3X, yPos, 100, "Space FX", \spaceOn, trackNum);
@@ -473,7 +486,7 @@ Each track tab contains:
 		yPos = yPos + 35;
 		StaticText(parent, Rect(col3X, yPos, 350, 18))
 			.string_("REVERB")
-			.font_(Font("Monaco", 10, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col3X, yPos, "Size", ControlSpec(0, 1, \lin), \reverbSize, trackNum, 0.5);
 		yPos = yPos + 22;
@@ -486,7 +499,7 @@ Each track tab contains:
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col3X, yPos, 350, 18))
 			.string_("DELAY")
-			.font_(Font("Monaco", 10, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col3X, yPos, "Time", ControlSpec(0.01, 2.0, \exp), \delayTime, trackNum, 0.25);
 		yPos = yPos + 22;
@@ -498,8 +511,8 @@ Each track tab contains:
 		yPos = yPos + 22;
 		Button(parent, Rect(col3X + 125, yPos, 150, 20))
 			.states_([
-				["Ping-Pong OFF", Color.black, Color.gray(0.5)],
-				["Ping-Pong ON", Color.white, Color.green(0.6)]
+				["Ping-Pong OFF", colors.buttonText, Color.gray(0.5)],
+				["Ping-Pong ON", colors.buttonTextActive, Color.green(0.6)]
 			])
 			.action_({ arg btn;
 				trackManager.setParam(trackNum, \delayPingPong, btn.value);
@@ -508,7 +521,7 @@ Each track tab contains:
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col3X, yPos, 350, 18))
 			.string_("SHIMMER")
-			.font_(Font("Monaco", 10, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 		yPos = yPos + 22;
 		makeSlider.value(parent, col3X, yPos, "Time", ControlSpec(0.1, 2.0, \exp), \shimmerTime, trackNum, 0.5);
 		yPos = yPos + 22;
@@ -523,7 +536,7 @@ Each track tab contains:
 
 		StaticText(parent, Rect(10, yPos, 600, 20))
 			.string_("LOOP WINDOW (Drag to select • Arrows: Up/Down=Zoom, Left/Right=Pan • Mouse wheel zooms)")
-			.font_(Font("Monaco", 10, true))
+			.font_(Font("DejaVu Sans Mono", 10, true))
 			.stringColor_(colors.cyan);
 
 		waveView = SoundFileView(parent, Rect(10, yPos + 25, 1420, 150))
@@ -703,7 +716,7 @@ Each track tab contains:
 
 		StaticText(parent, Rect(10, yPos, 400, 30))
 			.string_("MASTER CONTROLS")
-			.font_(Font("Monaco", 16, true))
+			.font_(Font("DejaVu Sans Mono", 16, true))
 			.stringColor_(colors.cyan);
 
 		yPos = yPos + 40;
@@ -711,7 +724,7 @@ Each track tab contains:
 		// === GLOBAL TRANSPORT ===
 		StaticText(parent, Rect(10, yPos, 400, 25))
 			.string_("TRANSPORT")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 30;
 
@@ -750,13 +763,13 @@ Each track tab contains:
 		// Global Speed Control
 		StaticText(parent, Rect(10, yPos, 200, 20))
 			.string_("GLOBAL SPEED (Pitch)")
-			.font_(Font("Monaco", 11, true));
+			.font_(Font("DejaVu Sans Mono", 11, true));
 
 		yPos = yPos + 25;
 
 		StaticText(parent, Rect(10, yPos, 120, 18))
 			.string_("Speed")
-			.font_(Font("Monaco", 10));
+			.font_(Font("DejaVu Sans Mono", 10));
 
 		Slider(parent, Rect(135, yPos, 200, 18))
 			.value_(0.5)  // Center = 0 semitones
@@ -770,7 +783,7 @@ Each track tab contains:
 		NumberBox(parent, Rect(340, yPos, 60, 18))
 			.value_(0)
 			.decimals_(1)
-			.font_(Font("Monaco", 9))
+			.font_(Font("DejaVu Sans Mono", 9))
 			.action_({ arg nb;
 				var pitch = nb.value;
 				4.do({ arg i;
@@ -780,7 +793,7 @@ Each track tab contains:
 
 		StaticText(parent, Rect(405, yPos, 200, 18))
 			.string_("(-24 to +24 semitones)")
-			.font_(Font("Monaco", 8))
+			.font_(Font("DejaVu Sans Mono", 8))
 			.stringColor_(Color.gray(0.6));
 
 		yPos = yPos + 30;
@@ -788,7 +801,7 @@ Each track tab contains:
 		// === 48-BAND MORPHING RESONATOR ===
 		StaticText(parent, Rect(10, yPos, 400, 25))
 			.string_("48-BAND MORPHING RESONATOR (Shared)")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 30;
 		makeMasterButton.value(parent, 10, yPos, 150, "Filter", \filterOn);
@@ -813,7 +826,7 @@ Each track tab contains:
 		// === TRACK OVERVIEW ===
 		StaticText(parent, Rect(10, yPos, 400, 25))
 			.string_("TRACK OVERVIEW")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 30;
 
@@ -822,7 +835,7 @@ Each track tab contains:
 
 			StaticText(parent, Rect(10, trackY, 80, 20))
 				.string_("TRACK " ++ (i + 1))
-				.font_(Font("Monaco", 11, true));
+				.font_(Font("DejaVu Sans Mono", 11, true));
 
 			// VU Meter
 			levelMeters[i] = LevelIndicator(parent, Rect(10, trackY + 20, 80, 12))
@@ -836,8 +849,8 @@ Each track tab contains:
 			// Mute
 			Button(parent, Rect(100, trackY, 60, 35))
 				.states_([
-					["MUTE", Color.black, Color.gray(0.5)],
-					["MUTE", Color.white, Color.red(0.7)]
+					["MUTE", colors.buttonText, Color.gray(0.5)],
+					["MUTE", colors.buttonTextActive, Color.red(0.7)]
 				])
 				.action_({ arg btn;
 					trackManager.setMute(i, btn.value.asBoolean);
@@ -846,8 +859,8 @@ Each track tab contains:
 			// Solo
 			Button(parent, Rect(165, trackY, 60, 35))
 				.states_([
-					["SOLO", Color.black, Color.gray(0.5)],
-					["SOLO", Color.white, Color.yellow(0.8)]
+					["SOLO", colors.buttonText, Color.gray(0.5)],
+					["SOLO", colors.buttonTextActive, Color.yellow(0.8)]
 				])
 				.action_({ arg btn;
 					trackManager.setSolo(i, btn.value.asBoolean);
@@ -856,7 +869,7 @@ Each track tab contains:
 			// Volume
 			StaticText(parent, Rect(235, trackY, 50, 20))
 				.string_("Vol")
-				.font_(Font("Monaco", 9));
+				.font_(Font("DejaVu Sans Mono", 9));
 			Slider(parent, Rect(235, trackY + 18, 180, 18))
 				.value_(0.8)
 				.action_({ arg sl;
@@ -866,7 +879,7 @@ Each track tab contains:
 			// Pan
 			StaticText(parent, Rect(425, trackY, 50, 20))
 				.string_("Pan")
-				.font_(Font("Monaco", 9));
+				.font_(Font("DejaVu Sans Mono", 9));
 			Slider(parent, Rect(425, trackY + 18, 180, 18))
 				.value_(0.5)
 				.action_({ arg sl;
@@ -876,7 +889,7 @@ Each track tab contains:
 			// Viewfinder button (Phase 7)
 			Button(parent, Rect(615, trackY, 50, 35))
 				.states_([["VIEW", colors.fg, colors.blue]])
-				.font_(Font("Monaco", 8, true))
+				.font_(Font("DejaVu Sans Mono", 8, true))
 				.action_({
 					if(~viewfinder.notNil, {
 						~viewfinder.createWindow(i);
@@ -891,7 +904,7 @@ Each track tab contains:
 		// === MASTER OUTPUT ===
 		StaticText(parent, Rect(10, yPos, 400, 25))
 			.string_("MASTER OUTPUT")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 30;
 		makeMasterSlider.value(parent, 10, yPos, "Master Volume", ControlSpec(0, 1, \lin), \masterVol, 0.8);
@@ -901,14 +914,14 @@ Each track tab contains:
 		// === CPU MONITOR ===
 		StaticText(parent, Rect(10, yPos, 200, 20))
 			.string_("CPU USAGE")
-			.font_(Font("Monaco", 12, true));
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 25;
 
 		// Average CPU
 		StaticText(parent, Rect(10, yPos, 80, 18))
 			.string_("Average")
-			.font_(Font("Monaco", 9));
+			.font_(Font("DejaVu Sans Mono", 9));
 
 		cpuMeterAvg = LevelIndicator(parent, Rect(95, yPos, 200, 18))
 			.warning_(0.5)
@@ -918,7 +931,7 @@ Each track tab contains:
 
 		cpuTextAvg = StaticText(parent, Rect(300, yPos, 60, 18))
 			.string_("0%")
-			.font_(Font("Monaco", 9))
+			.font_(Font("DejaVu Sans Mono", 9))
 			.align_(\right);
 
 		yPos = yPos + 22;
@@ -926,7 +939,7 @@ Each track tab contains:
 		// Peak CPU
 		StaticText(parent, Rect(10, yPos, 80, 18))
 			.string_("Peak")
-			.font_(Font("Monaco", 9));
+			.font_(Font("DejaVu Sans Mono", 9));
 
 		cpuMeterPeak = LevelIndicator(parent, Rect(95, yPos, 200, 18))
 			.warning_(0.7)
@@ -936,14 +949,14 @@ Each track tab contains:
 
 		cpuTextPeak = StaticText(parent, Rect(300, yPos, 60, 18))
 			.string_("0%")
-			.font_(Font("Monaco", 9))
+			.font_(Font("DejaVu Sans Mono", 9))
 			.align_(\right);
 
 		yPos = yPos + 25;
 
 		StaticText(parent, Rect(10, yPos, 400, 40))
 			.string_("Target: <50% average, <80% peak\nHigh CPU may cause audio dropouts")
-			.font_(Font("Monaco", 9))
+			.font_(Font("DejaVu Sans Mono", 9))
 			.stringColor_(colors.brightBlack);
 	};
 

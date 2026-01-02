@@ -32,3 +32,12 @@ Thumbs.db
 *.o
 *.so
 *.dylib
+
+# Development archive
+archive/
+
+# .claude directory (AI assistant)
+.claude/
+
+# Test files
+tests/

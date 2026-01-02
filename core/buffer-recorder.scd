@@ -28,6 +28,7 @@ Usage:
 		// Storage
 		buffer: nil,
 		isRecording: false,
+		tempFilePath: nil,  // For waveform display of recorded buffers
 
 		/*
 		Function: init
@@ -68,8 +69,8 @@ Usage:
 						arg in = 0, buf = 0, recLevel = 1.0, preLevel = 0.0;
 						var input, output;
 
-						// Get input signal
-						input = SoundIn.ar(in);
+						// Get input signal (boosted 3x for better recording levels)
+						input = SoundIn.ar(in) * 3.0;
 
 						// Record to buffer (looping)
 						RecordBuf.ar(
@@ -110,7 +111,7 @@ Usage:
 
 		/*
 		Function: stopRecording
-		Purpose: Stop recording
+		Purpose: Stop recording and write buffer to temp file for waveform display
 		*/
 		stopRecording: {
 			arg self;
@@ -119,7 +120,15 @@ Usage:
 				recordSynth.free;
 				recordSynth = nil;
 				self.isRecording = false;
-				"Recording stopped.".postln;
+
+				// Write buffer to temp file so viewfinder can display it
+				fork {
+					server.sync;
+					self.tempFilePath = PathName.tmp +/+ "s4_recording_" ++ Date.getDate.stamp ++ ".wav";
+					self.buffer.write(self.tempFilePath, "WAV", "int16");
+					server.sync;
+					"Recording stopped. Temp file: %".format(self.tempFilePath).postln;
+				};
 			});
 
 			self;
