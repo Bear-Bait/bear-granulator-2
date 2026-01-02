@@ -17,6 +17,7 @@ Each track tab contains:
 ~s4FourTrackGUI = {
 	arg trackManager, masterBus, server;
 	var window, updateTasks, levelMeters, levelResponders;
+	var cpuMeterAvg, cpuMeterPeak, cpuTextAvg, cpuTextPeak, cpuUpdateTask;
 	var publicAPI;
 	var makeSlider, makeButton, makeMasterSlider, makeMasterButton;
 	var makeTrackTab, makeMasterTab;
@@ -896,10 +897,54 @@ Each track tab contains:
 		makeMasterSlider.value(parent, 10, yPos, "Master Volume", ControlSpec(0, 1, \lin), \masterVol, 0.8);
 
 		yPos = yPos + 40;
-		StaticText(parent, Rect(10, yPos, 400, 60))
-			.string_("CPU Monitor:\nUse s.avgCPU and s.peakCPU to check performance.\nTarget: <50% average, <80% peak")
-			.font_(Font("Monaco", 10))
-			.stringColor_(Color.gray(0.7));
+
+		// === CPU MONITOR ===
+		StaticText(parent, Rect(10, yPos, 200, 20))
+			.string_("CPU USAGE")
+			.font_(Font("Monaco", 12, true));
+
+		yPos = yPos + 25;
+
+		// Average CPU
+		StaticText(parent, Rect(10, yPos, 80, 18))
+			.string_("Average")
+			.font_(Font("Monaco", 9));
+
+		cpuMeterAvg = LevelIndicator(parent, Rect(95, yPos, 200, 18))
+			.warning_(0.5)
+			.critical_(0.8)
+			.style_(\led)
+			.numSteps_(20);
+
+		cpuTextAvg = StaticText(parent, Rect(300, yPos, 60, 18))
+			.string_("0%")
+			.font_(Font("Monaco", 9))
+			.align_(\right);
+
+		yPos = yPos + 22;
+
+		// Peak CPU
+		StaticText(parent, Rect(10, yPos, 80, 18))
+			.string_("Peak")
+			.font_(Font("Monaco", 9));
+
+		cpuMeterPeak = LevelIndicator(parent, Rect(95, yPos, 200, 18))
+			.warning_(0.7)
+			.critical_(0.9)
+			.style_(\led)
+			.numSteps_(20);
+
+		cpuTextPeak = StaticText(parent, Rect(300, yPos, 60, 18))
+			.string_("0%")
+			.font_(Font("Monaco", 9))
+			.align_(\right);
+
+		yPos = yPos + 25;
+
+		StaticText(parent, Rect(10, yPos, 400, 40))
+			.string_("Target: <50% average, <80% peak\nHigh CPU may cause audio dropouts")
+			.font_(Font("Monaco", 9))
+			.stringColor_(colors.brightBlack);
 	};
 
 	// ========================================
@@ -920,6 +965,7 @@ Each track tab contains:
 					levelResponders.do({ arg resp;
 						if(resp.notNil, { resp.free; });
 					});
+					if(cpuUpdateTask.notNil, { cpuUpdateTask.stop; });
 					"Four-track GUI closed.".postln;
 				});
 
@@ -989,6 +1035,28 @@ Each track tab contains:
 					}.defer;
 				}, "/levels" ++ i);
 			});
+
+			// Create CPU monitoring task
+			cpuUpdateTask = Routine({
+				loop {
+					{
+						var avg = server.avgCPU / 100;  // Convert to 0-1
+						var peak = server.peakCPU / 100;
+
+						if(cpuMeterAvg.notNil, {
+							cpuMeterAvg.value_(avg);
+							cpuTextAvg.string_((avg * 100).round(0.1).asString ++ "%");
+						});
+
+						if(cpuMeterPeak.notNil, {
+							cpuMeterPeak.value_(peak);
+							cpuMeterPeak.peakLevel_(peak);
+							cpuTextPeak.string_((peak * 100).round(0.1).asString ++ "%");
+						});
+					}.defer;
+					0.5.wait;  // Update every 500ms
+				}
+			}).play(AppClock);
 
 			window.front;
 		},
