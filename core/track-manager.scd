@@ -383,13 +383,15 @@ Public API:
 
 			// Free old mapper if exists
 			if(track.modMappers[modNum].notNil, {
-				// modMappers[modNum] is now (synth: X, bus: Y)
-				if(track.modMappers[modNum].synth.notNil, {
-					track.modMappers[modNum].synth.free;
+				// modMappers[modNum] is (synth: X, bus: Y)
+				var mapper = track.modMappers[modNum];
+				if(mapper.synth.notNil, {
+					mapper.synth.free;
 				});
-				if(track.modMappers[modNum].bus.notNil, {
-					track.modMappers[modNum].bus.free;
+				if(mapper.bus.notNil, {
+					mapper.bus.free;
 				});
+				track.modMappers[modNum] = nil;
 			});
 
 			// Create new mapper (returns (synth: X, bus: Y))
@@ -431,7 +433,14 @@ Public API:
 			});
 
 			if(track.modMappers[modNum].notNil, {
-				track.modMappers[modNum].free;
+				// modMappers[modNum] is (synth: X, bus: Y)
+				var mapper = track.modMappers[modNum];
+				if(mapper.synth.notNil, {
+					mapper.synth.free;
+				});
+				if(mapper.bus.notNil, {
+					mapper.bus.free;
+				});
 				track.modMappers[modNum] = nil;
 			});
 
