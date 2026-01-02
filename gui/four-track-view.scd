@@ -544,8 +544,8 @@ Each track tab contains:
 		};
 
 		// === ZOOM & NAVIGATION ===
-		// Arrow key controls
-		parent.view.addAction({ arg view, char, modifiers, unicode, keycode;
+		// Arrow key controls on waveView
+		waveView.keyDownAction = { arg view, char, modifiers, unicode, keycode;
 			var currentBuffer = track.recorder.buffer;
 			if(currentBuffer.notNil, {
 				var numFrames = currentBuffer.numFrames;
@@ -588,7 +588,7 @@ Each track tab contains:
 					{ waveView.scroll(newStart); waveView.refresh; }.defer;
 				});
 			});
-		}, \keyDownAction);
+		};
 
 		// Mouse wheel zoom
 		waveView.mouseWheelAction = { arg view, x, y, modifiers, xDelta, yDelta;
