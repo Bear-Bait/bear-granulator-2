@@ -511,14 +511,9 @@ Each track tab contains:
 			.timeCursorOn_(false)
 			.drawsWaveForm_(true)
 			.elasticMode_(1)
-			.resize_(5)
-			.setEditable_(true)           // Enable editing/selection
-			.canFocus_(true)              // Allow keyboard focus
-			.focus(true);                 // Request focus
+			.resize_(5);
 
 		waveView.setSelectionColor(0, Color.yellow(0.3));
-		waveView.setSelectionStart(0, 0);
-		waveView.setSelectionSize(0, 0);
 
 		// Load waveform when buffer is ready
 		fork {
