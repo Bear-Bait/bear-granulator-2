@@ -20,6 +20,24 @@ Each track tab contains:
 	var publicAPI;
 	var makeSlider, makeButton, makeMasterSlider, makeMasterButton;
 	var makeTrackTab, makeMasterTab;
+	var colors;  // Doom Material color palette
+
+	// Doom Material Color Palette
+	colors = (
+		bg: Color.fromHexString("#262938"),
+		fg: Color.fromHexString("#EEFFFF"),
+		black: Color.fromHexString("#171F24"),
+		red: Color.fromHexString("#ff5370"),
+		green: Color.fromHexString("#c3e88d"),
+		yellow: Color.fromHexString("#ffcb6b"),
+		blue: Color.fromHexString("#82aaff"),
+		magenta: Color.fromHexString("#c792ea"),
+		cyan: Color.fromHexString("#89DDFF"),
+		white: Color.fromHexString("#EEFFFF"),
+		brightBlack: Color.fromHexString("#37474F"),
+		orange: Color.fromHexString("#f78c6c"),
+		selection: Color.fromHexString("#cc7000")
+	);
 
 	// Track update tasks for waveform displays
 	updateTasks = Array.newClear(4);
@@ -117,7 +135,7 @@ Each track tab contains:
 		StaticText(parent, Rect(10, 10, 200, 25))
 			.string_("TRACK " ++ (trackNum + 1))
 			.font_(Font("Monaco", 14, true))
-			.stringColor_(Color.cyan);
+			.stringColor_(colors.cyan);
 
 		// Volume
 		StaticText(parent, Rect(220, 10, 50, 20))
@@ -142,8 +160,8 @@ Each track tab contains:
 		// Mute
 		Button(parent, Rect(480, 10, 60, 40))
 			.states_([
-				["MUTE", Color.black, Color.gray(0.5)],
-				["MUTE", Color.white, Color.red(0.7)]
+				["MUTE", colors.fg, colors.brightBlack],
+				["MUTE", colors.black, colors.red]
 			])
 			.action_({ arg btn;
 				trackManager.setMute(trackNum, btn.value.asBoolean);
@@ -152,8 +170,8 @@ Each track tab contains:
 		// Solo
 		Button(parent, Rect(545, 10, 60, 40))
 			.states_([
-				["SOLO", Color.black, Color.gray(0.5)],
-				["SOLO", Color.white, Color.yellow(0.8)]
+				["SOLO", colors.fg, colors.brightBlack],
+				["SOLO", colors.black, colors.yellow]
 			])
 			.action_({ arg btn;
 				trackManager.setSolo(trackNum, btn.value.asBoolean);
@@ -161,14 +179,14 @@ Each track tab contains:
 
 		// Modulation window button (Phase 5)
 		Button(parent, Rect(610, 10, 60, 40))
-			.states_([["MOD", Color.black, Color.cyan(0.6)]])
+			.states_([["MOD", colors.black, colors.cyan]])
 			.action_({
 				~s4ModulationWindow.value(trackManager, server, trackNum).create;
 			});
 
 		// Viewfinder button (Phase 7)
 		Button(parent, Rect(675, 10, 70, 40))
-			.states_([["LOOP\nVIEW", Color.white, Color.new(0.2, 0.6, 0.8)]])
+			.states_([["LOOP\nVIEW", colors.fg, colors.blue]])
 			.font_(Font("Monaco", 9, true))
 			.action_({
 				if(~viewfinder.notNil, {
@@ -188,7 +206,7 @@ Each track tab contains:
 
 		// Load Audio File button
 		Button(parent, Rect(col1X, yPos, 150, 30))
-			.states_([["Load Audio File", Color.black, Color.cyan(0.6)]])
+			.states_([["Load Audio File", colors.black, colors.cyan]])
 			.action_({
 				"Opening file dialog...".postln;
 				FileDialog({ |path|
@@ -277,8 +295,8 @@ Each track tab contains:
 		// Play/Stop buttons for grain engine
 		Button(parent, Rect(col1X, yPos, 70, 25))
 			.states_([
-				["PLAY", Color.black, Color.green(0.6)],
-				["STOP", Color.white, Color.red(0.7)]
+				["PLAY", colors.black, colors.green],
+				["STOP", colors.fg, colors.red]
 			])
 			.action_({ arg btn;
 				if(btn.value == 1, {
@@ -314,8 +332,8 @@ Each track tab contains:
 		// Record button
 		Button(parent, Rect(col1X + 130, yPos, 70, 25))
 			.states_([
-				["REC", Color.black, Color.green(0.7)],
-				["STOP", Color.white, Color.red(0.7)]
+				["REC", colors.black, colors.green],
+				["STOP", colors.fg, colors.red]
 			])
 			.action_({ arg btn;
 				if(btn.value == 1, {
@@ -501,21 +519,21 @@ Each track tab contains:
 		StaticText(parent, Rect(10, yPos, 600, 20))
 			.string_("LOOP WINDOW (Drag to select • Arrows: Up/Down=Zoom, Left/Right=Pan • Mouse wheel zooms)")
 			.font_(Font("Monaco", 10, true))
-			.stringColor_(Color.cyan);
+			.stringColor_(colors.cyan);
 
 		waveView = SoundFileView(parent, Rect(10, yPos + 25, 1420, 150))
-			.background_(Color.black)
-			.waveColors_([Color.cyan.alpha_(0.8)])
+			.background_(colors.black)
+			.waveColors_([colors.cyan.alpha_(0.8)])
 			.gridOn_(true)
-			.gridColor_(Color.gray(0.3))
+			.gridColor_(colors.brightBlack)
 			.timeCursorOn_(true)
-			.timeCursorColor_(Color.yellow.alpha_(0.6))
+			.timeCursorColor_(colors.yellow.alpha_(0.6))
 			.drawsWaveForm_(true)
 			.elasticMode_(1)
 			.gridResolution_(0.1)
 			.resize_(5);
 
-		waveView.setSelectionColor(0, Color.yellow(0.3));
+		waveView.setSelectionColor(0, colors.selection.alpha_(0.5));
 
 		// Load waveform when buffer is ready
 		fork {
@@ -656,7 +674,7 @@ Each track tab contains:
 			.drawFunc_({
 				var pos = track.params[\position] ? 0.0;
 				var x = pos * 1420;
-				Pen.color = Color.red(0.8, 0.7);
+				Pen.color = colors.red.alpha_(0.7);
 				Pen.width = 2;
 				Pen.line(Point(x, 0), Point(x, 150));
 				Pen.stroke;
@@ -681,9 +699,86 @@ Each track tab contains:
 		StaticText(parent, Rect(10, yPos, 400, 30))
 			.string_("MASTER CONTROLS")
 			.font_(Font("Monaco", 16, true))
-			.stringColor_(Color.cyan);
+			.stringColor_(colors.cyan);
 
 		yPos = yPos + 40;
+
+		// === GLOBAL TRANSPORT ===
+		StaticText(parent, Rect(10, yPos, 400, 25))
+			.string_("TRANSPORT")
+			.font_(Font("Monaco", 12, true));
+
+		yPos = yPos + 30;
+
+		// Play All button
+		Button(parent, Rect(10, yPos, 100, 40))
+			.states_([
+				["PLAY ALL", colors.black, colors.green]
+			])
+			.action_({
+				4.do({ arg i;
+					var track = trackManager.getTrack(i);
+					if(track.grainSynth.notNil, {
+						track.grainSynth.run(true);
+					});
+				});
+				"All tracks PLAYING".postln;
+			});
+
+		// Stop All button
+		Button(parent, Rect(115, yPos, 100, 40))
+			.states_([
+				["STOP ALL", colors.fg, colors.red]
+			])
+			.action_({
+				4.do({ arg i;
+					var track = trackManager.getTrack(i);
+					if(track.grainSynth.notNil, {
+						track.grainSynth.run(false);
+					});
+				});
+				"All tracks STOPPED".postln;
+			});
+
+		yPos = yPos + 50;
+
+		// Global Speed Control
+		StaticText(parent, Rect(10, yPos, 200, 20))
+			.string_("GLOBAL SPEED (Pitch)")
+			.font_(Font("Monaco", 11, true));
+
+		yPos = yPos + 25;
+
+		StaticText(parent, Rect(10, yPos, 120, 18))
+			.string_("Speed")
+			.font_(Font("Monaco", 10));
+
+		Slider(parent, Rect(135, yPos, 200, 18))
+			.value_(0.5)  // Center = 0 semitones
+			.action_({ arg sl;
+				var pitch = sl.value.linlin(0, 1, -24, 24);  // -2 octaves to +2 octaves
+				4.do({ arg i;
+					trackManager.setParam(i, \pitch, pitch);
+				});
+			});
+
+		NumberBox(parent, Rect(340, yPos, 60, 18))
+			.value_(0)
+			.decimals_(1)
+			.font_(Font("Monaco", 9))
+			.action_({ arg nb;
+				var pitch = nb.value;
+				4.do({ arg i;
+					trackManager.setParam(i, \pitch, pitch);
+				});
+			});
+
+		StaticText(parent, Rect(405, yPos, 200, 18))
+			.string_("(-24 to +24 semitones)")
+			.font_(Font("Monaco", 8))
+			.stringColor_(Color.gray(0.6));
+
+		yPos = yPos + 30;
 
 		// === 48-BAND MORPHING RESONATOR ===
 		StaticText(parent, Rect(10, yPos, 400, 25))
@@ -766,7 +861,7 @@ Each track tab contains:
 
 			// Viewfinder button (Phase 7)
 			Button(parent, Rect(615, trackY, 50, 35))
-				.states_([["VIEW", Color.white, Color.new(0.2, 0.6, 0.8)]])
+				.states_([["VIEW", colors.fg, colors.blue]])
 				.font_(Font("Monaco", 8, true))
 				.action_({
 					if(~viewfinder.notNil, {
@@ -823,8 +918,8 @@ Each track tab contains:
 
 				tabButtons[i] = Button(window, Rect(buttonX, buttonY, 140, buttonH))
 					.states_([
-						[label, Color.white, Color.gray(0.3)],
-						[label, Color.black, Color.cyan(0.7)]
+						[label, colors.fg, colors.brightBlack],
+						[label, colors.black, colors.cyan]
 					])
 					.value_(if(i == 0, 1, 0))
 					.action_({ arg btn;
@@ -843,7 +938,7 @@ Each track tab contains:
 			// Create composite views for each tab
 			5.do({ arg i;
 				tabViews[i] = CompositeView(window, Rect(0, contentY, 1450, 740))
-					.background_(Color.gray(0.15))
+					.background_(colors.bg)
 					.visible_(i == 0); // Only first tab visible initially
 
 				if(i < 4, {
