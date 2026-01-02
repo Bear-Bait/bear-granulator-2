@@ -89,7 +89,7 @@ Usage:
 
 			// Selection is enabled by default in SoundFileView
 
-			// Load waveform
+			// Load waveform (DEFER for Qt thread safety)
 			{
 				var soundFile;
 				server.sync;
@@ -98,10 +98,13 @@ Usage:
 				if(track.filePath.notNil, {
 					soundFile = SoundFile.new;
 					if(soundFile.openRead(track.filePath), {
-						sfv.soundfile = soundFile;
-						sfv.read(0, soundFile.numFrames);
-						soundFile.close;
-						sfv.refresh;
+						// MUST defer all SoundFileView operations
+						{
+							sfv.soundfile = soundFile;
+							sfv.read(0, soundFile.numFrames);
+							soundFile.close;
+							sfv.refresh;
+						}.defer;
 					}, {
 						"Viewfinder: Could not open audio file".warn;
 					});
@@ -137,12 +140,13 @@ Usage:
 			// === THE BRIDGE: Real-time update on mouse drag ===
 			sfv.mouseMoveAction = { arg view;
 				var sel = view.selection(0);
-				if(sel.notNil and: { sel[1] > 0 }, {
+				var currentBuffer = track.recorder.buffer;  // Get buffer from track
+				if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
 					var startFrame = sel[0];
 					var duration = sel[1];
 					var endFrame = startFrame + duration;
-					var numFrames = buffer.numFrames;
-					var sampleRate = buffer.sampleRate;
+					var numFrames = currentBuffer.numFrames;
+					var sampleRate = currentBuffer.sampleRate;
 
 					var loopStart = (startFrame / numFrames).clip(0.0, 1.0);
 					var loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
@@ -174,11 +178,12 @@ Usage:
 			// === Finalize on mouse up ===
 			sfv.mouseUpAction = { arg view;
 				var sel = view.selection(0);
-				if(sel.notNil and: { sel[1] > 0 }, {
+				var currentBuffer = track.recorder.buffer;  // Get buffer from track
+				if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
 					var startFrame = sel[0];
 					var duration = sel[1];
 					var endFrame = startFrame + duration;
-					var numFrames = buffer.numFrames;
+					var numFrames = currentBuffer.numFrames;
 					var loopStart, loopEnd, startTime, endTime, loopDur;
 
 					loopStart = (startFrame / numFrames).clip(0.0, 1.0);
@@ -195,14 +200,100 @@ Usage:
 					trackManager.setParam(trackNum, \loopEnd, loopEnd);
 
 					// Post feedback
-					startTime = (loopStart * buffer.numFrames / buffer.sampleRate).round(0.001);
-					endTime = (loopEnd * buffer.numFrames / buffer.sampleRate).round(0.001);
+					startTime = (loopStart * currentBuffer.numFrames / currentBuffer.sampleRate).round(0.001);
+					endTime = (loopEnd * currentBuffer.numFrames / currentBuffer.sampleRate).round(0.001);
 					loopDur = (endTime - startTime).round(0.001);
 
 					postf("Track %: Loop Window Set\n", trackNum + 1);
 					postf("  Start: %s (%.1f%%)\n", startTime, loopStart * 100);
 					postf("  End: %s (%.1f%%)\n", endTime, loopEnd * 100);
 					postf("  Duration: %s\n", loopDur);
+				});
+			};
+
+			// === ZOOM FUNCTIONALITY ===
+			// Arrow key navigation: Up/Down = Zoom, Left/Right = Pan
+			win.view.keyDownAction = { arg view, char, modifiers, unicode, keycode;
+				var currentBuffer = track.recorder.buffer;
+				if(currentBuffer.notNil, {
+					var numFrames = currentBuffer.numFrames;
+					var zoomFactor = 1.5;
+					var panAmount = 0.1;
+
+					// UP ARROW (keycode 63232) - Zoom In
+					if(keycode == 63232, {
+						var viewStart = sfv.scrollPos;
+						var viewSize = sfv.viewFrames;
+						var newSize = (viewSize / zoomFactor).max(100); // Minimum 100 frames visible
+						var center = viewStart + (viewSize / 2);
+						var newStart = (center - (newSize / 2)).clip(0, numFrames - newSize);
+
+						{
+							sfv.scroll(newStart);
+							sfv.zoom(newSize);
+							sfv.refresh;
+						}.defer;
+					});
+
+					// DOWN ARROW (keycode 63233) - Zoom Out
+					if(keycode == 63233, {
+						var viewStart = sfv.scrollPos;
+						var viewSize = sfv.viewFrames;
+						var newSize = (viewSize * zoomFactor).min(numFrames); // Max = full buffer
+						var center = viewStart + (viewSize / 2);
+						var newStart = (center - (newSize / 2)).clip(0, numFrames - newSize);
+
+						{
+							sfv.scroll(newStart);
+							sfv.zoom(newSize);
+							sfv.refresh;
+						}.defer;
+					});
+
+					// LEFT ARROW (keycode 63234) - Pan Left
+					if(keycode == 63234, {
+						var viewStart = sfv.scrollPos;
+						var viewSize = sfv.viewFrames;
+						var newStart = (viewStart - (viewSize * panAmount)).max(0);
+
+						{
+							sfv.scroll(newStart);
+							sfv.refresh;
+						}.defer;
+					});
+
+					// RIGHT ARROW (keycode 63235) - Pan Right
+					if(keycode == 63235, {
+						var viewStart = sfv.scrollPos;
+						var viewSize = sfv.viewFrames;
+						var newStart = (viewStart + (viewSize * panAmount)).min(numFrames - viewSize);
+
+						{
+							sfv.scroll(newStart);
+							sfv.refresh;
+						}.defer;
+					});
+				});
+			};
+
+			// Mouse wheel zoom
+			sfv.mouseWheelAction = { arg view, x, y, modifiers, xDelta, yDelta;
+				var currentBuffer = track.recorder.buffer;
+				if(currentBuffer.notNil, {
+					var numFrames = currentBuffer.numFrames;
+					var zoomFactor = if(yDelta > 0, { 1.2 }, { 0.83 }); // Zoom in/out
+					var viewStart = sfv.scrollPos;
+					var viewSize = sfv.viewFrames;
+					var mousePos = x / (winWidth - 20); // Normalized mouse position
+					var mouseFrame = viewStart + (viewSize * mousePos);
+					var newSize = (viewSize * zoomFactor).clip(100, numFrames);
+					var newStart = (mouseFrame - (newSize * mousePos)).clip(0, numFrames - newSize);
+
+					{
+						sfv.scroll(newStart);
+						sfv.zoom(newSize);
+						sfv.refresh;
+					}.defer;
 				});
 			};
 
@@ -219,11 +310,14 @@ Usage:
 				.font_(Font("Monaco", 10))
 				.action_({
 					// Reset to full buffer
+					var currentBuffer = track.recorder.buffer;
 					trackManager.setParam(trackNum, \loopStart, 0.0);
 					trackManager.setParam(trackNum, \loopEnd, 1.0);
 					{
-						sfv.setSelection(0, [0, buffer.numFrames]);
-						sfv.refresh;
+						if(currentBuffer.notNil, {
+							sfv.setSelection(0, [0, currentBuffer.numFrames]);
+							sfv.refresh;
+						});
 					}.defer;
 					"Track %: Loop window reset to full buffer".format(trackNum + 1).postln;
 				});
@@ -232,9 +326,12 @@ Usage:
 				.states_([["Select All", Color.white, Color.new(0.2, 0.6, 0.8)]])
 				.font_(Font("Monaco", 10))
 				.action_({
+					var currentBuffer = track.recorder.buffer;
 					{
-						sfv.setSelection(0, [0, buffer.numFrames]);
-						sfv.refresh;
+						if(currentBuffer.notNil, {
+							sfv.setSelection(0, [0, currentBuffer.numFrames]);
+							sfv.refresh;
+						});
 					}.defer;
 				});
 
@@ -260,7 +357,7 @@ Usage:
 
 		// Update waveform display (call after loading new buffer)
 		updateWaveform: { arg self, trackNum = 0;
-			var sfv, track, buffer;
+			var sfv, track, buffer, soundFile;
 
 			sfv = soundFileViews[trackNum];
 			if(sfv.isNil, {
@@ -271,16 +368,22 @@ Usage:
 			track = trackManager.getTrack(trackNum);
 			buffer = track.recorder.buffer;
 
-			if(buffer.notNil, {
-				{
-					sfv.soundfile = buffer.path;
-					sfv.read(0, buffer.numFrames);
-					sfv.setSelection(0, [0, buffer.numFrames]); // Select all by default
-					sfv.refresh;
-					"Waveform updated for Track %".format(trackNum + 1).postln;
-				}.defer;
+			if(buffer.notNil and: { track.filePath.notNil }, {
+				soundFile = SoundFile.new;
+				if(soundFile.openRead(track.filePath), {
+					{
+						sfv.soundfile = soundFile;
+						sfv.read(0, soundFile.numFrames);
+						soundFile.close;
+						sfv.setSelection(0, [0, buffer.numFrames]); // Select all by default
+						sfv.refresh;
+						"Waveform updated for Track %".format(trackNum + 1).postln;
+					}.defer;
+				}, {
+					"Viewfinder: Could not open audio file for refresh".warn;
+				});
 			}, {
-				"Viewfinder: Track % has no buffer".format(trackNum + 1).warn;
+				"Viewfinder: Track % has no buffer or file path".format(trackNum + 1).warn;
 			});
 		},
 

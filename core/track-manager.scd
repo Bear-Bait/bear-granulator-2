@@ -82,9 +82,9 @@ Public API:
 				mode: 0,  // Phase 6: Default to TAPE mode
 				grainSize: 0.1,
 				density: 30,      // Legacy parameter
-				overlap: 4,       // Phase 6b: Default overlap count
+				overlap: 1,       // Phase 6b: Default overlap count (1 = full sample playback)
 				useOverlap: 1,    // Phase 6b: Use overlap mode by default
-				position: 0.5,
+				position: 0.0,    // Default to start of buffer
 				pitch: 0,
 				posJitter: 0.1,
 				pitchJitter: 0,
@@ -142,13 +142,16 @@ Public API:
 
 			track.params = defaultParams.copy;
 
-			// Create grain synth with parameters
+			// Create grain synth with parameters (STOPPED by default)
 			track.grainSynth = Synth(\s4GrainEngine, [
 				\out, track.audioBus.index,
 				\bufnum, track.recorder.getBufferNum
 			] ++ track.params.asPairs, addAction: \addToHead);
 
-			"Track manager: Track % created (bus: %)".format(
+			// Start synth in STOPPED state - user must press PLAY
+			track.grainSynth.run(false);
+
+			"Track manager: Track % created (bus: %) - STOPPED (press PLAY to start)".format(
 				trackNum + 1,
 				track.audioBus.index
 			).postln;

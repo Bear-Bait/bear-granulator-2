@@ -233,8 +233,11 @@ Each track tab contains:
 								"New buffer number: %".format(track.recorder.buffer.bufnum).postln;
 
 								if(track.grainSynth.notNil, {
+									// Stop synth first
+									track.grainSynth.run(false);
+									// Update buffer
 									track.grainSynth.set(\bufnum, track.recorder.buffer.bufnum);
-									"Track %: Grain synth updated to buffer %".format(
+									"Track %: Grain synth updated to buffer % (STOPPED - press PLAY to start)".format(
 										trackNum + 1,
 										track.recorder.buffer.bufnum
 									).postln;
@@ -242,20 +245,11 @@ Each track tab contains:
 									"WARNING: Grain synth is nil!".postln;
 								});
 
-								// Update waveform
-								0.2.wait;
-								"Loading waveform data...".postln;
-								track.recorder.buffer.loadToFloatArray(action: { arg array;
-									{
-										waveView.setData(array);
-										waveView.refresh;
-										"✓ Loaded: % (% seconds, % frames)".format(
-											PathName(filePath).fileName,
-											duration.round(0.01),
-											numFrames
-										).postln;
-									}.defer;
-								});
+								"✓ Loaded: % (% seconds, % frames)".format(
+									PathName(filePath).fileName,
+									duration.round(0.01),
+									numFrames
+								).postln;
 							};
 						}, {
 							"❌ Failed to open audio file: %".format(filePath).postln;
@@ -276,16 +270,18 @@ Each track tab contains:
 			])
 			.action_({ arg btn;
 				if(btn.value == 1, {
-					// Start grain synth if stopped
-					if(track.grainSynth.isNil or: { track.grainSynth.isPlaying.not }, {
-						trackManager.tracks[trackNum].grainSynth.run(true);
-						"Track % grain engine started".format(trackNum + 1).postln;
+					// PLAY - Start grain synth
+					if(track.grainSynth.notNil, {
+						track.grainSynth.run(true);
+						"Track % grain engine PLAYING".format(trackNum + 1).postln;
+					}, {
+						"ERROR: Grain synth is nil!".error;
 					});
 				}, {
-					// Stop grain synth
+					// STOP - Pause grain synth
 					if(track.grainSynth.notNil, {
-						trackManager.tracks[trackNum].grainSynth.run(false);
-						"Track % grain engine stopped".format(trackNum + 1).postln;
+						track.grainSynth.run(false);
+						"Track % grain engine STOPPED".format(trackNum + 1).postln;
 					});
 				});
 			});
@@ -331,14 +327,14 @@ Each track tab contains:
 		// Grain controls
 		makeSlider.value(parent, col1X, yPos, "Grain Size", ControlSpec(0.001, 60.0, \exp), \grainSize, trackNum, 0.1);
 		yPos = yPos + 22;
-		makeSlider.value(parent, col1X, yPos, "Overlap", ControlSpec(1, 128, \lin), \overlap, trackNum, 4);
+		makeSlider.value(parent, col1X, yPos, "Overlap", ControlSpec(1, 128, \lin), \overlap, trackNum, 1);
 		yPos = yPos + 22;
 		StaticText(parent, Rect(col1X, yPos, 350, 18))
 			.string_("(Overlap = simultaneous grains, auto-adjusts for grain size)")
 			.font_(Font("Monaco", 8))
 			.stringColor_(Color.gray(0.6));
 		yPos = yPos + 22;
-		makeSlider.value(parent, col1X, yPos, "Position", ControlSpec(0, 1, \lin), \position, trackNum, 0.5);
+		makeSlider.value(parent, col1X, yPos, "Position", ControlSpec(0, 1, \lin), \position, trackNum, 0.0);
 		yPos = yPos + 22;
 		makeSlider.value(parent, col1X, yPos, "Pitch", ControlSpec(-24, 24, \lin), \pitch, trackNum, 0);
 		yPos = yPos + 22;
@@ -487,72 +483,149 @@ Each track tab contains:
 		yPos = yPos + 22;
 		makeSlider.value(parent, col3X, yPos, "Shimmer Mix", ControlSpec(0, 1, \lin), \shimmerMix, trackNum, 0);
 
-		// === WAVEFORM DISPLAY ===
-		StaticText(parent, Rect(10, 540, 350, 20))
-			.string_("WAVEFORM (Shift+Drag to set loop region)")
-			.font_(Font("Monaco", 10, true));
+		// === INTEGRATED WAVEFORM VIEWFINDER ===
+		yPos = 540;
 
-		waveView = SoundFileView(parent, Rect(10, 565, 1420, 150))
+		StaticText(parent, Rect(10, yPos, 600, 20))
+			.string_("LOOP WINDOW (Drag to select • Arrows: Up/Down=Zoom, Left/Right=Pan • Mouse wheel zooms)")
+			.font_(Font("Monaco", 10, true))
+			.stringColor_(Color.cyan);
+
+		waveView = SoundFileView(parent, Rect(10, yPos + 25, 1420, 150))
 			.background_(Color.black)
-			.waveColors_([Color.cyan(0.8)])
-			.gridOn_(false)
-			.resize_(5)
-			.elasticMode_(true)  // Auto-scale amplitude
-			.timeCursorOn_(false)  // Disabled - using custom positionView instead
-			.gridColor_(Color.gray(0.2))
-			.drawsWaveForm_(true);
+			.waveColors_([Color.cyan.alpha_(0.8)])
+			.gridOn_(true)
+			.gridColor_(Color.gray(0.3))
+			.timeCursorOn_(false)
+			.drawsWaveForm_(true)
+			.elasticMode_(1)
+			.resize_(5);
 
-		// Set selection color for loop point editing (drag to select region)
 		waveView.setSelectionColor(0, Color.yellow(0.3));
 
-		// Add mouse action to set loop points from selection
-		waveView.mouseUpAction_({ arg view;
-			var selection = view.selection(0); // [start, size]
-			var numFrames = view.numFrames;
-			if(numFrames > 0, {
-				var loopStart = selection[0] / numFrames;
-				var loopEnd = (selection[0] + selection[1]) / numFrames;
-				// Store loop points in track params
+		// Load waveform when buffer is ready
+		fork {
+			0.3.wait;
+			if(track.filePath.notNil, {
+				var sf = SoundFile.new;
+				if(sf.openRead(track.filePath), {
+					{
+						waveView.soundfile = sf;
+						waveView.read(0, sf.numFrames);
+						sf.close;
+						waveView.refresh;
+					}.defer;
+				});
+			});
+		};
+
+		// Mouse drag to set loop points
+		waveView.mouseUpAction = { arg view;
+			var sel = view.selection(0);
+			var currentBuffer = track.recorder.buffer;
+			if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
+				var startFrame = sel[0];
+				var duration = sel[1];
+				var endFrame = startFrame + duration;
+				var numFrames = currentBuffer.numFrames;
+				var loopStart = (startFrame / numFrames).clip(0.0, 1.0);
+				var loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
+
 				trackManager.setParam(trackNum, \loopStart, loopStart);
 				trackManager.setParam(trackNum, \loopEnd, loopEnd);
-				"Track %: Loop set to % - %".format(
+
+				"Track %: Loop % - % (% sec)".format(
 					trackNum + 1,
 					(loopStart * 100).round(0.1),
-					(loopEnd * 100).round(0.1)
+					(loopEnd * 100).round(0.1),
+					((loopEnd - loopStart) * numFrames / currentBuffer.sampleRate).round(0.01)
 				).postln;
 			});
-		});
+		};
 
-		// Position indicator
-		positionView = UserView(parent, Rect(10, 565, 1420, 150))
+		// === ZOOM & NAVIGATION ===
+		// Arrow key controls
+		parent.view.addAction({ arg view, char, modifiers, unicode, keycode;
+			var currentBuffer = track.recorder.buffer;
+			if(currentBuffer.notNil, {
+				var numFrames = currentBuffer.numFrames;
+				var zoomFactor = 1.5;
+				var panAmount = 0.1;
+
+				// UP - Zoom In
+				if(keycode == 63232, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newSize = (viewSize / zoomFactor).max(100);
+					var center = viewStart + (viewSize / 2);
+					var newStart = (center - (newSize / 2)).clip(0, numFrames - newSize);
+					{ waveView.scroll(newStart); waveView.zoom(newSize); waveView.refresh; }.defer;
+				});
+
+				// DOWN - Zoom Out
+				if(keycode == 63233, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newSize = (viewSize * zoomFactor).min(numFrames);
+					var center = viewStart + (viewSize / 2);
+					var newStart = (center - (newSize / 2)).clip(0, numFrames - newSize);
+					{ waveView.scroll(newStart); waveView.zoom(newSize); waveView.refresh; }.defer;
+				});
+
+				// LEFT - Pan Left
+				if(keycode == 63234, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newStart = (viewStart - (viewSize * panAmount)).max(0);
+					{ waveView.scroll(newStart); waveView.refresh; }.defer;
+				});
+
+				// RIGHT - Pan Right
+				if(keycode == 63235, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newStart = (viewStart + (viewSize * panAmount)).min(numFrames - viewSize);
+					{ waveView.scroll(newStart); waveView.refresh; }.defer;
+				});
+			});
+		}, \keyDownAction);
+
+		// Mouse wheel zoom
+		waveView.mouseWheelAction = { arg view, x, y, modifiers, xDelta, yDelta;
+			var currentBuffer = track.recorder.buffer;
+			if(currentBuffer.notNil, {
+				var numFrames = currentBuffer.numFrames;
+				var zoomFactor = if(yDelta > 0, { 1.2 }, { 0.83 });
+				var viewStart = waveView.scrollPos;
+				var viewSize = waveView.viewFrames;
+				var mousePos = x / 1420;
+				var mouseFrame = viewStart + (viewSize * mousePos);
+				var newSize = (viewSize * zoomFactor).clip(100, numFrames);
+				var newStart = (mouseFrame - (newSize * mousePos)).clip(0, numFrames - newSize);
+				{ waveView.scroll(newStart); waveView.zoom(newSize); waveView.refresh; }.defer;
+			});
+		};
+
+		// Position cursor overlay
+		positionView = UserView(parent, Rect(10, yPos + 25, 1420, 150))
 			.background_(Color.clear)
 			.drawFunc_({
-				var pos = trackManager.getTrack(trackNum).params[\position] ? 0.5;
+				var pos = track.params[\position] ? 0.0;
 				var x = pos * 1420;
-				Pen.color = Color.red(0.8);
+				Pen.color = Color.red(0.8, 0.7);
+				Pen.width = 2;
 				Pen.line(Point(x, 0), Point(x, 150));
 				Pen.stroke;
 			})
 			.resize_(5);
 
-		// Update position indicator
+		// Update position cursor
 		updateTasks[trackNum] = Routine({
 			loop {
 				{ positionView.refresh }.defer;
 				0.1.wait;
 			}
 		}).play(AppClock);
-
-		// Load initial waveform
-		fork {
-			0.3.wait;
-			track.recorder.buffer.loadToFloatArray(action: { arg array;
-				{
-					waveView.setData(array);
-					waveView.refresh;
-				}.defer;
-			});
-		};
 	};
 
 	// ========================================
