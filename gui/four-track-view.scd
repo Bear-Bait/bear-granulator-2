@@ -508,9 +508,11 @@ Each track tab contains:
 			.waveColors_([Color.cyan.alpha_(0.8)])
 			.gridOn_(true)
 			.gridColor_(Color.gray(0.3))
-			.timeCursorOn_(false)
+			.timeCursorOn_(true)
+			.timeCursorColor_(Color.yellow.alpha_(0.6))
 			.drawsWaveForm_(true)
 			.elasticMode_(1)
+			.gridResolution_(0.1)
 			.resize_(5);
 
 		waveView.setSelectionColor(0, Color.yellow(0.3));
@@ -531,7 +533,31 @@ Each track tab contains:
 			});
 		};
 
-		// Mouse drag to set loop points
+		// Real-time update while dragging (like popup viewfinder)
+		waveView.mouseMoveAction = { arg view;
+			var sel = view.selection(0);
+			var currentBuffer = track.recorder.buffer;
+			if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
+				var startFrame = sel[0];
+				var duration = sel[1];
+				var endFrame = startFrame + duration;
+				var numFrames = currentBuffer.numFrames;
+				var sampleRate = currentBuffer.sampleRate;
+				var loopStart = (startFrame / numFrames).clip(0.0, 1.0);
+				var loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
+
+				// Ensure minimum window size (1% of buffer)
+				if((loopEnd - loopStart) < 0.01, {
+					loopEnd = (loopStart + 0.01).min(1.0);
+				});
+
+				// Update engine in real-time
+				trackManager.setParam(trackNum, \loopStart, loopStart);
+				trackManager.setParam(trackNum, \loopEnd, loopEnd);
+			});
+		};
+
+		// Finalize on mouse up
 		waveView.mouseUpAction = { arg view;
 			var sel = view.selection(0);
 			var currentBuffer = track.recorder.buffer;
@@ -542,6 +568,12 @@ Each track tab contains:
 				var numFrames = currentBuffer.numFrames;
 				var loopStart = (startFrame / numFrames).clip(0.0, 1.0);
 				var loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
+
+				// Ensure minimum window size
+				if((loopEnd - loopStart) < 0.01, {
+					"Loop window too small (minimum 1% of buffer)".warn;
+					^this;
+				});
 
 				trackManager.setParam(trackNum, \loopStart, loopStart);
 				trackManager.setParam(trackNum, \loopEnd, loopEnd);
