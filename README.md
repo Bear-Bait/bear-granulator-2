@@ -115,8 +115,13 @@ The GUI will open automatically!
 ### 1. Load Audio into Track 1
 1. Click **TRACK 1** tab
 2. Click **Load Audio File**
-3. Select a WAV/AIFF file
+3. Navigate to `samples/stock/` and load one of these:
+   - **a11wlk01.wav** - "Columbia, this is Houston" (Apollo 11 mission audio) 🚀
+   - **a11wlk01-44_1.aiff** - Same audio, different format
+   - **SinedPink.aiff** - Synthetic test tone
 4. Click **PLAY** to hear grains
+
+**Pro tip**: The Apollo 11 sample is PERFECT for granular processing - try tiny grain sizes (0.01s) for a frozen space transmission texture!
 
 ### 2. Sculpt the Grains
 - **Grain Size**: How long each grain is (0.001s - 60s)
@@ -236,9 +241,36 @@ granular/
 │   ├── four-track-view.scd
 │   ├── viewfinder.scd
 │   └── ...
-├── samples/                  # Put test audio here
+├── samples/                  # Audio samples
+│   ├── stock/               # Included samples (Apollo 11, test tones)
+│   ├── drones/              # Put your drone samples here
+│   ├── percussion/          # Put your percussion here
+│   └── field-recordings/    # Put your field recordings here
 └── docs/                     # Development notes
 ```
+
+---
+
+## 🎧 STOCK SAMPLES
+
+The `samples/stock/` folder includes some great starter material:
+
+### Apollo 11 Mission Audio 🚀
+- **a11wlk01.wav** - "Columbia, this is Houston. We've got you..."
+- Classic mission control transmission
+- Perfect for granular processing - rich textures with voice, static, and space
+- Try these settings:
+  - Grain Size: 0.01s → frozen space transmission
+  - Position: 0.3-0.7 → scan through the transmission
+  - Pitch: -12 → deep space drone
+  - Reverb Mix: 0.8 + Freeze: 1.0 → infinite space
+
+### Test Tone
+- **SinedPink.aiff** - Sine wave + pink noise blend
+- Good for testing effects and understanding parameters
+- Less exciting than Apollo 11 but useful for calibration
+
+**Want more samples?** Drop any WAV/AIFF files into the samples folders!
 
 ---
 
