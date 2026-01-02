@@ -17,7 +17,7 @@
              ~~~~~~~~~~~~~~~
 ```
 
-Welcome aboard! This is a 4-track granular synthesis sampler inspired by the Torso S-4 Rival. Think of it as a time-stretching, pitch-shifting, loop-mangling machine.
+This is a 4-track granular synthesis sampler!
 
 ---
 
@@ -335,3 +335,10 @@ Now go make some grape leaf sounds! 🍇🍃
   |  S-4 RIVAL |
    \_________/
 ```
+
+<!-- Local Variables: -->
+<!-- gptel-model: claude-haiku-4-5-20251001 -->
+<!-- gptel--backend-name: "Claude-Haiku-4.5" -->
+<!-- gptel-max-tokens: 6000 -->
+<!-- gptel--bounds: nil -->
+<!-- End: -->
