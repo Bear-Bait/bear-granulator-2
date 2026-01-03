@@ -267,7 +267,7 @@ Phase 7 Features:
 							// Store file path for viewfinder
 							track.filePath = filePath;
 
-							// CRITICAL: Update grain synth to point to new buffer!
+							// CRITICAL: Update grain + spectral synths to point to new buffer!
 							fork {
 								0.3.wait; // Wait for buffer to load on server
 								"New buffer number: %".format(track.recorder.buffer.bufnum).postln;
@@ -277,12 +277,22 @@ Phase 7 Features:
 									track.grainSynth.run(false);
 									// Update buffer
 									track.grainSynth.set(\bufnum, track.recorder.buffer.bufnum);
-									"Track %: Grain synth updated to buffer % (STOPPED - press PLAY to start)".format(
+									"Track %: Grain synth updated to buffer %".format(
 										trackNum + 1,
 										track.recorder.buffer.bufnum
 									).postln;
 								}, {
 									"WARNING: Grain synth is nil!".postln;
+								});
+
+								// Phase 8: Also update spectral synth
+								if(track.spectralSynth.notNil, {
+									track.spectralSynth.run(false);
+									track.spectralSynth.set(\bufnum, track.recorder.buffer.bufnum);
+									"Track %: Spectral synth updated to buffer %".format(
+										trackNum + 1,
+										track.recorder.buffer.bufnum
+									).postln;
 								});
 
 
@@ -305,7 +315,7 @@ Phase 7 Features:
 
 		yPos = yPos + 35;
 
-		// Play/Stop buttons for grain engine
+		// Play/Stop buttons for grain + spectral engines (Phase 8)
 		Button(parent, Rect(col1X, yPos, 70, 25))
 			.states_([
 				["PLAY", colors.black, colors.green],
@@ -313,19 +323,25 @@ Phase 7 Features:
 			])
 			.action_({ arg btn;
 				if(btn.value == 1, {
-					// PLAY - Start grain synth
+					// PLAY - Start both grain and spectral synths
 					if(track.grainSynth.notNil, {
 						track.grainSynth.run(true);
-						"Track % grain engine PLAYING".format(trackNum + 1).postln;
 					}, {
 						"ERROR: Grain synth is nil!".error;
 					});
+					if(track.spectralSynth.notNil, {
+						track.spectralSynth.run(true);
+					});
+					"Track % engines PLAYING (Grain + Spectral)".format(trackNum + 1).postln;
 				}, {
-					// STOP - Pause grain synth
+					// STOP - Pause both synths
 					if(track.grainSynth.notNil, {
 						track.grainSynth.run(false);
-						"Track % grain engine STOPPED".format(trackNum + 1).postln;
 					});
+					if(track.spectralSynth.notNil, {
+						track.spectralSynth.run(false);
+					});
+					"Track % engines STOPPED".format(trackNum + 1).postln;
 				});
 			});
 
@@ -512,6 +528,27 @@ Phase 7 Features:
 		makeSlider.value(parent, col3X, yPos, "Window Size", ControlSpec(0.05, 0.5, \exp), \shimmerWindowSize, trackNum, 0.2);
 		yPos = yPos + 22;
 		makeSlider.value(parent, col3X, yPos, "Shimmer Mix", ControlSpec(0, 1, \lin), \shimmerMix, trackNum, 0);
+
+		// === SPECTRAL ENGINE (Warp1) - Phase 8 ===
+		yPos = yPos + 35;
+		StaticText(parent, Rect(col3X, yPos, 350, 18))
+			.string_("SPECTRAL ENGINE (Warp1) - M4 Extreme")
+			.stringColor_(colors.orange)
+			.font_(Font("DejaVu Sans Mono", 10, true));
+		yPos = yPos + 22;
+		makeSlider.value(parent, col3X, yPos, "Spectral Mix", ControlSpec(0, 1, \lin), \spectralMix, trackNum, 0);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col3X, yPos, "Window Size", ControlSpec(0.05, 1.0, \exp), \spectralWindowSize, trackNum, 0.2);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col3X, yPos, "Overlaps", ControlSpec(1, 8, \lin, 1), \spectralOverlaps, trackNum, 4);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col3X, yPos, "Rate", ControlSpec(-2, 2, \lin), \spectralRate, trackNum, 1.0);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col3X, yPos, "Pitch", ControlSpec(-24, 24, \lin), \spectralPitch, trackNum, 0);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col3X, yPos, "Smear", ControlSpec(0, 1, \lin), \spectralSmear, trackNum, 0);
+		yPos = yPos + 22;
+		makeButton.value(parent, col3X, yPos, 150, "Freeze", \spectralFreeze, trackNum);
 	};
 
 
@@ -535,7 +572,7 @@ Phase 7 Features:
 
 		yPos = yPos + 30;
 
-		// Play All button
+		// Play All button (Phase 8: runs both grain + spectral engines)
 		Button(parent, Rect(10, yPos, 100, 40))
 			.states_([
 				["PLAY ALL", colors.black, colors.green]
@@ -546,11 +583,14 @@ Phase 7 Features:
 					if(track.grainSynth.notNil, {
 						track.grainSynth.run(true);
 					});
+					if(track.spectralSynth.notNil, {
+						track.spectralSynth.run(true);
+					});
 				});
-				"All tracks PLAYING".postln;
+				"All tracks PLAYING (Grain + Spectral)".postln;
 			});
 
-		// Stop All button
+		// Stop All button (Phase 8: stops both engines)
 		Button(parent, Rect(115, yPos, 100, 40))
 			.states_([
 				["STOP ALL", colors.fg, colors.red]
@@ -560,6 +600,9 @@ Phase 7 Features:
 					var track = trackManager.getTrack(i);
 					if(track.grainSynth.notNil, {
 						track.grainSynth.run(false);
+					});
+					if(track.spectralSynth.notNil, {
+						track.spectralSynth.run(false);
 					});
 				});
 				"All tracks STOPPED".postln;

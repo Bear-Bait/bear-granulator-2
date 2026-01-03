@@ -164,6 +164,10 @@ SynthDef(\s4GrainEngine, {
 		(scanSpeed.abs > 0.01).lag(0.1).linlin(0, 1, -1, 1)  // Smooth crossfade
 	);
 
+	// Phase 8: Send playhead position for GUI visualization @ 60Hz
+	// Broadcasts normalized position (0-1) for viewfinder window
+	SendReply.ar(Impulse.ar(60), '/playhead', [scanPos]);
+
 	// Buffer position calculation depends on mode
 	// Mode 0 (TAPE): Looping playback position
 	// Mode 1 (POLY): Fixed start position per grain

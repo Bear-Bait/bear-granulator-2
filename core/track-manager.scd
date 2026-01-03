@@ -29,6 +29,7 @@ Public API:
 		(
 			trackNum: i,
 			grainSynth: nil,
+			spectralSynth: nil,  // Phase 8: Warp1 spectral engine
 			recorder: nil,
 			audioBus: nil,
 			volume: 0.8,
@@ -140,7 +141,17 @@ Public API:
 				shimmerFeedback: 0.6,
 				shimmerPitch: 12,
 				shimmerWindowSize: 0.2,  // Phase 7c: Shimmer texture (0.05=glitchy, 0.5=smooth)
-				shimmerMix: 0
+				shimmerMix: 0,
+
+				// Phase 8: Spectral engine (Warp1) - M4 Extreme Performance
+				spectralMix: 0.0,      // Wet/dry (0=off, 1=full spectral)
+				spectralPosition: 0.5, // Independent position control
+				spectralRate: 1.0,     // Playback rate (0=freeze, 1=normal)
+				spectralWindowSize: 0.2, // Window size (0.05-1.0, larger=more smear)
+				spectralOverlaps: 4,   // Overlap factor (1-8, M4 can handle 8)
+				spectralPitch: 0,      // Pitch shift (-24 to +24)
+				spectralFreeze: 0,     // Freeze toggle (1=freeze)
+				spectralSmear: 0       // Spectral smear (0-1)
 			);
 
 			track.params = defaultParams.copy;
@@ -154,7 +165,25 @@ Public API:
 			// Start synth in STOPPED state - user must press PLAY
 			track.grainSynth.run(false);
 
-			"Track manager: Track % created (bus: %) - STOPPED (press PLAY to start)".format(
+			// Phase 8: Create spectral synth (Warp1) - runs in parallel
+			track.spectralSynth = Synth(\s4SpectralEngine, [
+				\out, track.audioBus.index,
+				\bufnum, track.recorder.getBufferNum,
+				\spectralMix, track.params[\spectralMix],
+				\position, track.params[\spectralPosition],
+				\rate, track.params[\spectralRate],
+				\windowSize, track.params[\spectralWindowSize],
+				\overlaps, track.params[\spectralOverlaps],
+				\pitch, track.params[\spectralPitch],
+				\freeze, track.params[\spectralFreeze],
+				\smear, track.params[\spectralSmear],
+				\interp, 4  // Best quality for M4
+			], addAction: \addToHead);
+
+			// Spectral synth starts STOPPED too
+			track.spectralSynth.run(false);
+
+			"Track manager: Track % created (bus: %) - Grain + Spectral - STOPPED (press PLAY to start)".format(
 				trackNum + 1,
 				track.audioBus.index
 			).postln;
@@ -169,6 +198,12 @@ Public API:
 			if(track.grainSynth.notNil, {
 				track.grainSynth.free;
 				track.grainSynth = nil;
+			});
+
+			// Phase 8: Free spectral synth
+			if(track.spectralSynth.notNil, {
+				track.spectralSynth.free;
+				track.spectralSynth = nil;
 			});
 
 			if(track.recorder.notNil, {
@@ -187,6 +222,9 @@ Public API:
 		// Set a parameter on a specific track
 		setParam: { arg self, trackNum, param, value;
 			var track = tracks[trackNum];
+			var spectralParams = [\spectralMix, \spectralPosition, \spectralRate,
+			                       \spectralWindowSize, \spectralOverlaps, \spectralPitch,
+			                       \spectralFreeze, \spectralSmear];
 
 			if(track.grainSynth.isNil, {
 				"Track manager: Track % not initialized".format(trackNum + 1).postln;
@@ -196,8 +234,25 @@ Public API:
 			// Update stored parameter
 			track.params[param] = value;
 
-			// Send to synth
-			track.grainSynth.set(param, value);
+			// Phase 8: Route spectral parameters to spectral synth
+			if(spectralParams.includes(param), {
+				if(track.spectralSynth.notNil, {
+					// Map spectralMix → spectralMix, spectralPosition → position, etc.
+					var synthParam = param.asString.replace("spectral", "").toLower.asSymbol;
+					if(param == \spectralMix, { synthParam = \spectralMix });
+					if(param == \spectralPosition, { synthParam = \position });
+					if(param == \spectralRate, { synthParam = \rate });
+					if(param == \spectralWindowSize, { synthParam = \windowSize });
+					if(param == \spectralOverlaps, { synthParam = \overlaps });
+					if(param == \spectralPitch, { synthParam = \pitch });
+					if(param == \spectralFreeze, { synthParam = \freeze });
+					if(param == \spectralSmear, { synthParam = \smear });
+					track.spectralSynth.set(synthParam, value);
+				});
+			}, {
+				// Non-spectral parameters go to grain synth
+				track.grainSynth.set(param, value);
+			});
 		},
 
 		// Set material mode (Phase 6: 0=TAPE, 1=POLY, 2=LIVE)

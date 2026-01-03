@@ -79,6 +79,14 @@ Opens a dedicated window for modulation control of a single track
 			.string_("Rate (Hz):")
 			.font_(Font("Monaco", 9));
 
+		rateSlider = Slider(parent, Rect(x + 140, yPos, 190, 18))
+			.value_(ControlSpec(0.01, 20, \exp).unmap(1.0))
+			.action_({ arg sl;
+				var val = ControlSpec(0.01, 20, \exp).map(sl.value);
+				rateNum.value_(val);
+				trackManager.setModParam(trackNum, modNum, \freq, val);
+			});
+
 		rateNum = NumberBox(parent, Rect(x + 85, yPos, 50, 18))
 			.value_(1.0)
 			.decimals_(2)
@@ -88,20 +96,19 @@ Opens a dedicated window for modulation control of a single track
 				trackManager.setModParam(trackNum, modNum, \freq, nb.value);
 			});
 
-		rateSlider = Slider(parent, Rect(x + 140, yPos, 190, 18))
-			.value_(0.2)
-			.action_({ arg sl;
-				var val = ControlSpec(0.01, 20, \exp).map(sl.value);
-				rateNum.value_(val);
-				trackManager.setModParam(trackNum, modNum, \freq, val);
-			});
-
 		yPos = yPos + 22;
 
 		// Depth control
 		StaticText(parent, Rect(x + 10, yPos, 70, 18))
 			.string_("Depth:")
 			.font_(Font("Monaco", 9));
+
+		depthSlider = Slider(parent, Rect(x + 140, yPos, 190, 18))
+			.value_(1.0)
+			.action_({ arg sl;
+				depthNum.value_(sl.value);
+				trackManager.setModParam(trackNum, modNum, \amp, sl.value);
+			});
 
 		depthNum = NumberBox(parent, Rect(x + 85, yPos, 50, 18))
 			.value_(1.0)
@@ -110,13 +117,6 @@ Opens a dedicated window for modulation control of a single track
 			.action_({ arg nb;
 				depthSlider.value_(nb.value);
 				trackManager.setModParam(trackNum, modNum, \amp, nb.value);
-			});
-
-		depthSlider = Slider(parent, Rect(x + 140, yPos, 190, 18))
-			.value_(1.0)
-			.action_({ arg sl;
-				depthNum.value_(sl.value);
-				trackManager.setModParam(trackNum, modNum, \amp, sl.value);
 			});
 
 		yPos = yPos + 30;

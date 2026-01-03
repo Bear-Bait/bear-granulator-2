@@ -122,6 +122,11 @@ fork {
 		0.2.wait;
 		"  ✓ Grain engine loaded".postln;
 
+		// Load spectral engine (Warp1) - Phase 8
+		(~config.corePath +/+ "spectral-engine.scd").load;
+		0.2.wait;
+		"  ✓ Spectral engine (Warp1) loaded".postln;
+
 		// Load buffer recorder
 		(~config.corePath +/+ "buffer-recorder.scd").load;
 		0.2.wait;

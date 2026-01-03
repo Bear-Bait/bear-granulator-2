@@ -32,6 +32,8 @@ Usage:
 			var makeSlider;  // Phase 7: Slider helper function
 			var yPos;  // Phase 7: Y position for slider layout
 			var overlayView, updateRoutine;  // Phase 7: Grain visualization overlay
+			var playheadPos = 0;  // Phase 8: Real-time playhead position (0-1)
+			var oscListener;  // Phase 8: OSC responder for playhead updates
 
 			// Doom Material colors
 			colors = (
@@ -77,6 +79,14 @@ Usage:
 					.font_(Font("DejaVu Sans Mono", 10))
 					.stringColor_(colors.fg);
 
+				slider = Slider(parent, Rect(x + 125, y, 150, 18))
+					.value_(spec.unmap(default))
+					.action_({ arg sl;
+						var val = spec.map(sl.value);
+						numBox.value_(val);
+						trackManager.setParam(trackNum, param, val);
+					});
+
 				numBox = NumberBox(parent, Rect(x + 280, y, 60, 18))
 					.value_(default)
 					.decimals_(3)
@@ -85,14 +95,6 @@ Usage:
 					.action_({ arg nb;
 						trackManager.setParam(trackNum, param, nb.value);
 						slider.value_(spec.unmap(nb.value));
-					});
-
-				slider = Slider(parent, Rect(x + 125, y, 150, 18))
-					.value_(spec.unmap(default))
-					.action_({ arg sl;
-						var val = spec.map(sl.value);
-						numBox.value_(val);
-						trackManager.setParam(trackNum, param, val);
 					});
 			};
 
@@ -125,7 +127,10 @@ Usage:
 				.timeCursorColor_(Color.yellow.alpha_(0.6))
 				.drawsWaveForm_(true)
 				.elasticMode_(1) // Elastic resize
-				.gridResolution_(0.1); // Grid every 100ms
+				.gridResolution_(0.1) // Grid every 100ms
+				.setSelectionColor(0, Color.yellow.alpha_(0.3))  // Selection color
+				.setEditableSelectionStart(0, true)   // Enable native zoom
+				.setEditableSelectionSize(0, true);   // SHIFT+right-click to zoom
 
 			// Selection is enabled by default in SoundFileView
 
@@ -260,11 +265,32 @@ Usage:
 							));
 						});
 
-						// Main playhead line
+						// Main playhead line (position parameter - static or slow-moving)
 						Pen.color = Color.red.alpha_(0.8);
 						Pen.width = 3;
 						Pen.line(Point(positionPixels, 0), Point(positionPixels, viewHeight));
 						Pen.stroke;
+
+						// === LAYER 4: Real-time Playhead (Phase 8 - sample-accurate @ 60Hz) ===
+						// This is the ACTUAL playhead from the grain engine's Phasor
+						// Shows true position when scanSpeed > 0 or when position is modulated
+						if(playheadPos.notNil and: { currentBuffer.notNil }, {
+							var realPlayheadPixels = playheadPos * viewWidth;
+
+							// Bright cyan line (distinct from position parameter)
+							Pen.color = colors.cyan.alpha_(0.9);
+							Pen.width = 2;
+							Pen.line(Point(realPlayheadPixels, 0), Point(realPlayheadPixels, viewHeight));
+							Pen.stroke;
+
+							// Small label to distinguish from position parameter
+							Pen.stringAtPoint(
+								"Live",
+								Point(realPlayheadPixels + 5, viewHeight - 20),
+								Font("DejaVu Sans Mono", 9),
+								colors.cyan
+							);
+						});
 					});
 				});
 
@@ -276,9 +302,21 @@ Usage:
 				}
 			}).play(AppClock);
 
-			// Stop update routine when window closes
+			// Phase 8: OSC listener for sample-accurate playhead @ 60Hz
+			// Receives normalized position (0-1) from grain engine's SendReply
+			oscListener = OSCFunc({ arg msg, time, addr, recvPort;
+				var nodeID = msg[1];  // Synth node ID
+				var replyID = msg[2];  // '/playhead'
+				var position = msg[3]; // Normalized position 0-1
+
+				// Update playhead position (this will be drawn in overlay)
+				playheadPos = position;
+			}, '/playhead');
+
+			// Stop update routine and OSC listener when window closes
 			win.onClose = {
 				updateRoutine.stop;
+				oscListener.free;  // Phase 8: Free OSC responder
 				windows[trackNum] = nil;
 				soundFileViews[trackNum] = nil;
 				"Viewfinder % closed".format(trackNum + 1).postln;
