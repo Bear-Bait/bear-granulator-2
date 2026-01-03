@@ -90,10 +90,11 @@ All functions return audio signals for direct integration.
 	  time: Delay time in seconds (0.1-2.0)
 	  feedback: Feedback amount (0-0.9)
 	  pitch: Pitch shift in semitones (typically +7 or +12)
+	  windowSize: FFT window size (0.05-0.5, smaller=glitchy, larger=smooth)
 	  mix: Dry/wet mix (0-1)
 	Returns: Stereo processed audio signal
 	*/
-	var shimmer = { arg input, time = 0.5, feedback = 0.6, pitch = 12, mix = 0.3;
+	var shimmer = { arg input, time = 0.5, feedback = 0.6, pitch = 12, windowSize = 0.2, mix = 0.3;
 		var maxDelay = 2.0;
 		var delayL, delayR, shiftL, shiftR, wetL, wetR;
 		var fbL, fbR;
@@ -107,8 +108,10 @@ All functions return audio signals for direct integration.
 		delayR = DelayC.ar(input[1] + fbR, maxDelay, time.clip(0.1, maxDelay));
 
 		// Pitch shift the delayed signal
+		// Phase 7c: Variable windowSize allows morphing between granular and smooth textures
 		shiftL = PitchShift.ar(
 			delayL,
+			windowSize: windowSize.clip(0.05, 0.5),  // Smaller = glitchy, larger = smooth
 			pitchRatio: pitch.midiratio,
 			pitchDispersion: 0.01,
 			timeDispersion: 0.01
@@ -116,6 +119,7 @@ All functions return audio signals for direct integration.
 
 		shiftR = PitchShift.ar(
 			delayR,
+			windowSize: windowSize.clip(0.05, 0.5),
 			pitchRatio: pitch.midiratio,
 			pitchDispersion: 0.01,
 			timeDispersion: 0.01

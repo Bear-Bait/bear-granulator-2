@@ -23,10 +23,10 @@ Thumbs.db
 *~
 
 # Audio files (optional - uncomment if you don't want to track audio)
-# *.wav
-# *.aif
-# *.aiff
-# *.mp3
+*.wav
+*.aif
+*.aiff
+*.mp3
 
 # Build artifacts
 *.o
@@ -41,3 +41,13 @@ archive/
 
 # Test files
 tests/
+
+# samples
+# 1. Ignore all files and folders inside samples/
+samples/*
+
+# 2. But don't ignore the stock/ directory itself
+!samples/stock/
+
+# 3. And don't ignore anything inside the stock/ directory
+!samples/stock/**

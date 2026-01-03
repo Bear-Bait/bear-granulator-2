@@ -85,7 +85,9 @@ Public API:
 				overlap: 1,       // Phase 6b: Default overlap count (1 = full sample playback)
 				useOverlap: 1,    // Phase 6b: Use overlap mode by default
 				position: 0.0,    // Default to start of buffer
-				pitch: 0,
+				scanSpeed: 0,     // Phase 7c: Continuous scanning (0=static)
+				pitch: 0,         // Legacy: changes speed+pitch
+				pitchShift: 0,    // Phase 7: True pitch shift (preserves speed)
 				posJitter: 0.1,
 				pitchJitter: 0,
 				envType: 1,
@@ -137,6 +139,7 @@ Public API:
 				shimmerTime: 0.5,
 				shimmerFeedback: 0.6,
 				shimmerPitch: 12,
+				shimmerWindowSize: 0.2,  // Phase 7c: Shimmer texture (0.05=glitchy, 0.5=smooth)
 				shimmerMix: 0
 			);
 

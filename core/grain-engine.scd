@@ -26,7 +26,8 @@ Args:
   density: Grains per second (1-200) - LEGACY, use overlap instead
   useOverlap: 1=use overlap mode (default), 0=use density mode
   position: Playback position in buffer (0-1)
-  pitch: Pitch shift in semitones (-24 to +24)
+  pitch: Pitch shift in semitones (-24 to +24) - LEGACY (changes speed+pitch)
+  pitchShift: True pitch shift in semitones (-24 to +24) - NEW (preserves speed)
   posJitter: Random position offset (0-1)
   pitchJitter: Random pitch offset in semitones (0-12)
   envType: Envelope shape (0=Perc, 1=Sine, 2=Triangle, 3=Welch)
@@ -58,7 +59,9 @@ SynthDef(\s4GrainEngine, {
 	    overlap = 4,       // Phase 6b: Number of simultaneous grains (1-128)
 	    useOverlap = 1,    // Phase 6b: 0=use density, 1=use overlap (default)
 	    position = 0.5,
-	    pitch = 0,
+	    scanSpeed = 0,     // Phase 7c: Continuous scanning speed (-4 to 4, 0=static)
+	    pitch = 0,         // Legacy: changes speed+pitch (playback rate)
+	    pitchShift = 0,    // Phase 7: True pitch shift (preserves speed)
 	    posJitter = 0.0,
 	    pitchJitter = 0.0,
 	    envType = 1,
@@ -107,6 +110,7 @@ SynthDef(\s4GrainEngine, {
 	    shimmerTime = 0.5,
 	    shimmerFeedback = 0.6,
 	    shimmerPitch = 12,
+	    shimmerWindowSize = 0.2,  // Phase 7c: 0.05=glitchy, 0.5=smooth
 	    shimmerMix = 0,
 	    out = 0;
 
@@ -114,6 +118,8 @@ SynthDef(\s4GrainEngine, {
 	var grainDur, maxGrains, panL, panR, envBuf;
 	var delayL, delayR, shiftL, shiftR; // for effects
 	var actualDensity; // Calculated from overlap or direct
+	var trigL, trigR; // Phase 7b: Per-channel triggers for stereo spread
+	var phasor, scanPos; // Phase 7c: Phasor for continuous scanning
 
 	// Calculate buffer parameters
 	bufFrames = BufFrames.kr(bufnum);
@@ -132,18 +138,45 @@ SynthDef(\s4GrainEngine, {
 	// Grain triggering with calculated density
 	trig = Impulse.ar(actualDensity);
 
+	// Phase 7b: Per-channel trigger jitter for enhanced stereo spread
+	// When stereoSpread > 0, grains fire at slightly different times L/R
+	// This creates a wider, more immersive stereo field
+	trigL = Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg * 5, stereoSpread * 5));
+	trigR = Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg * 5, stereoSpread * 5));
+
+	// Phase 7c: Phasor.ar for continuous buffer scanning
+	// Provides sample-accurate, bidirectional scrubbing
+	// scanSpeed: -4 to 4 (negative = reverse, 0 = static, positive = forward)
+	phasor = Phasor.ar(
+		trig: 0,  // Free-running (no reset)
+		rate: scanSpeed * BufRateScale.kr(bufnum),
+		start: loopStart * bufFrames,
+		end: loopEnd * bufFrames,
+		resetPos: loopStart * bufFrames
+	) / bufFrames;  // Normalize to 0-1
+
+	// Scan position: blend between static position and phasor
+	// When scanSpeed = 0, use static position; otherwise use phasor
+	// Use XFade2 for smooth blending (avoids Select.ar audio-rate requirement)
+	scanPos = XFade2.ar(
+		K2A.ar(position),  // Static position (converted to audio-rate)
+		phasor,            // Continuous phasor scan
+		(scanSpeed.abs > 0.01).lag(0.1).linlin(0, 1, -1, 1)  // Smooth crossfade
+	);
+
 	// Buffer position calculation depends on mode
 	// Mode 0 (TAPE): Looping playback position
 	// Mode 1 (POLY): Fixed start position per grain
 	// Mode 2 (LIVE): Lookback time from current write position
+	// Phase 7c: Now uses scanPos (which can be phasor or static position)
 	bufPos = Select.kr(mode, [
 		// TAPE mode: loop through buffer
-		(position.linlin(0, 1, loopStart, loopEnd) + LFNoise1.kr(10).range(posJitter.neg, posJitter)).wrap(loopStart, loopEnd),
+		(scanPos.linlin(0, 1, loopStart, loopEnd) + LFNoise1.kr(10).range(posJitter.neg, posJitter)).wrap(loopStart, loopEnd),
 		// POLY mode: fixed position (no looping)
-		position + LFNoise1.kr(10).range(posJitter.neg, posJitter),
+		scanPos + LFNoise1.kr(10).range(posJitter.neg, posJitter),
 		// LIVE mode: position represents "time ago" (0=now, 1=buffer start)
 		// In LIVE mode, grains read from recent past
-		(1.0 - position + LFNoise1.kr(10).range(posJitter.neg, posJitter)).wrap(0, 1)
+		(1.0 - scanPos + LFNoise1.kr(10).range(posJitter.neg, posJitter)).wrap(0, 1)
 	]);
 
 	// Convert pitch (semitones) to ratio
@@ -166,10 +199,10 @@ SynthDef(\s4GrainEngine, {
 	// GrainBuf requires maxGrains to be a constant at compile time
 	// Set to 64 per channel (128 total) to support overlap up to 128
 
-	// Left channel: grains panned left
+	// Left channel: grains panned left with independent trigger timing
 	panL = GrainBuf.ar(
 		numChannels: 1,
-		trigger: trig,
+		trigger: trigL,  // Phase 7b: Independent left trigger
 		dur: grainDur,
 		sndbuf: bufnum,
 		rate: pitchRatio,
@@ -180,10 +213,10 @@ SynthDef(\s4GrainEngine, {
 		maxGrains: 64 // Fixed at compile time
 	);
 
-	// Right channel: grains panned right
+	// Right channel: grains panned right with independent trigger timing
 	panR = GrainBuf.ar(
 		numChannels: 1,
-		trigger: trig,
+		trigger: trigR,  // Phase 7b: Independent right trigger
 		dur: grainDur,
 		sndbuf: bufnum,
 		rate: pitchRatio,
@@ -200,6 +233,20 @@ SynthDef(\s4GrainEngine, {
 	// Phase 6b: Volume boost for overlap mode
 	// 2x gain boost - GrainBuf output is quiet compared to hardware synths
 	sig = sig * 2.0;
+
+	// === PHASE 7: TRUE PITCH SHIFTING (preserves speed) ===
+	// PitchShift uses FFT-based time-stretching to shift pitch independently
+	// pitchDispersion and timeDispersion add slight randomness for smoother texture
+	sig = Select.ar(pitchShift.abs > 0.01, [
+		sig,  // bypass if pitch shift is near 0
+		PitchShift.ar(
+			sig,
+			windowSize: 0.2,           // Window size (smaller = better transients, larger = smoother)
+			pitchRatio: pitchShift.midiratio,  // Convert semitones to ratio
+			pitchDispersion: 0.0,      // Slight pitch randomness (0-1)
+			timeDispersion: 0.0        // Slight time randomness (0-1)
+		)
+	]);
 
 	// === PHASE 2: FILTERBANK (MOVED TO MASTER BUS IN PHASE 4) ===
 	// The 48-band morphing resonator is now applied on the master bus
@@ -283,8 +330,9 @@ SynthDef(\s4GrainEngine, {
 			shimFbR = LocalIn.ar(1);
 			shimDelayL = DelayC.ar(spaced[0] + shimFbL, maxDelay, shimmerTime.clip(0.1, maxDelay));
 			shimDelayR = DelayC.ar(spaced[1] + shimFbR, maxDelay, shimmerTime.clip(0.1, maxDelay));
-			shimShiftL = PitchShift.ar(shimDelayL, pitchRatio: shimmerPitch.midiratio, pitchDispersion: 0.01, timeDispersion: 0.01);
-			shimShiftR = PitchShift.ar(shimDelayR, pitchRatio: shimmerPitch.midiratio, pitchDispersion: 0.01, timeDispersion: 0.01);
+			// Phase 7c: Variable windowSize for morphing between glitchy and smooth textures
+			shimShiftL = PitchShift.ar(shimDelayL, windowSize: shimmerWindowSize.clip(0.05, 0.5), pitchRatio: shimmerPitch.midiratio, pitchDispersion: 0.01, timeDispersion: 0.01);
+			shimShiftR = PitchShift.ar(shimDelayR, windowSize: shimmerWindowSize.clip(0.05, 0.5), pitchRatio: shimmerPitch.midiratio, pitchDispersion: 0.01, timeDispersion: 0.01);
 			LocalOut.ar([shimShiftL * shimmerFeedback, shimShiftR * shimmerFeedback]);
 			spaced = XFade2.ar(spaced, [shimShiftL, shimShiftR], shimmerMix.linlin(0, 1, -1, 1));
 

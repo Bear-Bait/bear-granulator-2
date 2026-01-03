@@ -31,7 +31,6 @@ Phase 7 Features:
 	var makeSlider, makeButton, makeMasterSlider, makeMasterButton;
 	var makeTrackTab, makeMasterTab;
 	var colors;  // Doom Material color palette
-	var lastBrowsedFolder;  // Remember last folder for file dialogs
 
 	// Doom Material Color Palette
 	colors = (
@@ -147,6 +146,7 @@ Phase 7 Features:
 	// ========================================
 	makeTrackTab = { arg parent, trackNum;
 		var track = trackManager.getTrack(trackNum);
+		var waveView, positionView;
 		var col1X = 10, col2X = 370, col3X = 730;
 		var yPos;
 
@@ -240,9 +240,6 @@ Phase 7 Features:
 						// FileDialog with stripResult:true returns String, not Array
 						filePath = if(path.isString, { path }, { path[0] });
 
-						// Remember this folder for next time
-						lastBrowsedFolder = filePath.dirname;
-
 						"Attempting to open: %".format(filePath).postln;
 
 						if(soundFile.openRead(filePath), {
@@ -285,6 +282,17 @@ Phase 7 Features:
 									"WARNING: Grain synth is nil!".postln;
 								});
 
+								// Load waveform into main GUI display
+								{
+									var sf = SoundFile.new;
+									if(sf.openRead(filePath), {
+										waveView.soundfile = sf;
+										waveView.read(0, sf.numFrames);
+										sf.close;
+										waveView.refresh;
+										"Waveform loaded into main view".postln;
+									});
+								}.defer;
 
 								"✓ Loaded: % (% seconds, % frames)".format(
 									PathName(filePath).fileName,
@@ -298,9 +306,7 @@ Phase 7 Features:
 					}, {
 						"File dialog cancelled or no file selected".postln;
 					});
-				},
-			path: lastBrowsedFolder,  // Remember last folder
-			fileMode: 1, acceptMode: 0, stripResult: true);
+				}, fileMode: 1, acceptMode: 0, stripResult: true);
 			});
 
 		yPos = yPos + 35;
@@ -362,6 +368,13 @@ Phase 7 Features:
 							"Track %: Recorded buffer saved to temp file for waveform display".format(trackNum + 1).postln;
 						});
 
+						// Load waveform data into main view
+						track.recorder.buffer.loadToFloatArray(action: { arg array;
+							{
+								waveView.setData(array);
+								waveView.refresh;
+							}.defer;
+						});
 					};
 				});
 			});
@@ -514,6 +527,248 @@ Phase 7 Features:
 		makeSlider.value(parent, col3X, yPos, "Shimmer Mix", ControlSpec(0, 1, \lin), \shimmerMix, trackNum, 0);
 	};
 
+		StaticText(parent, Rect(10, yPos, 600, 20))
+			.string_("LOOP WINDOW (Drag to select • Arrows: Up/Down=Zoom, Left/Right=Pan • Mouse wheel zooms)")
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.stringColor_(colors.cyan);
+
+		waveView = SoundFileView(parent, Rect(10, yPos + 25, 1420, 150))
+			.background_(colors.black)
+			.waveColors_([colors.cyan.alpha_(0.8)])
+			.gridOn_(true)
+			.gridColor_(colors.brightBlack)
+			.timeCursorOn_(true)
+			.timeCursorColor_(colors.yellow.alpha_(0.6))
+			.drawsWaveForm_(true)
+			.elasticMode_(1)
+			.gridResolution_(0.1)
+			.resize_(5)
+			.canFocus_(true)           // Phase 7: Enable keyboard focus
+			.focusColor_(colors.cyan.alpha_(0.3));  // Visual feedback when focused
+
+		waveView.setSelectionColor(0, colors.selection.alpha_(0.5));
+
+		// Load waveform when buffer is ready
+		fork {
+			0.3.wait;
+			if(track.filePath.notNil, {
+				var sf = SoundFile.new;
+				if(sf.openRead(track.filePath), {
+					{
+						waveView.soundfile = sf;
+						waveView.read(0, sf.numFrames);
+						sf.close;
+						waveView.refresh;
+					}.defer;
+				});
+			});
+		};
+
+		// Phase 7: Real-time loop selection while dragging
+		waveView.mouseMoveAction = { arg view;
+			var sel, currentBuffer, startFrame, duration, endFrame, numFrames, sampleRate, loopStart, loopEnd;
+
+			view.focus;  // Ensure focus when interacting
+			sel = view.selection(0);
+			currentBuffer = track.recorder.buffer;
+			if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
+				startFrame = sel[0];
+				duration = sel[1];
+				endFrame = startFrame + duration;
+				numFrames = currentBuffer.numFrames;
+				sampleRate = currentBuffer.sampleRate;
+				loopStart = (startFrame / numFrames).clip(0.0, 1.0);
+				loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
+
+				// Ensure minimum window size (1% of buffer)
+				if((loopEnd - loopStart) < 0.01, {
+					loopEnd = (loopStart + 0.01).min(1.0);
+				});
+
+				// Update engine in real-time
+				trackManager.setParam(trackNum, \loopStart, loopStart);
+				trackManager.setParam(trackNum, \loopEnd, loopEnd);
+			});
+		};
+
+		// Finalize on mouse up
+		waveView.mouseUpAction = { arg view;
+			var sel = view.selection(0);
+			var currentBuffer = track.recorder.buffer;
+			if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
+				var startFrame = sel[0];
+				var duration = sel[1];
+				var endFrame = startFrame + duration;
+				var numFrames = currentBuffer.numFrames;
+				var loopStart = (startFrame / numFrames).clip(0.0, 1.0);
+				var loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
+
+				// Ensure minimum window size
+				if((loopEnd - loopStart) < 0.01, {
+					"Loop window too small (minimum 1% of buffer)".warn;
+					^this;
+				});
+
+				trackManager.setParam(trackNum, \loopStart, loopStart);
+				trackManager.setParam(trackNum, \loopEnd, loopEnd);
+
+				"Track %: Loop % - % (% sec)".format(
+					trackNum + 1,
+					(loopStart * 100).round(0.1),
+					(loopEnd * 100).round(0.1),
+					((loopEnd - loopStart) * numFrames / currentBuffer.sampleRate).round(0.01)
+				).postln;
+			});
+		};
+
+		// === PHASE 7: ZOOM & NAVIGATION ===
+		// Arrow key controls: UP/DOWN = zoom, LEFT/RIGHT = pan
+		waveView.keyDownAction = { arg view, char, modifiers, unicode, keycode;
+			var currentBuffer = track.recorder.buffer;
+			if(currentBuffer.notNil, {
+				var numFrames = currentBuffer.numFrames;
+				var zoomFactor = 1.5;
+				var panAmount = 0.1;
+
+				// UP - Zoom In
+				if(keycode == 63232, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newSize = (viewSize / zoomFactor).max(100);
+					var center = viewStart + (viewSize / 2);
+					var newStart = (center - (newSize / 2)).clip(0, numFrames - newSize);
+					{ waveView.scrollPos_(newStart); waveView.viewFrames_(newSize); waveView.refresh; }.defer;
+				});
+
+				// DOWN - Zoom Out
+				if(keycode == 63233, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newSize = (viewSize * zoomFactor).min(numFrames);
+					var center = viewStart + (viewSize / 2);
+					var newStart = (center - (newSize / 2)).clip(0, numFrames - newSize);
+					{ waveView.scrollPos_(newStart); waveView.viewFrames_(newSize); waveView.refresh; }.defer;
+				});
+
+				// LEFT - Pan Left
+				if(keycode == 63234, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newStart = (viewStart - (viewSize * panAmount)).max(0);
+					{ waveView.scrollPos_(newStart); waveView.refresh; }.defer;
+				});
+
+				// RIGHT - Pan Right
+				if(keycode == 63235, {
+					var viewStart = waveView.scrollPos;
+					var viewSize = waveView.viewFrames;
+					var newStart = (viewStart + (viewSize * panAmount)).min(numFrames - viewSize);
+					{ waveView.scrollPos_(newStart); waveView.refresh; }.defer;
+				});
+			});
+		};
+
+		// Phase 7: Mouse wheel zoom (zoom toward mouse position)
+		waveView.mouseWheelAction = { arg view, x, y, modifiers, xDelta, yDelta;
+			var currentBuffer = track.recorder.buffer;
+			if(currentBuffer.notNil, {
+				var numFrames = currentBuffer.numFrames;
+				var zoomFactor = if(yDelta > 0, { 1.2 }, { 0.83 });
+				var viewStart = waveView.scrollPos;
+				var viewSize = waveView.viewFrames;
+				var mousePos = x / 1420;
+				var mouseFrame = viewStart + (viewSize * mousePos);
+				var newSize = (viewSize * zoomFactor).clip(100, numFrames);
+				var newStart = (mouseFrame - (newSize * mousePos)).clip(0, numFrames - newSize);
+				{ waveView.scrollPos_(newStart); waveView.viewFrames_(newSize); waveView.refresh; }.defer;
+			});
+		};
+
+		// Phase 7: Zoom slider controls (placed after waveView creation)
+		StaticText(parent, Rect(1100, yPos, 50, 20))
+			.string_("Zoom")
+			.font_(Font("DejaVu Sans Mono", 10))
+			.stringColor_(colors.fg);
+
+		Slider(parent, Rect(1155, yPos, 200, 20))
+			.value_(1.0)  // Start fully zoomed out
+			.action_({ arg sl;
+				var currentBuffer, numFrames, zoomFrames, viewStart, viewSize, center, newStart;
+
+				currentBuffer = track.recorder.buffer;
+				if(currentBuffer.notNil, {
+					numFrames = currentBuffer.numFrames;
+					// Map slider: 0 = zoomed in (show 1000 frames), 1 = zoomed out (show all frames)
+					zoomFrames = sl.value.linexp(0, 1, 1000, numFrames);
+
+					{
+						viewStart = waveView.scrollPos;
+						viewSize = waveView.viewFrames;
+						// Keep current center position when zooming
+						center = viewStart + (viewSize / 2);
+						newStart = (center - (zoomFrames / 2)).clip(0, numFrames - zoomFrames);
+						waveView.scrollPos_(newStart);
+						waveView.viewFrames_(zoomFrames);
+						waveView.refresh;
+						"Zoom slider: showing % frames (%.1f%% of buffer)".format(
+							zoomFrames.asInteger,
+							(zoomFrames / numFrames * 100).round(0.1)
+						).postln;
+					}.defer;
+				}, {
+					"Zoom slider: No buffer loaded yet".warn;
+				});
+			});
+
+		NumberBox(parent, Rect(1360, yPos, 60, 20))
+			.value_(100)
+			.decimals_(0)
+			.font_(Font("DejaVu Sans Mono", 9))
+			.stringColor_(colors.fg)
+			.action_({ arg nb;
+				var currentBuffer = track.recorder.buffer;
+				if(currentBuffer.notNil, {
+					var numFrames = currentBuffer.numFrames;
+					var zoomPercent = nb.value.clip(0.1, 100);
+					var zoomFrames = numFrames * (zoomPercent / 100);
+					var viewStart = waveView.scrollPos;
+					var center = viewStart + (waveView.viewFrames / 2);
+					var newStart = (center - (zoomFrames / 2)).clip(0, numFrames - zoomFrames);
+					waveView.scrollPos_(newStart);
+					waveView.viewFrames_(zoomFrames);
+					waveView.refresh;
+				});
+			});
+
+		StaticText(parent, Rect(1360, yPos - 15, 60, 15))
+			.string_("% visible")
+			.font_(Font("DejaVu Sans Mono", 7))
+			.stringColor_(Color.gray(0.6))
+			.align_(\center);
+
+		// Simple position cursor overlay (non-blocking)
+		positionView = UserView(parent, Rect(10, yPos + 25, 1420, 150))
+			.background_(Color.clear)
+			.acceptsMouseOver_(false)  // Let mouse events pass through to waveView
+			.canFocus_(false)          // Don't steal keyboard focus
+			.drawFunc_({
+				var pos = track.params[\position] ? 0.0;
+				var x = pos * 1420;
+				Pen.color = colors.red.alpha_(0.7);
+				Pen.width = 2;
+				Pen.line(Point(x, 0), Point(x, 150));
+				Pen.stroke;
+			})
+			.resize_(5);
+
+		// Update position cursor at 10fps
+		updateTasks[trackNum] = Routine({
+			loop {
+				{ positionView.refresh }.defer;
+				0.1.wait;
+			}
+		}).play(AppClock);
+	};
 
 	// ========================================
 	// CREATE MASTER TAB
@@ -568,6 +823,9 @@ Phase 7 Features:
 		yPos = yPos + 20;
 
 		// === 48-BAND MORPHING RESONATOR ===
+		StaticText(parent, Rect(10, yPos, 400, 25))
+			.string_("48-BAND MORPHING RESONATOR (Shared)")
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
 		yPos = yPos + 30;
 		makeMasterButton.value(parent, 10, yPos, 150, "Filter", \filterOn);

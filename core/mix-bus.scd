@@ -151,6 +151,11 @@ SynthDef(\s4MasterBus, {
 	// Soft limiter to prevent clipping
 	mix = mix.tanh;
 
+	// Phase 7c: DC offset protection
+	// High-resonance filtering and bit-crushing can create DC offset
+	// LeakDC removes this silent voltage that eats headroom and can damage speakers
+	mix = LeakDC.ar(mix, coef: 0.995);
+
 	// Output to hardware
 	Out.ar(out, mix);
 }).add;
