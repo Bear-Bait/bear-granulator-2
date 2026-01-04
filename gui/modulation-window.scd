@@ -146,7 +146,17 @@ Opens a dedicated window for modulation control of a single track
 				"Filt Freq",
 				"Filt Morph",
 				"Rev Mix",
-				"Del Mix"
+				"Del Mix",
+				"Shimmer Mix",
+				"Quad X",     // Phase 13: Spatial modulation
+				"Quad Y",     // Phase 13: Spatial modulation
+				"─────",      // Separator
+				"M: Filter Freq",    // Phase 15: Master filter
+				"M: Filter Morph",   // Phase 15: Master filter
+				"M: Filter Res",     // Phase 15: Master filter
+				"M: Filter Decay",   // Phase 15: Master filter
+				"M: Filter Animate", // Phase 15: Master filter
+				"M: Filter Mix"      // Phase 15: Master filter
 			])
 			.value_(0)
 			.font_(Font("Monaco", 8));
@@ -177,14 +187,26 @@ Opens a dedicated window for modulation control of a single track
 				var paramMap = [
 					nil, \grainSize, \density, \position, \pitch,
 					\posJitter, \pitchJitter, \stereoSpread,
-					\filterFreq, \filterMorph, \reverbMix, \delayMix
+					\filterFreq, \filterMorph, \reverbMix, \delayMix,
+					\shimmerMix,
+					\quadX, \quadY,  // Phase 13: Spatial modulation targets
+					nil,  // Separator
+					\masterFilterFreq, \masterFilterMorph, \masterFilterRes,    // Phase 15: Master filter
+					\masterFilterDecay, \masterFilterAnimate, \masterFilterMix  // Phase 15: Master filter
 				];
 				var targetIdx = targetMenu.value;
-				if(targetIdx > 0, {
+				if(targetIdx > 0 and: { targetIdx != 15 }, {  // Skip separator
 					var param = paramMap[targetIdx];
 					var min = minNum.value;
 					var max = maxNum.value;
-					trackManager.routeModulator(trackNum, modNum, param, min, max);
+
+					// Phase 15: Route to master bus if master parameter
+					if(targetIdx >= 16, {
+						trackManager.routeModulatorToMaster(trackNum, modNum, param, min, max);
+					}, {
+						trackManager.routeModulator(trackNum, modNum, param, min, max);
+					});
+
 					statusText.string_("Status: Routed to " ++ targetMenu.items[targetIdx])
 						.stringColor_(Color.cyan);
 				});

@@ -215,6 +215,20 @@ Phase 7 Features:
 				});
 			});
 
+		// Phase 12: Quad Panner button (only show on Track 1)
+		if(trackNum == 0, {
+			Button(parent, Rect(750, 10, 70, 40))
+				.states_([["QUAD\nPANNER", colors.black, colors.orange]])
+				.font_(Font("DejaVu Sans Mono", 9, true))
+				.action_({
+					if(~quadPanner.notNil, {
+						~quadPanner.createWindow();
+					}, {
+						"Quad panner not loaded. Restart main.scd.".warn;
+					});
+				});
+		});
+
 		// === COLUMN 1: RECORDING + GRAIN ===
 		yPos = 60;
 		StaticText(parent, Rect(col1X, yPos, 350, 20))
@@ -625,10 +639,22 @@ Phase 7 Features:
 
 		yPos = yPos + 20;
 
-		// === 48-BAND MORPHING RESONATOR ===
+		// === PHASE 15: 128-BAND RESONATOR (DynKlank) ===
 
 		yPos = yPos + 30;
 		makeMasterButton.value(parent, 10, yPos, 150, "Filter", \filterOn);
+
+		// Phase 15: Spectrum Analyzer button (FabFilter-style)
+		Button(parent, Rect(170, yPos, 120, 25))
+			.states_([["SPECTRUM", colors.fg, colors.blue]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({
+				if(~spectrumAnalyzer.notNil, {
+					~spectrumAnalyzer.createWindow();
+				}, {
+					"Spectrum analyzer not initialized".warn;
+				});
+			});
 
 		yPos = yPos + 35;
 		makeMasterSlider.value(parent, 10, yPos, "Frequency", ControlSpec(20, 2000, \exp), \filterFreq, 200);

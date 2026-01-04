@@ -6,7 +6,7 @@
                     ___
                   _/   \_
                  |  o_o  |
-                 |   ^   |
+                 |   ^   |  
                   \_____/
                     | |
                _____|_|_____
@@ -19,62 +19,198 @@
 
 This is a 4-track granular synthesis sampler!
 
-## 🎯 Active TODOs
+This moving quickly so the instructions might be wrong! I will ask the AI to rewrite them after I can afford more AI credits!! !! !
 
-### Completed ✅
-- [x] Remove loop buttons from viewfinder (Reset Loop, Select All)
-- [x] Add Play/Stop transport buttons to viewfinder
-- [x] Add spectral amplitude slider to viewfinder
-- [x] Fix volume issues (grain boost at 2.0x, soft limiter using tanh)
-- [x] Move all spectral engine sliders to viewfinder (Mix, Amp, Window Size, Overlaps, Rate, Pitch, Smear, Freeze)
+I'm running on mac mini with 24 GB of ran. Full blast, 25% cpu. Will be taking advatage of that head room. I think it could run better on headless linux and eventually I will make a stripped version for rasipi.
 
-### Phase 12 Completed ✅
-- [x] MIDI integration (KeyStep Pro with 5 encoders + polyphonic notes)
-- [x] Recording viewfinder (live audio capture with region selection)
-- [x] Quad speaker output (4-channel spatial audio)
-- [x] Spatial panning GUI (interactive 2D quad positioning)
-- [x] Shimmer mix modulation target
-- [x] Filter cutoff modulation target
-- [x] Fixed viewfinder Play/Stop buttons
+Given the exceptional single-core performance and memory bandwidth of the **Mac Mini M4**, the previous constraints—designed for standard hardware—are no longer applicable. We are shifting the "S-4 RIVAL" from a "mobile-optimized" architecture to a 
+
+
+Rewrite the above
+
+# S-4 RIVAL: Granular Synthesis Workstation
+
+```
+      Hey Jim, come take a ride on the grape leaf raft!
+
+                    ___
+                  _/   \_
+                 |  o_o  |
+                 |   ^   |  
+                  \_____/
+                    | |
+               _____|_|_____
+              /             \
+         ~~~~|  GRAPE LEAF   |~~~~
+          ~~~|     RAFT      |~~~
+           ~~\_______________/~~
+             ~~~~~~~~~~~~~~~
+```
+
+## Overview
+
+A 4-track granular synthesis sampler built for high-performance hardware.
+
+## Current Platform
+
+**Mac Mini M4** with 24GB RAM, running at ~25% CPU utilization at full capacity. Excellent headroom for feature expansion and real-time processing.
+
+## Architecture Notes
+
+- **Primary target**: macOS (current development)
+- **Planned variants**: 
+  - Headless Linux (optimized performance)
+  - Raspberry Pi version (resource-constrained port)
+
+## Status
+
+
+# S-4 RIVAL: Feature Roadmap (M4 Optimized)
+
+## 1. Audio-Rate LFO Modulation
+**Priority:** HIGH | **Status:** Recommended for M4
+
+**Current:** LFOs run at control-rate (.kr) — 750Hz update rate, causes zipper noise on resonant filters.
+
+**Upgrade:** Move all LFO modulation to audio-rate (.ar) at 48kHz native.
+
+**Benefits:**
+- Eliminates zipper artifacts
+- Enables FM synthesis with metallic textures
+- Sub-millisecond modulation precision
+
+**Target File:** `core/track-manager.scd`
 
 ---
 
-## 🚀 THE M4 ULTIMATE SPEC (Phase 9+)
+## 2. 4x Oversampled Saturation
+**Priority:** HIGH | **Status:** Recommended for M4
 
-### 🌌 Visual Flash (Doom Material Enhanced)
-- [x] **FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11 ✅)**
-- [x] **Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11 ✅)**
-- [ ] **Neon Glow Rendering:** Hardware-accelerated "glow" effects for the playhead and loop regions
+**Current:** Distortion runs at standard sample rate, causing digital aliasing.
 
-### 🔊 Overlooked Audio Components
-- [x] **Dual-Topology Analog-Modeled Filter (Per Track):** **(Phase 10 ✅)**
-  - ZDF (Zero-Delay Feedback) Ladder Filter - Liquid resonance with self-oscillation
-  - State Variable Filter (SVF) - LP/HP/BP morph capability
-  - Pre-Filter Drive Stage - Nonlinear saturation (.tanh) for filter "grit"
-  - Bass Loss Compensation - Maintains low-end at high resonance
-- [ ] **Audio-Rate Modulation:** Upgrade from 750Hz control-rate to 48kHz audio-rate
-- [ ] **Transient Bypass Logic:** Keeps drum transients sharp during heavy spectral stretching
-- [x] **Phase-Aligned Granulation:** Prevents phase-cancellation in low-frequency textures **(Phase 9 ✅)**
-- [x] **Master Bus "Glue" Compressor:** Final stage compressor to bond the 4 tracks together **(Phase 9 ✅)**
+**Upgrade:** 4x upsampling chain (192kHz) → non-linear saturation → 4x downsampling with anti-aliasing filter.
+
+**Benefits:**
+- Analog-like "creamy" saturation
+- No digital harshness or artifacts
+- Leverages M4's vectorized math performance
+
+**Target File:** `core/grain-engine.scd` (lines 257–295)
 
 ---
 
-## 💻 **HARDWARE PLATFORM**
+## 3. 128-Band Resonator (DynKlank)
+**Priority:** MEDIUM | **Status:** Recommended for M4
 
-**Target:** Mac Mini M4
-**RAM:** 24 GB
-**CPU Usage:** ~25% at full capacity (75% headroom available!)
-**Architecture:** Optimized for M4 single-core performance & high memory bandwidth
+**Current:** 48-band morphing resonator using parallel filters.
 
-**Future Targets:**
-- Headless Linux build (server deployment)
-- Raspberry Pi stripped version (portable/embedded)
+**Upgrade:** Replace with DynKlank UGen for 128-band architecture.
 
-**Development Status:** ⚠️ Active development - Documentation evolving rapidly
+**Benefits:**
+- Professional spectral resolution
+- Richer harmonic textures
+- **CPU target:** <30% per track
 
-**📖 For complete feature list, see [FEATURES.md](FEATURES.md)**
+**Target File:** Master bus filterbank initialization
 
 ---
+
+## 4. Real-Time Playhead Visualization
+**Priority:** HIGH | **Status:** Recommended for M4
+
+**Current:** Static waveform display with polling lag.
+
+**Upgrade:** Hardware-timed playhead pushed via `SendReply.ar` at 60–120Hz to GPU-rendered UserView.
+
+**Benefits:**
+- Sample-locked visual tracking
+- Zero UI latency
+- Real-time recording visualization
+
+**Target File:** `\s4SpectralEngine` and `\s4GrainEngine` SynthDefs
+
+### 
+
+**High-Resolution Desktop Architecture**.
+
+This plan prioritizes **Signal Purity**, **Sample-Accurate Modulation**, and **Spectral Density** over CPU conservation.
+
+---
+
+# S-4 RIVAL: M4 Extreme Performance Plan (Phase 5+)
+
+## 1. Global Audio-Rate (`.ar`) Signal Path
+
+**Status:** Recommended for M4 | **Priority:** High
+
+* **The Upgrade:** Eliminate `.kr` (Control Rate) for all internal modulation. Migrate every instance of `Bus.control` to `Bus.audio`.
+* **The Rationale:** On the M4, the overhead of calculating modulators at 48kHz instead of 750Hz is negligible. Native `.ar` modulation eliminates "zipper noise" on high-resonance filters and enables "Audio-Rate FM" where LFOs can reach audible frequencies for metallic textures.
+* **Action Item:** Update `modulator.scd` to use `.ar` for all LFO and Random UGens.
+
+---
+
+## 2. 4x Oversampled "Color" Section
+
+**Status:** Recommended for M4 | **Priority:** High (Sonic Fidelity)
+
+* **The Upgrade:** Wrap nonlinear modules (Distortion, Bit-Crusher, Saturation) in oversampling blocks.
+* **The Rationale:** Digital distortion at standard sample rates creates "aliasing"—unwanted frequencies that fold back into the audible range, making high-end textures sound "brittle."
+* **Implementation:**
+* Upsample the signal 4x (to 192kHz).
+* Apply `.tanh` or `SoftClipAmp8`.
+* Downsample with an anti-aliasing filter.
+
+
+* **Result:** A "warm," analog-modeled saturation that rivals boutique hardware.
+
+---
+
+## 3. Concurrent Engine: `GrainBuf` + `Warp1`
+
+**Status:** Recommended for M4 | **Priority:** Medium (Versatility)
+
+* **The Upgrade:** Run both the Granular Engine (`GrainBuf`) and the Spectral Engine (`Warp1`) simultaneously per track, rather than as a toggle.
+* **The Rationale:** With 24GB of RAM and M4 bandwidth, you can manage dual high-resolution buffer readers without dropouts.
+* **Benefit:** This allows for **Layered Sculpting**. You can use `Warp1` to create a "frozen spectral bed" while `GrainBuf` adds rhythmic "shards" or "sculpted pulses" on top of the same audio material.
+
+---
+
+## 4. Ultra-Density 96-Band Resonator
+
+**Status:** Recommended for M4 | **Priority:** High
+
+* **The Upgrade:** Increase the resonator density from 48 bands to **96 or 128 bands** per track.
+* **The Rationale:** The M4's ability to handle vectorized math allows for massive parallel filter banks.
+* **Implementation:** Replace individual filter objects with `DynKlank.ar` or `Klank.ar`, driven by a `Buffer` containing 128 precise frequency ratios.
+* **Result:** The resonator shifts from sounding like "a group of filters" to "a physical resonant object," providing a much smoother morphing experience across the frequency spectrum.
+
+---
+
+## 5. System-Wide DC Safety & Headroom
+
+**Status:** Mandatory for High-Power Use | **Priority:** Critical
+
+* **The Upgrade:** Integrate `LeakDC.ar` and `Limiter.ar` as permanent fixtures on the `s4MasterBus`.
+* **The Rationale:** High-resonance, oversampled filters can easily create massive energy peaks and DC offset (silent speaker-damaging voltage).
+* **Benefit:** Allows the user to push the "sculpting" controls to extreme limits without fear of digital clipping or hardware damage.
+
+---
+
+## Technical Summary for Mac Mini M4
+
+| Component | Standard Plan (Subpar) | M4 Extreme Plan (Target) |
+| --- | --- | --- |
+| **Modulation** | `.kr` (Control Rate) | **`.ar` (Audio Rate)** |
+| **Granulation** | Single-Engine Mode | **Parallel Multi-Engine** |
+| **Filter Density** | 48 Bands | **96 - 128 Bands** |
+| **Distortion** | Standard `.tanh` | **4x Oversampled Saturation** |
+| **CPU Target** | < 50% | **Unlimited (Single-Core Max)** |
+
+---
+
+### Implementation Note
+
+To implement the 128-band resonator effectively on your M4, I recommend using the **`DynKlank`** UGen. It is significantly more efficient for large banks and allows you to update the frequencies, amplitudes, and ring times (decay) of all 128 bands simultaneously via `ControlBus` arrays.
 
 ## QUICK START
 
@@ -198,20 +334,6 @@ The GUI will open automatically!
 - Adjust track volumes
 - Watch VU meters (aim for green/yellow, avoid red)
 - Keep CPU below 50% average
-
-### 6. Save Your Work (Phase 14!)
-```supercollider
-// Save current state as a preset
-~presets.save("mySound");
-
-// Load it later
-~presets.load("mySound");
-
-// Or try example presets
-"examples/preset-examples.scd".loadRelative;  // Creates 10 example presets
-~presets.list;                                  // See all presets
-~presets.load("ambient_pad");                   // Load ambient preset
-```
 
 ---
 
@@ -367,125 +489,14 @@ The `samples/stock/` folder includes some great starter material:
 - Zoom with arrow keys or mouse wheel
 - Drag to select precise loop regions
 - Works with both loaded files AND recorded buffers
-- **Play/Stop buttons** control track playback directly from viewfinder
-
-### Recording Viewfinder (Phase 12) 🎤
-- Separate window for live audio recording
-- Real-time waveform visualization
-- Select regions with mouse drag
-- Send selected regions to any of 4 granulator tracks
-- 8-channel input support (MOTU Mk5 compatible)
-- Transport controls (Record/Stop/Play)
-
-**Usage:**
-```supercollider
-~recordingViewfinder.createWindow();  // Open recording window
-// 1. Select input channel (In 1-8)
-// 2. Press REC to record
-// 3. Press STOP when done
-// 4. Drag on waveform to select region
-// 5. Choose target track (1-4)
-// 6. Press "Send to Track"
-```
-
-### MIDI Control (Phase 12) 🎹
-**KeyStep Pro Integration:**
-- 5 encoder mappings (customizable CC assignments)
-- Polyphonic note triggering (4 MIDI channels → 4 tracks)
-- Velocity-sensitive grain density
-- Note number → playback rate (C3 = 1.0x, C4 = 2.0x)
-- Visual feedback (green pulses on note events, cyan overlays on CC changes)
-
-**Default Encoder Mappings:**
-- CC 74 → Filter Cutoff (Track 1)
-- CC 71 → Grain Size (Track 1)
-- CC 76 → Overlap/Density (Track 1)
-- CC 77 → Spectral Mix (Track 1)
-- CC 78 → Filter Drive (Track 1)
-
-**Remap encoders:**
-```supercollider
-~s4MIDIMapping.mapCC(74, \reverbMix, 0);  // CC 74 → Reverb Mix on Track 1
-```
-
-### Quad Speaker Output (Phase 12) 🔊
-**4-Speaker Spatial Audio System**
-
-**Speaker Layout (MOTU outputs 1-4):**
-```
-  FL (Out 0)     FR (Out 1)
-      [  X  Y  ]
-  RL (Out 2)     RR (Out 3)
-```
-
-**Features:**
-- 2D spatial positioning (X/Y coordinates)
-- Equal-power quad panning
-- Interactive spatial GUI with drag-and-drop positioning
-- Per-track spatial control
-- Real-time spatial movement
-
-**Setup:**
-1. Load quad mix bus:
-   ```supercollider
-   "core/mix-bus-quad.scd".loadRelative;
-   ```
-
-2. Open spatial panner GUI:
-   ```supercollider
-   ~quadPanner = ~s4QuadPanner.value(~trackManager);
-   ~quadPanner.createWindow();
-   ```
-
-3. Position tracks by dragging colored dots in the 2D field
-
-**Manual Control:**
-```supercollider
-~trackManager.setQuadPosition(0, -0.5, -0.5);  // Track 1: Front-Left
-~trackManager.setQuadPosition(1,  0.5, -0.5);  // Track 2: Front-Right
-~trackManager.setQuadPosition(2, -0.5,  0.5);  // Track 3: Rear-Left
-~trackManager.setQuadPosition(3,  0.5,  0.5);  // Track 4: Rear-Right
-```
-
-**Preset Positions:**
-- **Corners**: Distribute tracks to the 4 corners of the quad field
-- **Front Row**: All tracks in front (good for live performance)
-- **Circle**: Evenly distributed around the perimeter
-- **Center All**: Collapse all tracks to center
-
-**Test Quad Output:**
-```supercollider
-"tests/quad-speaker-test.scd".loadRelative;  // Runs rotation test + manual control
-```
-
-**Spatial Effects Ideas:**
-- **Rotating Cloud**: Slowly rotate grain position in circle
-- **Ping-Pong Quad**: Bounce grains between all 4 speakers
-- **Spatial Granulation**: Position each grain randomly in quad field
-- **Spectral Spread**: Low frequencies in front, high in rear
-- **Dynamic Space**: Modulate X/Y position with LFOs
 
 ---
-
-## DEVELOPMENT STATUS
-
-**Current Phase:** 15 (Planning Complete)
-**Last Updated:** Phase 14 - Preset System (Jan 4, 2026)
-
-**Active TODO List:** See `TODO.md` for current tasks
-**Detailed Specs:** See `docs/PHASE-15-TODO.md` for technical details
-
-### Next Up (Phase 15-17):
-- ZDF Filter Integration (zero-delay feedback)
-- 128-Band DynKlank Resonator
-- Musical MIDI Scaling Logic
-- Enhanced KeyStep Pro routing
-- Visual feedback enhancements
 
 ## KNOWN ISSUES
 
 - Waveform display uses temp files for recorded buffers
 - Modulation window is a separate popup (not integrated)
+- Track naming & preset system coming soon™
 
 ---
 
@@ -519,5 +530,5 @@ Questions? Check `generic-commands.scd` or holler at Forrest.
 <!-- gptel-model: claude-haiku-4-5-20251001 -->
 <!-- gptel--backend-name: "Claude-Haiku-4.5" -->
 <!-- gptel-max-tokens: 6000 -->
-<!-- gptel--bounds: ((response (1140 2102) (2110 7628))) -->
+<!-- gptel--bounds: ((response (1121 2042) (2043 3816))) -->
 <!-- End: -->

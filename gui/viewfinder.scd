@@ -573,7 +573,7 @@ Usage:
 				.states_([["▶ PLAY", Color.white, Color.green(0.6)]])
 				.font_(Font("Monaco", 12, true))
 				.action_({
-					trackManager.playTrack(trackNum);
+					trackManager.setParam(trackNum, \amp, 0.5);  // Set amp to 0.5 (playing)
 					"Track % PLAYING".format(trackNum + 1).postln;
 				});
 
@@ -582,7 +582,7 @@ Usage:
 				.states_([["■ STOP", Color.white, Color.red(0.6)]])
 				.font_(Font("Monaco", 12, true))
 				.action_({
-					trackManager.stopTrack(trackNum);
+					trackManager.setParam(trackNum, \amp, 0.0);  // Set amp to 0.0 (silent)
 					"Track % STOPPED".format(trackNum + 1).postln;
 				});
 
@@ -729,6 +729,46 @@ Usage:
 			4.do({ arg i;
 				self.createWindow(i);
 			});
+		},
+
+		// Phase 12: MIDI visual feedback - CC parameter change (cyan overlay)
+		showCCFeedback: { arg self, trackNum, param, value;
+			// Display parameter name + value as cyan overlay
+			// Fades out after 1 second
+			{
+				var win = windows[trackNum];
+				var overlayText;
+
+				if(win.notNil and: { win.isClosed.not }, {
+					// Create temporary overlay text
+					overlayText = StaticText(win, Rect(350, 50, 200, 30))
+						.string_("% : %".format(param, value.round(0.01)))
+						.font_(Font("DejaVu Sans Mono", 14, true))
+						.stringColor_(Color.fromHexString("#89DDFF"))  // Doom cyan
+						.background_(Color.fromHexString("#262938").alpha_(0.9));
+
+					// Fade out and remove after 1 second
+					{
+						1.wait;
+						{ overlayText.remove }.defer;
+					}.fork(AppClock);
+				});
+			}.defer;
+		},
+
+		// Phase 12: MIDI visual feedback - Note trigger (green pulse)
+		showNotePulse: { arg self, trackNum, velocity;
+			// This triggers a visual pulse that the overlay will draw
+			// Store pulse data for overlay to animate
+			{
+				var track = trackManager.getTrack(trackNum);
+				if(track.notNil, {
+					// Trigger pulse animation in overlay
+					// The existing grain pulse animation will be enhanced to show this
+					track.lastMIDIVelocity = velocity;
+					track.lastMIDITime = Date.getDate.rawSeconds;
+				});
+			}.defer;
 		},
 
 		// Close all viewfinder windows

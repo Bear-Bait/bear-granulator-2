@@ -37,6 +37,9 @@ Public API:
 			mute: false,
 			solo: false,
 			params: IdentityDictionary.new,
+			// Phase 13: Execution order groups
+			modGroup: Group.head(server),     // Modulators run first
+			instrumentGroup: Group.tail(server), // Instruments run after
 			// Phase 5: Modulation system (4 modulators per track)
 			modulators: 4.collect({ nil }),           // Modulator synths
 			modBusses: 4.collect({ nil }),            // Control busses
@@ -157,10 +160,11 @@ Public API:
 			track.params = defaultParams.copy;
 
 			// Create grain synth with parameters (STOPPED by default)
+			// Phase 13: Place in instrumentGroup (runs AFTER modGroup)
 			track.grainSynth = Synth(\s4GrainEngine, [
 				\out, track.audioBus.index,
 				\bufnum, track.recorder.getBufferNum
-			] ++ track.params.asPairs, addAction: \addToHead);
+			] ++ track.params.asPairs, track.instrumentGroup);
 
 			// Start synth in STOPPED state - user must press PLAY
 			track.grainSynth.run(false);
@@ -179,7 +183,7 @@ Public API:
 				\smear, track.params[\spectralSmear],
 				\amp, track.params[\spectralAmp],
 				\interp, 4  // Best quality for M4
-			], addAction: \addToHead);
+			], track.instrumentGroup);
 
 			// Spectral synth starts STOPPED too
 			track.spectralSynth.run(false);
@@ -314,6 +318,23 @@ Public API:
 			});
 		},
 
+		// Phase 12: Set quad position (X/Y coordinates for quad speaker output)
+		setQuadPosition: { arg self, trackNum, x, y;
+			var track = tracks[trackNum];
+			var xParamName, yParamName;
+
+			// Store quad position in track
+			track.quadX = x.clip(-1, 1);
+			track.quadY = y.clip(-1, 1);
+
+			// Update quad master bus if it exists
+			if(masterBus.notNil, {
+				xParamName = ("track" ++ (trackNum + 1) ++ "X").asSymbol;
+				yParamName = ("track" ++ (trackNum + 1) ++ "Y").asSymbol;
+				masterBus.set(xParamName, track.quadX, yParamName, track.quadY);
+			});
+		},
+
 		// Set track mute (also updates master bus)
 		setMute: { arg self, trackNum, mute;
 			var track = tracks[trackNum];
@@ -403,19 +424,20 @@ Public API:
 				track.modulators[modNum] = nil;
 			});
 
-			// Allocate control bus if needed
+			// Phase 13: Allocate AUDIO bus for audio-rate modulation
 			if(track.modBusses[modNum].isNil, {
-				track.modBusses[modNum] = Bus.control(server, 1);
+				track.modBusses[modNum] = Bus.audio(server, 1);
 			});
 
-			// Create modulator synth
+			// Create modulator synth in modGroup (Phase 13: execution order)
 			track.modulators[modNum] = ~s4Modulator.value(server).create(
 				type,
 				track.modBusses[modNum].index,
 				rate,
 				depth,
 				shape,
-				track.audioBus.index  // For envelope follower
+				track.audioBus.index,  // For envelope follower
+				track.modGroup  // Phase 13: Place in modGroup
 			);
 
 			"Track %: Modulator % created (type: %, bus: %)".format(
@@ -431,6 +453,7 @@ Public API:
 		// Route modulator to parameter
 		routeModulator: { arg self, trackNum, modNum, targetParam, minVal, maxVal;
 			var track = tracks[trackNum];
+			var trackMgr = this;
 
 			if(track.modulators[modNum].isNil, {
 				"Track %: Modulator % not created yet".format(trackNum + 1, modNum + 1).postln;
@@ -443,30 +466,114 @@ Public API:
 
 			// Free old mapper if exists
 			if(track.modMappers[modNum].notNil, {
-				// modMappers[modNum] is (synth: X, bus: Y)
 				var mapper = track.modMappers[modNum];
-				if(mapper.synth.notNil, {
-					mapper.synth.free;
-				});
-				if(mapper.bus.notNil, {
-					mapper.bus.free;
-				});
+				// Safe access to the Event returned by createMapper
+				if(mapper[\synth].notNil, { mapper[\synth].free });
+				if(mapper[\bus].notNil, { mapper[\bus].free });
 				track.modMappers[modNum] = nil;
 			});
 
-			// Create new mapper (returns (synth: X, bus: Y))
+			// Phase 13: Special handling for spatial modulation (quadX/quadY)
+			if((targetParam == \quadX) or: { targetParam == \quadY }, {
+				var spatialSynth;
+
+				// Create synth that reads modulation and updates quad position
+				spatialSynth = {
+					arg modBus, minVal, maxVal;
+					var modValue = In.ar(modBus, 1);
+					var scaled = modValue.linlin(0, 1, minVal, maxVal);
+
+					// Send position updates via OSC (20Hz to avoid flooding)
+					SendTrig.kr(Impulse.kr(20), 0, scaled);
+				}.play(server, [
+					\modBus, track.modBusses[modNum].index,
+					\minVal, minVal,
+					\maxVal, maxVal
+				], addAction: \addToTail);
+
+				// Register OSC responder to update quad position
+				OSCdef(("spatialMod_" ++ trackNum ++ "_" ++ modNum).asSymbol, { arg msg;
+					var value = msg[3];  // ['/tr', nodeID, trigID, value]
+					{
+						if(targetParam == \quadX, {
+							trackMgr.setQuadPosition(trackNum, value, track.quadY ? 0);
+						}, {
+							trackMgr.setQuadPosition(trackNum, track.quadX ? 0, value);
+						});
+					}.defer;
+				}, '/tr', server.addr);
+
+				track.modMappers[modNum] = (synth: spatialSynth, bus: nil);
+
+				"Track %: Mod % → SPATIAL % (range: % to %)".format(
+					trackNum + 1,
+					modNum + 1,
+					targetParam,
+					minVal,
+					maxVal
+				).postln;
+			}, {
+				// Normal synth parameter mapping
+				track.modMappers[modNum] = ~s4Modulator.value(server).createMapper(
+					track.modBusses[modNum].index,
+					track.modulators[modNum],  // Pass modulator synth for order-of-execution
+					track.grainSynth,
+					targetParam,
+					minVal,
+					maxVal,
+					track.modGroup  // Phase 13: Place in modGroup
+				);
+
+				"Track %: Mod % → % (range: % to %)".format(
+					trackNum + 1,
+					modNum + 1,
+					targetParam,
+					minVal,
+					maxVal
+				).postln;
+			});
+		},
+
+		// Phase 15: Route modulator to MASTER BUS parameter
+		routeModulatorToMaster: { arg self, trackNum, modNum, targetParam, minVal, maxVal;
+			var track = tracks[trackNum];
+			var paramName;
+
+			if(track.modulators[modNum].isNil, {
+				"Track %: Modulator % not created yet".format(trackNum + 1, modNum + 1).postln;
+				^nil;
+			});
+
+			// Store routing info
+			track.modTargets[modNum] = targetParam;
+			track.modRanges[modNum] = (min: minVal, max: maxVal);
+
+			// Free old mapper if exists
+			if(track.modMappers[modNum].notNil, {
+				var mapper = track.modMappers[modNum];
+				if(mapper[\synth].notNil, { mapper[\synth].free });
+				if(mapper[\bus].notNil, { mapper[\bus].free });
+				track.modMappers[modNum] = nil;
+			});
+
+			// Map master parameter name to actual master bus param
+			paramName = targetParam.asString.replace("master", "").asSymbol;
+
+			// Create mapper that routes to master bus
 			track.modMappers[modNum] = ~s4Modulator.value(server).createMapper(
 				track.modBusses[modNum].index,
-				track.grainSynth,
-				targetParam,
+				track.modulators[modNum],
+				masterBus,  // Target is master bus instead of track synth
+				paramName,  // e.g., \filterFreq, \filterMorph
 				minVal,
-				maxVal
+				maxVal,
+				track.modGroup
 			);
 
-			"Track %: Mod % → % (range: % to %)".format(
+			"Track %: Mod % → MASTER % (range: % to %)".format(
 				trackNum + 1,
 				modNum + 1,
-				targetParam,
+				paramName,
 				minVal,
 				maxVal
 			).postln;
@@ -486,6 +593,7 @@ Public API:
 		// Free a modulator
 		freeModulator: { arg self, trackNum, modNum;
 			var track = tracks[trackNum];
+			var mapper;
 
 			if(track.modulators[modNum].notNil, {
 				track.modulators[modNum].free;
@@ -493,14 +601,10 @@ Public API:
 			});
 
 			if(track.modMappers[modNum].notNil, {
-				// modMappers[modNum] is (synth: X, bus: Y)
-				var mapper = track.modMappers[modNum];
-				if(mapper.synth.notNil, {
-					mapper.synth.free;
-				});
-				if(mapper.bus.notNil, {
-					mapper.bus.free;
-				});
+				mapper = track.modMappers[modNum];
+				// Safe access to the Event returned by createMapper
+				if(mapper[\synth].notNil, { mapper[\synth].free });
+				if(mapper[\bus].notNil, { mapper[\bus].free });
 				track.modMappers[modNum] = nil;
 			});
 
