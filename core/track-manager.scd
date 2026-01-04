@@ -90,6 +90,7 @@ Public API:
 				useOverlap: 1,    // Phase 6b: Use overlap mode by default
 				position: 0.0,    // Default to start of buffer
 				scanSpeed: 0,     // Phase 7c: Continuous scanning (0=static)
+				timeStretch: 1.0, // Phase 15: Master time stretch (1.0 = normal)
 				pitch: 0,         // Legacy: changes speed+pitch
 				pitchShift: 0,    // Phase 7: True pitch shift (preserves speed)
 				posJitter: 0.1,
@@ -611,6 +612,108 @@ Public API:
 			track.modTargets[modNum] = nil;
 
 			"Track %: Modulator % freed".format(trackNum + 1, modNum + 1).postln;
+		},
+
+		// Phase 15: Switch between stereo and quad master buses
+		setMasterBusMode: { arg self, mode;
+			var oldMasterBus = masterBus;
+			var filterState, trackState;
+
+			if(masterBus.isNil, {
+				"Track manager: No master bus to switch".warn;
+				^nil;
+			});
+
+			// Capture current filter state
+			filterState = (
+				filterOn: 0,  // Will be set by user
+				filterFreq: 200,
+				filterMorph: 0.5,
+				filterRes: 0.5,
+				filterDecay: 0.5,
+				filterAnimate: 0,
+				filterAnimRate: 0.5,
+				filterMix: 0.5,
+				masterVol: 0.8
+			);
+
+			// Capture track volumes, pans, mutes
+			trackState = tracks.collect({ |track, i|
+				(
+					volume: track.volume,
+					pan: track.pan,
+					mute: track.mute,
+					quadX: track.quadX ? 0,
+					quadY: track.quadY ? 0
+				);
+			});
+
+			// Free old master bus
+			fork {
+				"Switching master bus mode...".postln;
+
+				if(oldMasterBus.notNil, {
+					oldMasterBus.free;
+					0.2.wait;
+				});
+
+				// Create new master bus based on mode
+				if(mode == 0, {
+					// STEREO MODE
+					masterBus = Synth(\s4MasterBus, [
+						\track1Bus, tracks[0].audioBus.index,
+						\track2Bus, tracks[1].audioBus.index,
+						\track3Bus, tracks[2].audioBus.index,
+						\track4Bus, tracks[3].audioBus.index,
+						\out, 0
+					] ++ filterState.asPairs, addAction: \addToTail);
+
+					"✓ Switched to STEREO mode (2-channel output)".postln;
+				}, {
+					// QUAD MODE
+					masterBus = Synth(\s4MasterBusQuad, [
+						\track1Bus, tracks[0].audioBus.index,
+						\track2Bus, tracks[1].audioBus.index,
+						\track3Bus, tracks[2].audioBus.index,
+						\track4Bus, tracks[3].audioBus.index,
+						\out, 0
+					] ++ filterState.asPairs, addAction: \addToTail);
+
+					"✓ Switched to QUAD mode (4-channel output)".postln;
+				});
+
+				0.1.wait;
+
+				// Restore track states
+				trackState.do({ |state, i|
+					var track = tracks[i];
+					var volParam = ("track" ++ (i + 1) ++ "Vol").asSymbol;
+					var muteParam = ("track" ++ (i + 1) ++ "Mute").asSymbol;
+
+					masterBus.set(volParam, state.volume);
+					masterBus.set(muteParam, state.mute.asInteger);
+
+					if(mode == 0, {
+						// Stereo: restore pan
+						var panParam = ("track" ++ (i + 1) ++ "Pan").asSymbol;
+						masterBus.set(panParam, state.pan);
+					}, {
+						// Quad: restore X/Y position
+						var xParam = ("track" ++ (i + 1) ++ "X").asSymbol;
+						var yParam = ("track" ++ (i + 1) ++ "Y").asSymbol;
+						masterBus.set(xParam, state.quadX);
+						masterBus.set(yParam, state.quadY);
+					});
+				});
+
+				// Refresh quad panner positions if in quad mode
+				if((mode == 1) and: { ~quadPanner.notNil }, {
+					trackState.do({ |state, i|
+						publicAPI.setQuadPosition(i, state.quadX, state.quadY);
+					});
+					"✓ Quad panner positions refreshed".postln;
+				});
+			};
 		},
 
 		// Free all tracks

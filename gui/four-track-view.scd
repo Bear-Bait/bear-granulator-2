@@ -656,6 +656,21 @@ Phase 7 Features:
 				});
 			});
 
+		// Phase 15: Stereo/Quad toggle button
+		Button(parent, Rect(300, yPos, 120, 25))
+			.states_([
+				["STEREO MODE", colors.buttonText, colors.green],
+				["QUAD MODE", colors.buttonTextActive, colors.orange]
+			])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({ arg btn;
+				if(~trackManager.notNil, {
+					~trackManager.setMasterBusMode(btn.value);
+				}, {
+					"Track manager not initialized".warn;
+				});
+			});
+
 		yPos = yPos + 35;
 		makeMasterSlider.value(parent, 10, yPos, "Frequency", ControlSpec(20, 2000, \exp), \filterFreq, 200);
 		yPos = yPos + 22;

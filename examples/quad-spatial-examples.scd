@@ -48,9 +48,54 @@ PREREQUISITE: Run main.scd first!
 }).play;
 )
 
+  // Slowly rotate Track 2 around the quad field
+  (
+  ~spatialRotation2 = Task({
+      var angle = 0;
+      loop {
+          var x = angle.cos;
+          var y = angle.sin;
+          ~trackManager.setQuadPosition(1, x, y);  // Track 2 is index 1
+          angle = angle + 0.05;  // Speed of rotation
+          0.1.wait; // Update rate (10Hz)
+      }
+  }).play;
+  )
+
+  // Rotate Track 1 clockwise, Track 2 counter-clockwise
+  (
+  ~spatialRotation = Task({
+      var angle = 0;
+      loop {
+          // Track 1: clockwise
+          ~trackManager.setQuadPosition(0, angle.cos, angle.sin);
+          // Track 2: counter-clockwise (negative angle)
+          ~trackManager.setQuadPosition(1, angle.neg.cos, angle.neg.sin);
+          angle = angle + 0.05;
+          0.1.wait;
+      }
+  }).play;
+  )
+
+  Or rotate all 4 tracks with 90° offsets (like a windmill):
+
+  // All 4 tracks rotating together, 90° apart
+  (
+  ~spatialRotation = Task({
+      var angle = 0;
+      loop {
+          ~trackManager.setQuadPosition(0, angle.cos, angle.sin);
+          ~trackManager.setQuadPosition(1, (angle + 1.5pi).cos, (angle + 1.5pi).sin);
+          ~trackManager.setQuadPosition(2, (angle + pi).cos, (angle + pi).sin);
+          ~trackManager.setQuadPosition(3, (angle + 0.5pi).cos, (angle + 0.5pi).sin);
+          angle = angle + 0.05;
+          0.1.wait;
+      }
+  }).play;
+  )
 // Stop rotation
 ~spatialRotation.stop;
-
+ ~spatialRotation2.stop;
 // ============================================
 // EXAMPLE 3: Ping-Pong Between Speakers
 // ============================================

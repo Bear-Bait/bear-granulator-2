@@ -1,13 +1,14 @@
 /*
 S-4 Rival: Quad Master Mix Bus
 Phase 12 - Quad Speaker Output
+Phase 15 - 128-Band Resonator Upgrade
 
 Sums 4 independent track buses and applies:
 - Per-track volume, mute controls
 - Quad spatial positioning (X/Y coordinates)
-- Shared 48-band morphing resonator
+- Shared 128-band morphing resonator (DynKlank)
+- DC safety and brick-wall limiting
 - Master volume control
-- Soft limiting
 
 Signal Flow:
 Track 1 (Bus 10-11) ↘
@@ -97,137 +98,149 @@ SynthDef(\s4MasterBusQuad, {
 	t4 = (t4[0] + t4[1]) * 0.5;
 
 	// Quad panning function (X/Y → 4 speakers)
-	// Uses equal-power panning for smooth spatial movement
+	// TRUE constant-power bilinear interpolation
+	// Maps X/Y (-1 to +1) to 4 speakers with constant total energy
 	// Speaker layout: FL(0), FR(1), RL(2), RR(3)
 	t1Quad = [
 		// FL: strongest when X=-1, Y=-1
-		((1 - Lag.kr(track1X, rampTime)) * (1 - Lag.kr(track1Y, rampTime)) * 0.5).sqrt * t1,
+		((1 - Lag.kr(track1X, rampTime)) * (1 - Lag.kr(track1Y, rampTime)) * 0.25).sqrt * t1,
 		// FR: strongest when X=+1, Y=-1
-		((1 + Lag.kr(track1X, rampTime)) * (1 - Lag.kr(track1Y, rampTime)) * 0.5).sqrt * t1,
+		((1 + Lag.kr(track1X, rampTime)) * (1 - Lag.kr(track1Y, rampTime)) * 0.25).sqrt * t1,
 		// RL: strongest when X=-1, Y=+1
-		((1 - Lag.kr(track1X, rampTime)) * (1 + Lag.kr(track1Y, rampTime)) * 0.5).sqrt * t1,
+		((1 - Lag.kr(track1X, rampTime)) * (1 + Lag.kr(track1Y, rampTime)) * 0.25).sqrt * t1,
 		// RR: strongest when X=+1, Y=+1
-		((1 + Lag.kr(track1X, rampTime)) * (1 + Lag.kr(track1Y, rampTime)) * 0.5).sqrt * t1
+		((1 + Lag.kr(track1X, rampTime)) * (1 + Lag.kr(track1Y, rampTime)) * 0.25).sqrt * t1
 	];
 
 	t2Quad = [
-		((1 - Lag.kr(track2X, rampTime)) * (1 - Lag.kr(track2Y, rampTime)) * 0.5).sqrt * t2,
-		((1 + Lag.kr(track2X, rampTime)) * (1 - Lag.kr(track2Y, rampTime)) * 0.5).sqrt * t2,
-		((1 - Lag.kr(track2X, rampTime)) * (1 + Lag.kr(track2Y, rampTime)) * 0.5).sqrt * t2,
-		((1 + Lag.kr(track2X, rampTime)) * (1 + Lag.kr(track2Y, rampTime)) * 0.5).sqrt * t2
+		((1 - Lag.kr(track2X, rampTime)) * (1 - Lag.kr(track2Y, rampTime)) * 0.25).sqrt * t2,
+		((1 + Lag.kr(track2X, rampTime)) * (1 - Lag.kr(track2Y, rampTime)) * 0.25).sqrt * t2,
+		((1 - Lag.kr(track2X, rampTime)) * (1 + Lag.kr(track2Y, rampTime)) * 0.25).sqrt * t2,
+		((1 + Lag.kr(track2X, rampTime)) * (1 + Lag.kr(track2Y, rampTime)) * 0.25).sqrt * t2
 	];
 
 	t3Quad = [
-		((1 - Lag.kr(track3X, rampTime)) * (1 - Lag.kr(track3Y, rampTime)) * 0.5).sqrt * t3,
-		((1 + Lag.kr(track3X, rampTime)) * (1 - Lag.kr(track3Y, rampTime)) * 0.5).sqrt * t3,
-		((1 - Lag.kr(track3X, rampTime)) * (1 + Lag.kr(track3Y, rampTime)) * 0.5).sqrt * t3,
-		((1 + Lag.kr(track3X, rampTime)) * (1 + Lag.kr(track3Y, rampTime)) * 0.5).sqrt * t3
+		((1 - Lag.kr(track3X, rampTime)) * (1 - Lag.kr(track3Y, rampTime)) * 0.25).sqrt * t3,
+		((1 + Lag.kr(track3X, rampTime)) * (1 - Lag.kr(track3Y, rampTime)) * 0.25).sqrt * t3,
+		((1 - Lag.kr(track3X, rampTime)) * (1 + Lag.kr(track3Y, rampTime)) * 0.25).sqrt * t3,
+		((1 + Lag.kr(track3X, rampTime)) * (1 + Lag.kr(track3Y, rampTime)) * 0.25).sqrt * t3
 	];
 
 	t4Quad = [
-		((1 - Lag.kr(track4X, rampTime)) * (1 - Lag.kr(track4Y, rampTime)) * 0.5).sqrt * t4,
-		((1 + Lag.kr(track4X, rampTime)) * (1 - Lag.kr(track4Y, rampTime)) * 0.5).sqrt * t4,
-		((1 - Lag.kr(track4X, rampTime)) * (1 + Lag.kr(track4Y, rampTime)) * 0.5).sqrt * t4,
-		((1 + Lag.kr(track4X, rampTime)) * (1 + Lag.kr(track4Y, rampTime)) * 0.5).sqrt * t4
+		((1 - Lag.kr(track4X, rampTime)) * (1 - Lag.kr(track4Y, rampTime)) * 0.25).sqrt * t4,
+		((1 + Lag.kr(track4X, rampTime)) * (1 - Lag.kr(track4Y, rampTime)) * 0.25).sqrt * t4,
+		((1 - Lag.kr(track4X, rampTime)) * (1 + Lag.kr(track4Y, rampTime)) * 0.25).sqrt * t4,
+		((1 + Lag.kr(track4X, rampTime)) * (1 + Lag.kr(track4Y, rampTime)) * 0.25).sqrt * t4
 	];
 
 	// Sum all 4 tracks (now quad)
 	mix = t1Quad + t2Quad + t3Quad + t4Quad;
 
-	// === MASTER 48-BAND MORPHING RESONATOR ===
-	// Processes all 4 channels through the filterbank
+	// === PHASE 15: 128-BAND RESONATOR (M4 Extreme Plan) ===
+	// Upgraded from 48 bands to 128 bands using DynKlank for efficiency
+	// Provides professional spectral resolution for quad spatial audio
+
 	filtered = Select.ar(filterOn > 0.5, [
 		// Filter off: pass through
 		mix,
-		// Filter on: process each quad channel through 48-band filterbank
+		// Filter on: process each quad channel through 128-band resonator
 		[
-			// FL channel filterbank
-			Mix.ar(48.collect({ arg i;
-				var harmonic = i + 1;
-				var freq = filterFreq * harmonic;
-				var rq = filterRes.linexp(0.01, 1, 0.5, 0.005);
-				var bandGain = 1.0 - ((i / 48) * (1.0 - filterDecay));
-				var phase = (i / 48) * 2pi;
-				var modulation = SinOsc.kr(filterAnimRate, phase);
-				var animGain = bandGain * (1 + (modulation * filterAnimate * 0.5));
-				var lp, bp, hp, lpAmt, bpAmt, hpAmt;
+			// FL channel: 128-band DynKlank resonator
+			DynKlank.ar(
+				`[
+					// Frequencies: 128 harmonic bands
+					Array.fill(128, { arg i;
+						var harmonic = i + 1;
+						filterFreq * harmonic * (filterTuning.linlin(0, 1, 0.98, 1.02));
+					}),
+					// Amplitudes: Decay envelope with animation
+					Array.fill(128, { arg i;
+						var bandGain = 1.0 - ((i / 128) * (1.0 - filterDecay));
+						var phase = (i / 128) * 2pi * filterSpread;
+						var modulation = SinOsc.kr(filterAnimRate, phase);
+						bandGain * (1 + (modulation * filterAnimate * 0.5));
+					}),
+					// Ring times: Controlled by resonance parameter
+					Array.fill(128, { arg i;
+						filterRes.linexp(0.01, 1, 0.1, 2.0);
+					})
+				],
+				mix[0],
+				freqscale: 1.0 + (filterMorph * 0.5),
+				freqoffset: 0,
+				decayscale: 1.0
+			) / 128.sqrt,
 
-				lpAmt = (1 - (filterMorph * 2)).clip(0, 1);
-				bpAmt = (1 - ((filterMorph - 0.5).abs * 2)).clip(0, 1);
-				hpAmt = ((filterMorph - 0.5) * 2).clip(0, 1);
+			// FR channel: 128-band DynKlank resonator (slight detuning for width)
+			DynKlank.ar(
+				`[
+					Array.fill(128, { arg i;
+						var harmonic = i + 1;
+						var detune = filterSpread.linlin(1.0, 2.0, 1.0, 1.01);
+						filterFreq * harmonic * (filterTuning.linlin(0, 1, 0.98, 1.02)) * detune;
+					}),
+					Array.fill(128, { arg i;
+						var bandGain = 1.0 - ((i / 128) * (1.0 - filterDecay));
+						var phase = (i / 128) * 2pi * filterSpread;
+						var modulation = SinOsc.kr(filterAnimRate, phase);
+						bandGain * (1 + (modulation * filterAnimate * 0.5));
+					}),
+					Array.fill(128, { arg i;
+						filterRes.linexp(0.01, 1, 0.1, 2.0);
+					})
+				],
+				mix[1],
+				freqscale: 1.0 + (filterMorph * 0.5),
+				freqoffset: 0,
+				decayscale: 1.0
+			) / 128.sqrt,
 
-				lp = RLPF.ar(mix[0], freq, rq);
-				bp = Resonz.ar(mix[0], freq, rq);
-				hp = RHPF.ar(mix[0], freq, rq);
+			// RL channel: 128-band DynKlank resonator
+			DynKlank.ar(
+				`[
+					Array.fill(128, { arg i;
+						var harmonic = i + 1;
+						filterFreq * harmonic * (filterTuning.linlin(0, 1, 0.98, 1.02));
+					}),
+					Array.fill(128, { arg i;
+						var bandGain = 1.0 - ((i / 128) * (1.0 - filterDecay));
+						var phase = (i / 128) * 2pi * filterSpread;
+						var modulation = SinOsc.kr(filterAnimRate, phase);
+						bandGain * (1 + (modulation * filterAnimate * 0.5));
+					}),
+					Array.fill(128, { arg i;
+						filterRes.linexp(0.01, 1, 0.1, 2.0);
+					})
+				],
+				mix[2],
+				freqscale: 1.0 + (filterMorph * 0.5),
+				freqoffset: 0,
+				decayscale: 1.0
+			) / 128.sqrt,
 
-				((lp * lpAmt) + (bp * bpAmt) + (hp * hpAmt)) * animGain;
-			})) / 48.sqrt,
-
-			// FR channel filterbank
-			Mix.ar(48.collect({ arg i;
-				var harmonic = i + 1;
-				var freq = filterFreq * harmonic;
-				var rq = filterRes.linexp(0.01, 1, 0.5, 0.005);
-				var bandGain = 1.0 - ((i / 48) * (1.0 - filterDecay));
-				var phase = (i / 48) * 2pi;
-				var modulation = SinOsc.kr(filterAnimRate, phase);
-				var animGain = bandGain * (1 + (modulation * filterAnimate * 0.5));
-				var lp, bp, hp, lpAmt, bpAmt, hpAmt;
-
-				lpAmt = (1 - (filterMorph * 2)).clip(0, 1);
-				bpAmt = (1 - ((filterMorph - 0.5).abs * 2)).clip(0, 1);
-				hpAmt = ((filterMorph - 0.5) * 2).clip(0, 1);
-
-				lp = RLPF.ar(mix[1], freq, rq);
-				bp = Resonz.ar(mix[1], freq, rq);
-				hp = RHPF.ar(mix[1], freq, rq);
-
-				((lp * lpAmt) + (bp * bpAmt) + (hp * hpAmt)) * animGain;
-			})) / 48.sqrt,
-
-			// RL channel filterbank
-			Mix.ar(48.collect({ arg i;
-				var harmonic = i + 1;
-				var freq = filterFreq * harmonic;
-				var rq = filterRes.linexp(0.01, 1, 0.5, 0.005);
-				var bandGain = 1.0 - ((i / 48) * (1.0 - filterDecay));
-				var phase = (i / 48) * 2pi;
-				var modulation = SinOsc.kr(filterAnimRate, phase);
-				var animGain = bandGain * (1 + (modulation * filterAnimate * 0.5));
-				var lp, bp, hp, lpAmt, bpAmt, hpAmt;
-
-				lpAmt = (1 - (filterMorph * 2)).clip(0, 1);
-				bpAmt = (1 - ((filterMorph - 0.5).abs * 2)).clip(0, 1);
-				hpAmt = ((filterMorph - 0.5) * 2).clip(0, 1);
-
-				lp = RLPF.ar(mix[2], freq, rq);
-				bp = Resonz.ar(mix[2], freq, rq);
-				hp = RHPF.ar(mix[2], freq, rq);
-
-				((lp * lpAmt) + (bp * bpAmt) + (hp * hpAmt)) * animGain;
-			})) / 48.sqrt,
-
-			// RR channel filterbank
-			Mix.ar(48.collect({ arg i;
-				var harmonic = i + 1;
-				var freq = filterFreq * harmonic;
-				var rq = filterRes.linexp(0.01, 1, 0.5, 0.005);
-				var bandGain = 1.0 - ((i / 48) * (1.0 - filterDecay));
-				var phase = (i / 48) * 2pi;
-				var modulation = SinOsc.kr(filterAnimRate, phase);
-				var animGain = bandGain * (1 + (modulation * filterAnimate * 0.5));
-				var lp, bp, hp, lpAmt, bpAmt, hpAmt;
-
-				lpAmt = (1 - (filterMorph * 2)).clip(0, 1);
-				bpAmt = (1 - ((filterMorph - 0.5).abs * 2)).clip(0, 1);
-				hpAmt = ((filterMorph - 0.5) * 2).clip(0, 1);
-
-				lp = RLPF.ar(mix[3], freq, rq);
-				bp = Resonz.ar(mix[3], freq, rq);
-				hp = RHPF.ar(mix[3], freq, rq);
-
-				((lp * lpAmt) + (bp * bpAmt) + (hp * hpAmt)) * animGain;
-			})) / 48.sqrt
+			// RR channel: 128-band DynKlank resonator (slight detuning for width)
+			DynKlank.ar(
+				`[
+					Array.fill(128, { arg i;
+						var harmonic = i + 1;
+						var detune = filterSpread.linlin(1.0, 2.0, 1.0, 1.01);
+						filterFreq * harmonic * (filterTuning.linlin(0, 1, 0.98, 1.02)) * detune;
+					}),
+					Array.fill(128, { arg i;
+						var bandGain = 1.0 - ((i / 128) * (1.0 - filterDecay));
+						var phase = (i / 128) * 2pi * filterSpread;
+						var modulation = SinOsc.kr(filterAnimRate, phase);
+						bandGain * (1 + (modulation * filterAnimate * 0.5));
+					}),
+					Array.fill(128, { arg i;
+						filterRes.linexp(0.01, 1, 0.1, 2.0);
+					})
+				],
+				mix[3],
+				freqscale: 1.0 + (filterMorph * 0.5),
+				freqoffset: 0,
+				decayscale: 1.0
+			) / 128.sqrt
 		]
 	]);
 
@@ -241,7 +254,14 @@ SynthDef(\s4MasterBusQuad, {
 	// Master volume control
 	mix = mix * Lag.kr(masterVol, rampTime);
 
+	// Phase 15: DC SAFETY & HEADROOM (M4 Extreme Plan)
+	// CRITICAL: Remove DC offset BEFORE dynamics processing
+	// High-resonance filters can create dangerous DC voltage
+	mix = LeakDC.ar(mix, coef: 0.995);
+
 	// Phase 9: Master Bus "Glue" Compressor (quad)
+	// Bonds the 4 tracks together with gentle compression
+	// Soft-knee design for transparent cohesion
 	mix = Compander.ar(
 		in: mix,
 		control: Mix.ar(mix) / 4,  // Use average of 4 channels for sidechain
@@ -252,11 +272,15 @@ SynthDef(\s4MasterBusQuad, {
 		relaxTime: 0.1      // 100ms release
 	);
 
-	// Soft limiter to prevent clipping
-	mix = mix.tanh;
-
-	// DC offset protection
-	mix = LeakDC.ar(mix, coef: 0.995);
+	// Phase 15: BRICK-WALL LIMITER (Safety + Headroom)
+	// Upgrade from .tanh to proper Limiter.ar
+	// Prevents clipping while preserving dynamics
+	// Allows extreme filter/saturation without fear of speaker damage
+	mix = Limiter.ar(
+		mix,
+		level: 0.95,        // Ceiling at -0.4dB (safe headroom)
+		dur: 0.01           // 10ms lookahead for transparent limiting
+	);
 
 	// Output to hardware (4 channels)
 	Out.ar(out, mix);

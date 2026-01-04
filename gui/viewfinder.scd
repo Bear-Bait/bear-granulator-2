@@ -606,7 +606,34 @@ Usage:
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Scan Speed", ControlSpec(-4, 4, \lin), \scanSpeed, track.params[\scanSpeed] ? 0);
 			yPos = yPos + 22;
+			makeSlider.value(win, 10, yPos, "Time Stretch", ControlSpec(0.25, 4, \exp), \timeStretch, track.params[\timeStretch] ? 1.0);
+			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Pos Jitter", ControlSpec(0, 1, \lin), \posJitter, track.params[\posJitter] ? 0.1);
+			yPos = yPos + 22;
+
+			// Master Pitch - controls BOTH engines simultaneously
+			StaticText(win, Rect(10, yPos, 120, 18))
+				.string_("MASTER Pitch")
+				.font_(Font("DejaVu Sans Mono", 10, true))
+				.stringColor_(colors.cyan);
+			Slider(win, Rect(135, yPos, 150, 18))
+				.value_(0.5)
+				.action_({ arg sl;
+					var val = sl.value.linlin(0, 1, -24, 24);
+					trackManager.setParam(trackNum, \pitch, val);
+					trackManager.setParam(trackNum, \spectralPitch, val);
+				});
+			NumberBox(win, Rect(290, yPos, 60, 18))
+				.value_(0)
+				.decimals_(1)
+				.font_(Font("DejaVu Sans Mono", 9))
+				.action_({ arg nb;
+					trackManager.setParam(trackNum, \pitch, nb.value);
+					trackManager.setParam(trackNum, \spectralPitch, nb.value);
+				});
+			yPos = yPos + 22;
+
+			makeSlider.value(win, 10, yPos, "Grain Pitch", ControlSpec(-24, 24, \lin), \pitch, track.params[\pitch] ? 0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Pitch Shift", ControlSpec(-24, 24, \lin), \pitchShift, track.params[\pitchShift] ? 0);
 			yPos = yPos + 22;
@@ -670,7 +697,7 @@ Usage:
 			yPos = yPos + 22;
 			makeSlider.value(win, 450, yPos, "Rate", ControlSpec(-2, 2, \lin), \spectralRate, track.params[\spectralRate] ? 1.0);
 			yPos = yPos + 22;
-			makeSlider.value(win, 450, yPos, "Pitch", ControlSpec(-24, 24, \lin), \spectralPitch, track.params[\spectralPitch] ? 0);
+			makeSlider.value(win, 450, yPos, "Spectral Pitch", ControlSpec(-24, 24, \lin), \spectralPitch, track.params[\spectralPitch] ? 0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 450, yPos, "Smear", ControlSpec(0, 1, \lin), \spectralSmear, track.params[\spectralSmear] ? 0);
 			yPos = yPos + 22;

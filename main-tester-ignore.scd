@@ -162,6 +162,11 @@ fork {
 		0.2.wait;
 		"  ✓ Modulation window loaded".postln;
 
+		// Phase 15: Load spectrum analyzer (FabFilter-style)
+		(~config.guiPath +/+ "spectrum-analyzer.scd").load;
+		0.2.wait;
+		"  ✓ Spectrum analyzer loaded".postln;
+
 		// Load 4-track GUI (Phase 4)
 		(~config.guiPath +/+ "four-track-view.scd").load;
 		0.2.wait;
@@ -233,6 +238,10 @@ fork {
 		// Initialize viewfinder (Phase 7)
 		~viewfinder = ~s4Viewfinder.value(s, ~trackManager);
 		"  ✓ Viewfinder initialized".postln;
+
+		// Phase 15: Initialize spectrum analyzer (FabFilter-style)
+		~spectrumAnalyzer = ~s4SpectrumAnalyzer.value(s, ~masterBus, ~trackManager);
+		"  ✓ Spectrum analyzer initialized (click SPECTRUM button in Master tab)".postln;
 
 		// Phase 12: Initialize quad spatial panner
 		~quadPanner = ~s4QuadPanner.value(~trackManager);

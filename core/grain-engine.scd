@@ -4,12 +4,14 @@ Phase 1 - Main SynthDef with GrainBuf
 Phase 2 - Integrated 48-band Morphing Resonator
 Phase 6 - Material Modes (TAPE/POLY/LIVE)
 Phase 6b - Overlap Control (musical grain density)
+Phase 15 - Time Stretch (temporal scaling without pitch shift)
 
 Features:
 - Up to 256 grains (dynamic based on overlap setting)
 - Variable buffer playback (any length)
 - Grain size: 1ms-60s (microtones to full loops, no upper limit)
 - Overlap control: 1-128 simultaneous grains (replaces density)
+- Time stretch: 0.25x-4x (slows/speeds grain stream, maintains pitch)
 - Pitch control: -2 to +2 octaves
 - 4 envelope shapes
 - Position jitter & pitch jitter
@@ -26,6 +28,7 @@ Args:
   density: Grains per second (1-200) - LEGACY, use overlap instead
   useOverlap: 1=use overlap mode (default), 0=use density mode
   position: Playback position in buffer (0-1)
+  timeStretch: Master time stretch (0.25-4x, scales grain rate & size, NOT pitch)
   pitch: Pitch shift in semitones (-24 to +24) - LEGACY (changes speed+pitch)
   pitchShift: True pitch shift in semitones (-24 to +24) - NEW (preserves speed)
   posJitter: Random position offset (0-1)
@@ -60,6 +63,7 @@ SynthDef(\s4GrainEngine, {
 	    useOverlap = 1,    // Phase 6b: 0=use density, 1=use overlap (default)
 	    position = 0.5,
 	    scanSpeed = 0,     // Phase 7c: Continuous scanning speed (-4 to 4, 0=static)
+	    timeStretch = 1.0, // Phase 15: Master time stretch (0.25-4x, affects grain rate & size, NOT pitch)
 	    pitch = 0,         // Legacy: changes speed+pitch (playback rate)
 	    pitchShift = 0,    // Phase 7: True pitch shift (preserves speed)
 	    posJitter = 0.0,
@@ -125,15 +129,20 @@ SynthDef(\s4GrainEngine, {
 	// Calculate buffer parameters
 	bufFrames = BufFrames.kr(bufnum);
 
-	// Grain duration (no upper limit - can be as long as buffer)
-	grainDur = grainSize.max(0.001);
+	// Phase 15: Time stretch affects grain size inversely
+	// timeStretch = 0.5 → grains 2x longer (slower temporal feel)
+	// timeStretch = 2.0 → grains 2x shorter (faster temporal feel)
+	grainDur = (grainSize / timeStretch.clip(0.25, 4)).max(0.001);
 
 	// Calculate actual density based on mode
+	// Phase 15: Time stretch affects density directly
+	// timeStretch = 0.5 → fire half as often (slower)
+	// timeStretch = 2.0 → fire twice as often (faster)
 	// useOverlap=1: density = overlap / grainSize (musical control)
 	// useOverlap=0: use density directly (legacy mode)
 	actualDensity = Select.kr(useOverlap, [
-		density,                    // Legacy mode: use density as-is
-		(overlap / grainDur).max(0.1)  // Overlap mode: calculate from grain size
+		density * timeStretch,                    // Legacy mode: scale density
+		(overlap / grainDur).max(0.1)  // Overlap mode: auto-adjusts via grainDur
 	]);
 
 	// Grain triggering with calculated density
