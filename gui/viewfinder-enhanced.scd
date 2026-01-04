@@ -131,13 +131,16 @@ Usage:
 			// ========================================
 			overlayView = UserView(win, Rect(10, 75, winWidth - 20, 250))
 				.background_(Color.clear)
+				.acceptsMouse_(false)      // Don't intercept any mouse events
+				.acceptsMouseOver_(false)  // Let mouse events pass through
+				.canFocus_(false)          // Don't steal focus
 				.drawFunc_({
 					var numFrames, sampleRate, viewWidth, viewHeight;
 					var grainSize, position, posJitter, loopStart, loopEnd;
 					var grainSizePixels, positionPixels, loopStartPixels, loopEndPixels;
 
 					// Get current buffer info
-					if(buffer.notNil, {
+					if(buffer.notNil and: { buffer.sampleRate.notNil }, {
 						numFrames = buffer.numFrames;
 						sampleRate = buffer.sampleRate;
 						viewWidth = winWidth - 20;

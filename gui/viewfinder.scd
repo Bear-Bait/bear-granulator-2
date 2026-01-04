@@ -34,6 +34,10 @@ Usage:
 			var overlayView, updateRoutine;  // Phase 7: Grain visualization overlay
 			var playheadPos = 0;  // Phase 8: Real-time playhead position (0-1)
 			var oscListener;  // Phase 8: OSC responder for playhead updates
+			var spectrogramData, spectrogramOSC;  // Phase 11: FFT spectrogram data
+			var spectrogramEnabled = true;  // Phase 11: Toggle spectrogram display
+			var grainPulses = List.new;  // Phase 11: Grain trigger pulse animations
+			var grainPulseEnabled = true;  // Phase 11: Toggle grain pulse display
 
 			// Doom Material colors
 			colors = (
@@ -79,23 +83,32 @@ Usage:
 					.font_(Font("DejaVu Sans Mono", 10))
 					.stringColor_(colors.fg);
 
+				// Create both widgets first (without actions)
 				slider = Slider(parent, Rect(x + 125, y, 150, 18))
-					.value_(spec.unmap(default))
-					.action_({ arg sl;
-						var val = spec.map(sl.value);
-						numBox.value_(val);
-						trackManager.setParam(trackNum, param, val);
-					});
+					.value_(spec.unmap(default));
 
 				numBox = NumberBox(parent, Rect(x + 280, y, 60, 18))
 					.value_(default)
 					.decimals_(3)
 					.font_(Font("DejaVu Sans Mono", 9))
-					.normalColor_(colors.fg)
-					.action_({ arg nb;
-						trackManager.setParam(trackNum, param, nb.value);
-						slider.value_(spec.unmap(nb.value));
-					});
+					.normalColor_(colors.cyan)
+					.background_(Color.gray(0.2))
+					.scroll_(true)
+					.scroll_step_(spec.range / 100)
+					.clipLo_(spec.minval)
+					.clipHi_(spec.maxval);
+
+				// Now assign actions (both widgets exist now)
+				slider.action_({ arg sl;
+					var val = spec.map(sl.value);
+					numBox.value_(val);
+					trackManager.setParam(trackNum, param, val);
+				});
+
+				numBox.action_({ arg nb;
+					trackManager.setParam(trackNum, param, nb.value);
+					slider.value_(spec.unmap(nb.value));
+				});
 			};
 
 			// Create window
@@ -185,6 +198,7 @@ Usage:
 			// === PHASE 7: GRAIN VISUALIZATION OVERLAY ===
 			overlayView = UserView(win, Rect(10, 75, winWidth - 20, 200))
 				.background_(Color.clear)
+				.acceptsMouse_(false)      // Don't intercept any mouse events
 				.acceptsMouseOver_(false)  // Let mouse events pass through
 				.canFocus_(false)          // Don't steal focus
 				.drawFunc_({
@@ -198,8 +212,31 @@ Usage:
 					var viewWidth = winWidth - 20, viewHeight = 200;
 					var loopStartPixels, loopEndPixels, fadeWidth;
 
-					if(currentBuffer.notNil, {
+					if(currentBuffer.notNil and: { currentBuffer.sampleRate.notNil }, {
 						bufferDuration = currentBuffer.numFrames / currentBuffer.sampleRate;
+
+						// === LAYER 0: FFT SPECTROGRAM (Phase 11) ===
+						if(spectrogramEnabled and: { spectrogramData.notNil }, {
+							var sliceWidth = viewWidth / 60;  // 60 time slices
+							var bandHeight = viewHeight / 10;  // 10 frequency bands
+
+							spectrogramData.do({ arg timeSlice, timeIdx;
+								timeSlice.do({ arg magnitude, freqIdx;
+									// Map magnitude (0-1) to color (dark blue → bright cyan)
+									var alpha = magnitude.clip(0, 1);
+									var hue = 0.55;  // Cyan hue
+									var brightness = alpha.linlin(0, 1, 0.1, 1.0);
+
+									Pen.fillColor = Color.hsv(hue, 0.8, brightness, alpha * 0.5);
+									Pen.fillRect(Rect(
+										timeIdx * sliceWidth,
+										viewHeight - ((freqIdx + 1) * bandHeight),  // Flip Y (low freqs at bottom)
+										sliceWidth + 1,  // +1 to avoid gaps
+										bandHeight + 1
+									));
+								});
+							});
+						});
 
 						// === LAYER 1: Loop Boundaries (green start, red end) ===
 						loopStartPixels = loopStart * viewWidth;
@@ -291,6 +328,30 @@ Usage:
 								colors.cyan
 							);
 						});
+
+						// === LAYER 5: GRAIN PULSE ANIMATION (Phase 11) ===
+						// Draw expanding/fading pulse rings at playhead position
+						if(grainPulseEnabled and: { playheadPos.notNil }, {
+							var pulseX = playheadPos * viewWidth;
+							var pulseY = viewHeight / 2;
+							var overlap = track.params[\overlap] ? 4;
+
+							// Create subtle pulse effect based on grain density
+							// Higher overlap = more frequent pulses (visual feedback for grain density)
+							var pulsePhase = (Date.getDate.rawSeconds * overlap * 2).mod(1.0);
+							var pulseRadius = pulsePhase.linlin(0, 1, 5, 25);
+							var pulseAlpha = (1 - pulsePhase) * 0.4;
+
+							// Draw expanding ring
+							Pen.strokeColor = colors.yellow.alpha_(pulseAlpha);
+							Pen.width = 2;
+							Pen.strokeOval(Rect(
+								pulseX - pulseRadius,
+								pulseY - pulseRadius,
+								pulseRadius * 2,
+								pulseRadius * 2
+							));
+						});
 					});
 				});
 
@@ -313,10 +374,27 @@ Usage:
 				playheadPos = position;
 			}, '/playhead');
 
+			// Phase 11: Initialize spectrogram data (10 frequency bands × 60 time slices)
+			spectrogramData = Array.fill(60, { Array.fill(10, { 0.0 }) });
+
+			// Phase 11: OSC listener for FFT spectrogram data @ 30Hz
+			spectrogramOSC = OSCFunc({ arg msg, time, addr, recvPort;
+				var nodeID = msg[1];
+				var replyID = msg[2];
+				var bands = msg[3..12];  // 10 frequency bands
+
+				// Scroll spectrogram: remove oldest, add newest
+				spectrogramData = spectrogramData.drop(1).add(bands);
+
+				// Trigger overlay redraw
+				{ overlayView.refresh }.defer;
+			}, '/s4_fft');
+
 			// Stop update routine and OSC listener when window closes
 			win.onClose = {
 				updateRoutine.stop;
 				oscListener.free;  // Phase 8: Free OSC responder
+				spectrogramOSC.free;  // Phase 11: Free spectrogram OSC responder
 				windows[trackNum] = nil;
 				soundFileViews[trackNum] = nil;
 				"Viewfinder % closed".format(trackNum + 1).postln;
@@ -490,38 +568,27 @@ Usage:
 				.align_(\left);
 
 			// Control buttons (bottom right)
+			// Play button
 			Button(win, Rect(winWidth - 340, 290, 100, 30))
-				.states_([["Reset Loop", Color.white, Color.gray(0.4)]])
-				.font_(Font("Monaco", 10))
+				.states_([["▶ PLAY", Color.white, Color.green(0.6)]])
+				.font_(Font("Monaco", 12, true))
 				.action_({
-					// Reset to full buffer
-					var currentBuffer = track.recorder.buffer;
-					trackManager.setParam(trackNum, \loopStart, 0.0);
-					trackManager.setParam(trackNum, \loopEnd, 1.0);
-					{
-						if(currentBuffer.notNil, {
-							sfv.setSelection(0, [0, currentBuffer.numFrames]);
-							sfv.refresh;
-						});
-					}.defer;
-					"Track %: Loop window reset to full buffer".format(trackNum + 1).postln;
+					trackManager.playTrack(trackNum);
+					"Track % PLAYING".format(trackNum + 1).postln;
 				});
 
-			Button(win, Rect(winWidth - 230, 290, 110, 30))
-				.states_([["Select All", Color.white, Color.new(0.2, 0.6, 0.8)]])
-				.font_(Font("Monaco", 10))
+			// Stop button
+			Button(win, Rect(winWidth - 230, 290, 100, 30))
+				.states_([["■ STOP", Color.white, Color.red(0.6)]])
+				.font_(Font("Monaco", 12, true))
 				.action_({
-					var currentBuffer = track.recorder.buffer;
-					{
-						if(currentBuffer.notNil, {
-							sfv.setSelection(0, [0, currentBuffer.numFrames]);
-							sfv.refresh;
-						});
-					}.defer;
+					trackManager.stopTrack(trackNum);
+					"Track % STOPPED".format(trackNum + 1).postln;
 				});
 
+			// Refresh button
 			Button(win, Rect(winWidth - 110, 290, 100, 30))
-				.states_([["Refresh", Color.white, Color.green(0.5)]])
+				.states_([["Refresh", Color.white, Color.gray(0.5)]])
 				.font_(Font("Monaco", 10))
 				.action_({
 					self.updateWaveform(trackNum);
@@ -584,6 +651,39 @@ Usage:
 				.font_(Font("DejaVu Sans Mono", 9))
 				.stringColor_(Color.gray(0.6))
 				.align_(\left);
+
+			// === SPECTRAL ENGINE CONTROLS ===
+			yPos = yPos + 50;
+			StaticText(win, Rect(450, yPos, 200, 20))
+				.string_("SPECTRAL ENGINE")
+				.font_(Font("DejaVu Sans Mono", 10, true))
+				.stringColor_(colors.yellow);
+
+			yPos = yPos + 25;
+			makeSlider.value(win, 450, yPos, "Spectral Mix", ControlSpec(0, 1, \lin), \spectralMix, track.params[\spectralMix] ? 0.0);
+			yPos = yPos + 22;
+			makeSlider.value(win, 450, yPos, "Spectral Amp", ControlSpec(0, 1, \lin), \spectralAmp, track.params[\spectralAmp] ? 0.5);
+			yPos = yPos + 22;
+			makeSlider.value(win, 450, yPos, "Window Size", ControlSpec(0.05, 1.0, \exp), \spectralWindowSize, track.params[\spectralWindowSize] ? 0.2);
+			yPos = yPos + 22;
+			makeSlider.value(win, 450, yPos, "Overlaps", ControlSpec(1, 8, \lin, 1), \spectralOverlaps, track.params[\spectralOverlaps] ? 4);
+			yPos = yPos + 22;
+			makeSlider.value(win, 450, yPos, "Rate", ControlSpec(-2, 2, \lin), \spectralRate, track.params[\spectralRate] ? 1.0);
+			yPos = yPos + 22;
+			makeSlider.value(win, 450, yPos, "Pitch", ControlSpec(-24, 24, \lin), \spectralPitch, track.params[\spectralPitch] ? 0);
+			yPos = yPos + 22;
+			makeSlider.value(win, 450, yPos, "Smear", ControlSpec(0, 1, \lin), \spectralSmear, track.params[\spectralSmear] ? 0);
+			yPos = yPos + 22;
+			// Freeze button
+			Button(win, Rect(450, yPos, 150, 20))
+				.states_([
+					["Freeze: OFF", colors.fg, Color.gray(0.3)],
+					["Freeze: ON", colors.black, colors.yellow]
+				])
+				.font_(Font("DejaVu Sans Mono", 9))
+				.action_({ arg btn;
+					trackManager.setParam(trackNum, \spectralFreeze, btn.value);
+				});
 
 			// Store references
 			windows[trackNum] = win;

@@ -414,6 +414,34 @@ Phase 7 Features:
 				trackManager.setMode(trackNum, menu.value);
 			});
 
+		// === PHASE 10: PER-TRACK FILTER ===
+		yPos = yPos + 40;
+		StaticText(parent, Rect(col1X, yPos, 350, 20))
+			.string_("PER-TRACK FILTER")
+			.font_(Font("DejaVu Sans Mono", 12, true))
+			.stringColor_(colors.yellow);
+
+		yPos = yPos + 25;
+		makeButton.value(parent, col1X, yPos, 120, "Filter", \filterOn, trackNum);
+
+		yPos = yPos + 35;
+		makeSlider.value(parent, col1X, yPos, "Cutoff", ControlSpec(0, 1, \lin), \filterFreq, trackNum, 0.5);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col1X, yPos, "Topology/Type", ControlSpec(0, 1, \lin), \filterMorph, trackNum, 0.5);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col1X, yPos, "Resonance", ControlSpec(0, 1, \lin), \filterRes, trackNum, 0.3);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col1X, yPos, "Drive", ControlSpec(0, 1, \lin), \filterDecay, trackNum, 0);
+		yPos = yPos + 22;
+		makeSlider.value(parent, col1X, yPos, "Filter Mix", ControlSpec(0, 1, \lin), \filterMix, trackNum, 0.5);
+
+		// Filter topology guide
+		yPos = yPos + 25;
+		StaticText(parent, Rect(col1X, yPos, 350, 40))
+			.string_("Topology: 0-0.33=Ladder (Moog), 0.33-1.0=SVF (LP/BP/HP)\nDrive adds saturation before filter for grit")
+			.font_(Font("DejaVu Sans Mono", 8))
+			.stringColor_(Color.gray(0.6));
+
 		// === COLUMN 2: COLOR EFFECTS ===
 		yPos = 60;
 		StaticText(parent, Rect(col2X, yPos, 350, 20))
@@ -529,26 +557,13 @@ Phase 7 Features:
 		yPos = yPos + 22;
 		makeSlider.value(parent, col3X, yPos, "Shimmer Mix", ControlSpec(0, 1, \lin), \shimmerMix, trackNum, 0);
 
-		// === SPECTRAL ENGINE (Warp1) - Phase 8 ===
+		// === SPECTRAL ENGINE - Moved to Viewfinder ===
 		yPos = yPos + 35;
-		StaticText(parent, Rect(col3X, yPos, 350, 18))
-			.string_("SPECTRAL ENGINE (Warp1) - M4 Extreme")
+		StaticText(parent, Rect(col3X, yPos, 350, 40))
+			.string_("SPECTRAL ENGINE\n(Controls in Viewfinder window)")
 			.stringColor_(colors.orange)
-			.font_(Font("DejaVu Sans Mono", 10, true));
-		yPos = yPos + 22;
-		makeSlider.value(parent, col3X, yPos, "Spectral Mix", ControlSpec(0, 1, \lin), \spectralMix, trackNum, 0);
-		yPos = yPos + 22;
-		makeSlider.value(parent, col3X, yPos, "Window Size", ControlSpec(0.05, 1.0, \exp), \spectralWindowSize, trackNum, 0.2);
-		yPos = yPos + 22;
-		makeSlider.value(parent, col3X, yPos, "Overlaps", ControlSpec(1, 8, \lin, 1), \spectralOverlaps, trackNum, 4);
-		yPos = yPos + 22;
-		makeSlider.value(parent, col3X, yPos, "Rate", ControlSpec(-2, 2, \lin), \spectralRate, trackNum, 1.0);
-		yPos = yPos + 22;
-		makeSlider.value(parent, col3X, yPos, "Pitch", ControlSpec(-24, 24, \lin), \spectralPitch, trackNum, 0);
-		yPos = yPos + 22;
-		makeSlider.value(parent, col3X, yPos, "Smear", ControlSpec(0, 1, \lin), \spectralSmear, trackNum, 0);
-		yPos = yPos + 22;
-		makeButton.value(parent, col3X, yPos, 150, "Freeze", \spectralFreeze, trackNum);
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.align_(\center);
 	};
 
 

@@ -148,6 +148,19 @@ SynthDef(\s4MasterBus, {
 	// Master volume control
 	mix = mix * Lag.kr(masterVol, rampTime);
 
+	// Phase 9: Master Bus "Glue" Compressor
+	// Bonds the 4 tracks together with gentle compression
+	// Soft-knee design for transparent cohesion
+	mix = Compander.ar(
+		in: mix,
+		control: mix,
+		thresh: 0.6,        // Threshold (0-1)
+		slopeBelow: 1.0,    // No compression below threshold
+		slopeAbove: 0.5,    // 2:1 ratio above threshold
+		clampTime: 0.01,    // 10ms attack (fast enough to catch transients)
+		relaxTime: 0.1      // 100ms release (smooth, musical)
+	);
+
 	// Soft limiter to prevent clipping
 	mix = mix.tanh;
 

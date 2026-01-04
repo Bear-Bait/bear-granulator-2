@@ -37,16 +37,16 @@ Args:
   loopStart: Loop region start (0-1, TAPE mode only)
   loopEnd: Loop region end (0-1, TAPE mode only)
 
-  filterOn: Enable filterbank (0=off, 1=on)
-  filterFreq: Filter fundamental frequency (20-2000 Hz)
-  filterMorph: Filter type (0=LP, 0.5=BP, 1.0=HP)
-  filterRes: Resonance (0-1)
-  filterDecay: Decay time (0-1)
-  filterAnimate: Animation amount (0-1)
-  filterAnimRate: Animation rate (0.01-10 Hz)
-  filterTuning: Tuning mode (0=harmonic, 1=inharmonic)
-  filterSpread: Inharmonic spread (1.0-2.0)
-  filterMix: Dry/wet mix (0=dry, 1=wet)
+  filterOn: Enable per-track filter (0=off, 1=on) - Phase 10
+  filterFreq: Filter cutoff frequency (0-1, mapped to 20Hz-18kHz exponential)
+  filterMorph: Filter topology & type (0-0.33=Ladder, 0.33-1.0=SVF LP/BP/HP)
+  filterRes: Resonance/Q factor (0-1)
+  filterDecay: Pre-filter drive amount (0=clean, 1=saturated) - Phase 10
+  filterAnimate: [DEPRECATED - use for master bus filter]
+  filterAnimRate: [DEPRECATED - use for master bus filter]
+  filterTuning: [DEPRECATED - use for master bus filter]
+  filterSpread: [DEPRECATED - use for master bus filter]
+  filterMix: Filter dry/wet mix (0=dry, 1=wet)
 
   out: Output bus
 */
@@ -64,6 +64,7 @@ SynthDef(\s4GrainEngine, {
 	    pitchShift = 0,    // Phase 7: True pitch shift (preserves speed)
 	    posJitter = 0.0,
 	    pitchJitter = 0.0,
+	    phaseAlign = 0,    // Phase 9: 1=zero-crossing aligned grains (prevents phase cancellation)
 	    envType = 1,
 	    stereoSpread = 0.5,
 	    amp = 0.5,
@@ -141,8 +142,21 @@ SynthDef(\s4GrainEngine, {
 	// Phase 7b: Per-channel trigger jitter for enhanced stereo spread
 	// When stereoSpread > 0, grains fire at slightly different times L/R
 	// This creates a wider, more immersive stereo field
-	trigL = Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg * 5, stereoSpread * 5));
-	trigR = Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg * 5, stereoSpread * 5));
+	// Phase 9: Optional phase-alignment - triggers on zero-crossings to prevent phase cancellation
+	trigL = Select.ar(phaseAlign, [
+		// Standard mode: regular impulses with stereo spread jitter
+		Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg * 5, stereoSpread * 5)),
+		// Phase-aligned mode: trigger on zero-crossings of the buffer
+		// Sample buffer at current position and detect zero-crossings
+		(ZeroCrossing.ar(PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum), loop: 1)) * actualDensity / 10).clip(0, actualDensity)
+	]);
+
+	trigR = Select.ar(phaseAlign, [
+		// Standard mode: regular impulses with stereo spread jitter
+		Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg * 5, stereoSpread * 5)),
+		// Phase-aligned mode: slightly offset zero-crossing detection for stereo
+		(ZeroCrossing.ar(PlayBuf.ar(1, bufnum, BufRateScale.kr(bufnum) * 1.001, loop: 1)) * actualDensity / 10).clip(0, actualDensity)
+	]);
 
 	// Phase 7c: Phasor.ar for continuous buffer scanning
 	// Provides sample-accurate, bidirectional scrubbing
@@ -257,6 +271,85 @@ SynthDef(\s4GrainEngine, {
 	// (post-mix) to save CPU when running 4 tracks. Filter parameters
 	// are still accepted for backward compatibility but are ignored.
 
+	// === PHASE 10: PER-TRACK DUAL-TOPOLOGY FILTER ===
+	// Professional-grade filtering with two topologies:
+	// - ZDF Ladder Filter (Moog-style): Liquid resonance, self-oscillation
+	// - State Variable Filter (SVF): LP/HP/BP morph capability
+	// Supports audio-rate cutoff modulation for FM synthesis
+	sig = Select.ar(filterOn > 0.5, [
+		sig,  // bypass
+		{
+			var filtered = sig;
+			var freq, rq, driven;
+			var ladder, svf, lp, hp, bp;
+			var lpAmt, bpAmt, hpAmt;
+
+			// Cutoff frequency (20Hz - 18kHz, exponential)
+			freq = filterFreq.linexp(0, 1, 20, 18000);
+
+			// Resonance (0-1 → Q factor)
+			// For SVF: 0-1 → rq 1.0 to 0.01 (inverse relationship)
+			// For Ladder: 0-1 → gain 0 to 4 (self-oscillation at 4)
+			rq = filterRes.linexp(0.01, 1, 1.0, 0.01);
+
+			// Pre-filter drive stage (optional nonlinear saturation)
+			// Adds harmonic content before filtering for "grit"
+			// filterDecay is repurposed as drive amount (0-1)
+			driven = Select.ar(filterDecay > 0.01, [
+				filtered,  // No drive
+				(filtered * filterDecay.linexp(0.01, 1, 1, 10)).tanh
+			]);
+
+			// TOPOLOGY SELECTION via filterMorph:
+			// 0.0 - 0.33: ZDF Ladder Filter (lowpass with resonance)
+			// 0.33 - 1.0: State Variable Filter (LP/BP/HP morph)
+
+			// ZDF Ladder Filter (MoogFF)
+			ladder = Select.ar(filterMorph < 0.33, [
+				DC.ar(0),  // Silent when not in ladder range
+				{
+					var moogSig = MoogFF.ar(
+						in: driven,
+						freq: freq,
+						gain: filterRes.linlin(0, 1, 0, 3.5),  // 0-3.5 for safety (4 can blow up)
+						reset: 0
+					);
+					// Bass compensation (MoogFF loses bass at high resonance)
+					var bass = BLowPass.ar(driven, 100, 1.0);
+					moogSig + (bass * filterRes * 0.3);
+				}.value
+			]);
+
+			// State Variable Filter (LP/HP/BP morph)
+			// filterMorph: 0.33=LP, 0.66=BP, 1.0=HP
+			svf = Select.ar(filterMorph >= 0.33, [
+				DC.ar(0),  // Silent when in ladder range
+				{
+					var morphNorm = (filterMorph - 0.33) / 0.67;  // Normalize 0.33-1.0 → 0-1
+					lp = RLPF.ar(driven, freq, rq);
+					bp = BPF.ar(driven, freq, rq);
+					hp = RHPF.ar(driven, freq, rq);
+
+					// Equal-power crossfade between filter types
+					lpAmt = (1 - (morphNorm * 2)).clip(0, 1);
+					bpAmt = (1 - ((morphNorm - 0.5).abs * 2)).clip(0, 1);
+					hpAmt = ((morphNorm - 0.5) * 2).clip(0, 1);
+
+					(lp * lpAmt) + (bp * bpAmt) + (hp * hpAmt);
+				}.value
+			]);
+
+			// Blend ladder and SVF based on filterMorph position
+			filtered = Select.ar(filterMorph < 0.33, [
+				svf,    // SVF range (0.33-1.0)
+				ladder  // Ladder range (0.0-0.33)
+			]);
+
+			// Dry/wet mix (repurpose filterMix parameter)
+			XFade2.ar(sig, filtered, filterMix.linlin(0, 1, -1, 1));
+		}.value
+	]);
+
 	// === PHASE 3: COLOR EFFECTS ===
 	sig = Select.ar(colorOn > 0.5, [
 		sig,  // bypass
@@ -349,6 +442,28 @@ SynthDef(\s4GrainEngine, {
 
 	// Soft limiter to prevent clipping
 	sig = sig.tanh;
+
+	// === PHASE 11: FFT SPECTROGRAM BROADCAST ===
+	// Broadcast spectral analysis data for viewfinder visualization
+	// Simple approach: Analyze multiple frequency bands with BPF
+	// This avoids complex FFT operations and reduces CPU overhead
+	SendReply.kr(
+		trig: Impulse.kr(30),  // 30fps update rate
+		cmdName: '/s4_fft',
+		values: [
+			// 16 frequency bands from 20Hz to ~16kHz (log-spaced)
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 40, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 80, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 160, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 320, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 640, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 1280, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 2560, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 5120, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 10240, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1),
+			Amplitude.kr(BPF.ar(Mix.ar(sig), 16000, 0.5)).ampdb.linlin(-60, 0, 0, 1).clip(0, 1)
+		]
+	);
 
 	// Output
 	Out.ar(out, sig);

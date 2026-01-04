@@ -6,7 +6,7 @@
                     ___
                   _/   \_
                  |  o_o  |
-                 |   ^   |  
+                 |   ^   |
                   \_____/
                     | |
                _____|_|_____
@@ -19,95 +19,57 @@
 
 This is a 4-track granular synthesis sampler!
 
-This moving quickly so the instructions might be wrong! I will ask the AI to rewrite them after I can afford more AI credits!! !! !
+## 🎯 Active TODOs
 
-I'm running on mac mini with 24 GB of ran. Full blast, 25% cpu. Will be taking advatage of that head room. I think it could run better on headless linux and eventually I will make a stripped version for rasipi.
+### Completed ✅
+- [x] Remove loop buttons from viewfinder (Reset Loop, Select All)
+- [x] Add Play/Stop transport buttons to viewfinder
+- [x] Add spectral amplitude slider to viewfinder
+- [x] Fix volume issues (grain boost at 2.0x, soft limiter using tanh)
+- [x] Move all spectral engine sliders to viewfinder (Mix, Amp, Window Size, Overlaps, Rate, Pitch, Smear, Freeze)
 
-Given the exceptional single-core performance and memory bandwidth of the **Mac Mini M4**, the previous constraints—designed for standard hardware—are no longer applicable. We are shifting the "S-4 RIVAL" from a "mobile-optimized" architecture to a 
-
-
-1. Audio-Rate (.ar) Modulation for All LFOsStatus: Recommended for M4 | Priority: #1 (High)Current State: LFO modulation is currently running at control-rate (.kr), updating only once every 64 samples (approx. 750Hz).The Upgrade: Move the entire modulation engine and all control buses to audio-rate (.ar) natively (48kHz).The Rationale: On M4 hardware, the overhead of audio-rate modulation is negligible. This eliminates "zipper noise" on high-resonance filters and allows LFOs to be used as FM sources for metallic, sideband-rich textures.Impact: Sub-millisecond modulation precision and tighter grain-level control.Target Files: core/track-manager.scd (LFO logic and modulation bus routing).2. 4x Oversampled Color Effects SectionStatus: Recommended for M4 | Priority: #2 (High)Current State: Distortion and saturation run at the standard sample rate, allowing for digital aliasing when harmonics exceed the Nyquist frequency.The Upgrade: Implement a 4x upsampling chain (192kHz) → Non-linear Distortion → 4x downsampling with a steep anti-aliasing filter.The Rationale: The M4 excels at the vectorized math required for high-quality interpolation. Oversampling ensures that saturation remains "creamy" and analog-like, without digital harshness.Impact: Anti-aliased saturation and high-fidelity "Color" sculpting without artifacts.Target Files: core/grain-engine.scd (Color effects section, approx. lines 257-295).3. 128-Band Resonator (DynKlank)Status: Recommended for M4 | Priority: #3 (Medium)Current State: A 48-band morphing resonator implemented with parallel filter objects on the master bus.The Upgrade: Transition to a 128-band resonator architecture utilizing the DynKlank UGen for optimized parallel processing.The Rationale: Using DynKlank allows the M4 to process a massive number of resonant peaks as a single unit, providing a far more dense and "physical" spectral response.Impact: Professional-grade spectral resolution and richer harmonic textures.M4 Target: <30% total CPU usage even with all 128 bands active per track.Target Files: Master bus filterbank initialization.4. Real-Time Buffer Visualization (Live Playhead)Status: Recommended for M4 | Priority: #4 (High)Current State: Static waveform display or low-refresh polling of the playback position.The Upgrade: Implement a "Server-Push" viewfinder. The audio engine broadcasts its exact sample-frame position via SendReply.ar at 60Hz-120Hz directly to a UserView.The Rationale: Standard waveform views often feel "disconnected" due to UI lag. By pushing data from the hardware-timed audio engine to the GPU, the playhead remains sample-locked to the sound.Impact: Zero-latency visual tracking and real-time recording visualization.Implementation Note: Requires SendReply.ar inside the \s4SpectralEngine and \s4GrainEngine SynthDefs.Implementation Summary for AssistantTaskStrategyKey UGen UpgradesModulationFull Audio-RateIn.kr → In.arSaturationOversamplingtanh → UpSample > tanh > DownSampleResonatorVectorized DensityBPF.ar arrays → DynKlank.arViewfinderServer-Pushbus.get → SendReply.ar + UserView
-
-**High-Resolution Desktop Architecture**.
-
-This plan prioritizes **Signal Purity**, **Sample-Accurate Modulation**, and **Spectral Density** over CPU conservation.
-
----
-
-# S-4 RIVAL: M4 Extreme Performance Plan (Phase 5+)
-
-## 1. Global Audio-Rate (`.ar`) Signal Path
-
-**Status:** Recommended for M4 | **Priority:** High
-
-* **The Upgrade:** Eliminate `.kr` (Control Rate) for all internal modulation. Migrate every instance of `Bus.control` to `Bus.audio`.
-* **The Rationale:** On the M4, the overhead of calculating modulators at 48kHz instead of 750Hz is negligible. Native `.ar` modulation eliminates "zipper noise" on high-resonance filters and enables "Audio-Rate FM" where LFOs can reach audible frequencies for metallic textures.
-* **Action Item:** Update `modulator.scd` to use `.ar` for all LFO and Random UGens.
+### Planned 📋
+- [ ] Create recording viewfinder for live audio scrubbing/selection
+- [ ] Send recorded regions to granulator viewfinder
 
 ---
 
-## 2. 4x Oversampled "Color" Section
+## 🚀 THE M4 ULTIMATE SPEC (Phase 9+)
 
-**Status:** Recommended for M4 | **Priority:** High (Sonic Fidelity)
+### 🌌 Visual Flash (Doom Material Enhanced)
+- [x] **FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11 ✅)**
+- [x] **Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11 ✅)**
+- [ ] **Neon Glow Rendering:** Hardware-accelerated "glow" effects for the playhead and loop regions
 
-* **The Upgrade:** Wrap nonlinear modules (Distortion, Bit-Crusher, Saturation) in oversampling blocks.
-* **The Rationale:** Digital distortion at standard sample rates creates "aliasing"—unwanted frequencies that fold back into the audible range, making high-end textures sound "brittle."
-* **Implementation:**
-* Upsample the signal 4x (to 192kHz).
-* Apply `.tanh` or `SoftClipAmp8`.
-* Downsample with an anti-aliasing filter.
-
-
-* **Result:** A "warm," analog-modeled saturation that rivals boutique hardware.
-
----
-
-## 3. Concurrent Engine: `GrainBuf` + `Warp1`
-
-**Status:** Recommended for M4 | **Priority:** Medium (Versatility)
-
-* **The Upgrade:** Run both the Granular Engine (`GrainBuf`) and the Spectral Engine (`Warp1`) simultaneously per track, rather than as a toggle.
-* **The Rationale:** With 24GB of RAM and M4 bandwidth, you can manage dual high-resolution buffer readers without dropouts.
-* **Benefit:** This allows for **Layered Sculpting**. You can use `Warp1` to create a "frozen spectral bed" while `GrainBuf` adds rhythmic "shards" or "sculpted pulses" on top of the same audio material.
+### 🔊 Overlooked Audio Components
+- [x] **Dual-Topology Analog-Modeled Filter (Per Track):** **(Phase 10 ✅)**
+  - ZDF (Zero-Delay Feedback) Ladder Filter - Liquid resonance with self-oscillation
+  - State Variable Filter (SVF) - LP/HP/BP morph capability
+  - Pre-Filter Drive Stage - Nonlinear saturation (.tanh) for filter "grit"
+  - Bass Loss Compensation - Maintains low-end at high resonance
+- [ ] **Audio-Rate Modulation:** Upgrade from 750Hz control-rate to 48kHz audio-rate
+- [ ] **Transient Bypass Logic:** Keeps drum transients sharp during heavy spectral stretching
+- [x] **Phase-Aligned Granulation:** Prevents phase-cancellation in low-frequency textures **(Phase 9 ✅)**
+- [x] **Master Bus "Glue" Compressor:** Final stage compressor to bond the 4 tracks together **(Phase 9 ✅)**
 
 ---
 
-## 4. Ultra-Density 96-Band Resonator
+## 💻 **HARDWARE PLATFORM**
 
-**Status:** Recommended for M4 | **Priority:** High
+**Target:** Mac Mini M4
+**RAM:** 24 GB
+**CPU Usage:** ~25% at full capacity (75% headroom available!)
+**Architecture:** Optimized for M4 single-core performance & high memory bandwidth
 
-* **The Upgrade:** Increase the resonator density from 48 bands to **96 or 128 bands** per track.
-* **The Rationale:** The M4's ability to handle vectorized math allows for massive parallel filter banks.
-* **Implementation:** Replace individual filter objects with `DynKlank.ar` or `Klank.ar`, driven by a `Buffer` containing 128 precise frequency ratios.
-* **Result:** The resonator shifts from sounding like "a group of filters" to "a physical resonant object," providing a much smoother morphing experience across the frequency spectrum.
+**Future Targets:**
+- Headless Linux build (server deployment)
+- Raspberry Pi stripped version (portable/embedded)
 
----
+**Development Status:** ⚠️ Active development - Documentation evolving rapidly
 
-## 5. System-Wide DC Safety & Headroom
-
-**Status:** Mandatory for High-Power Use | **Priority:** Critical
-
-* **The Upgrade:** Integrate `LeakDC.ar` and `Limiter.ar` as permanent fixtures on the `s4MasterBus`.
-* **The Rationale:** High-resonance, oversampled filters can easily create massive energy peaks and DC offset (silent speaker-damaging voltage).
-* **Benefit:** Allows the user to push the "sculpting" controls to extreme limits without fear of digital clipping or hardware damage.
+**📖 For complete feature list, see [FEATURES.md](FEATURES.md)**
 
 ---
-
-## Technical Summary for Mac Mini M4
-
-| Component | Standard Plan (Subpar) | M4 Extreme Plan (Target) |
-| --- | --- | --- |
-| **Modulation** | `.kr` (Control Rate) | **`.ar` (Audio Rate)** |
-| **Granulation** | Single-Engine Mode | **Parallel Multi-Engine** |
-| **Filter Density** | 48 Bands | **96 - 128 Bands** |
-| **Distortion** | Standard `.tanh` | **4x Oversampled Saturation** |
-| **CPU Target** | < 50% | **Unlimited (Single-Core Max)** |
-
----
-
-### Implementation Note
-
-To implement the 128-band resonator effectively on your M4, I recommend using the **`DynKlank`** UGen. It is significantly more efficient for large banks and allows you to update the frequencies, amplitudes, and ring times (decay) of all 128 bands simultaneously via `ControlBus` arrays.
 
 ## QUICK START
 
@@ -427,5 +389,5 @@ Questions? Check `generic-commands.scd` or holler at Forrest.
 <!-- gptel-model: claude-haiku-4-5-20251001 -->
 <!-- gptel--backend-name: "Claude-Haiku-4.5" -->
 <!-- gptel-max-tokens: 6000 -->
-<!-- gptel--bounds: nil -->
+<!-- gptel--bounds: ((response (1140 2102) (2110 7628))) -->
 <!-- End: -->

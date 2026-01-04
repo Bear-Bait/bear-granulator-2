@@ -177,6 +177,7 @@ Public API:
 				\pitch, track.params[\spectralPitch],
 				\freeze, track.params[\spectralFreeze],
 				\smear, track.params[\spectralSmear],
+				\amp, track.params[\spectralAmp],
 				\interp, 4  // Best quality for M4
 			], addAction: \addToHead);
 
@@ -224,7 +225,7 @@ Public API:
 			var track = tracks[trackNum];
 			var spectralParams = [\spectralMix, \spectralPosition, \spectralRate,
 			                       \spectralWindowSize, \spectralOverlaps, \spectralPitch,
-			                       \spectralFreeze, \spectralSmear];
+			                       \spectralFreeze, \spectralSmear, \spectralAmp];
 
 			if(track.grainSynth.isNil, {
 				"Track manager: Track % not initialized".format(trackNum + 1).postln;
@@ -247,6 +248,7 @@ Public API:
 					if(param == \spectralPitch, { synthParam = \pitch });
 					if(param == \spectralFreeze, { synthParam = \freeze });
 					if(param == \spectralSmear, { synthParam = \smear });
+					if(param == \spectralAmp, { synthParam = \amp });
 					track.spectralSynth.set(synthParam, value);
 				});
 			}, {
