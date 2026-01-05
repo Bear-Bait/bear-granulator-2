@@ -532,9 +532,10 @@ Public API:
 			var track = tracks[trackNum];
 			var trackMgr = this;
 
+			// Auto-create modulator if it doesn't exist (Phase 15.5 bugfix)
 			if(track.modulators[modNum].isNil, {
-				"Track %: Modulator % not created yet".format(trackNum + 1, modNum + 1).postln;
-				^nil;
+				"Track %: Modulator % not created, creating with defaults...".format(trackNum + 1, modNum + 1).postln;
+				this.createModulator(trackNum, modNum, 0, 1.0, 1.0, 0);  // LFO, 1Hz, full depth, sine
 			});
 
 			// Store routing info
