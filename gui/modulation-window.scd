@@ -179,14 +179,17 @@ Opens a dedicated window for modulation control of a single track
 				"Pos Jitter",
 				"Pitch Jitter",
 				"Spread",
-				"Filt Freq",
-				"Filt Morph",
+				"Filt Freq",      // Per-track filter
+				"Filt Morph",     // Per-track filter
+				"Filt Res",       // Per-track filter
+				"Filt Decay",     // Per-track filter (drive)
+				"Filt Mix",       // Per-track filter dry/wet
 				"Rev Mix",
 				"Del Mix",
 				"Shimmer Mix",
-				"Quad X",     // Phase 13: Spatial modulation
-				"Quad Y",     // Phase 13: Spatial modulation
-				"─────",      // Separator
+				"Quad X",         // Phase 13: Spatial modulation
+				"Quad Y",         // Phase 13: Spatial modulation
+				"─────",          // Separator
 				"M: Filter Freq",    // Phase 15: Master filter
 				"M: Filter Morph",   // Phase 15: Master filter
 				"M: Filter Res",     // Phase 15: Master filter
@@ -223,21 +226,21 @@ Opens a dedicated window for modulation control of a single track
 				var paramMap = [
 					nil, \grainSize, \density, \position, \pitch,
 					\posJitter, \pitchJitter, \stereoSpread,
-					\filterFreq, \filterMorph, \reverbMix, \delayMix,
-					\shimmerMix,
+					\filterFreq, \filterMorph, \filterRes, \filterDecay, \filterMix,  // Per-track filter (5 params)
+					\reverbMix, \delayMix, \shimmerMix,
 					\quadX, \quadY,  // Phase 13: Spatial modulation targets
 					nil,  // Separator
 					\masterFilterFreq, \masterFilterMorph, \masterFilterRes,    // Phase 15: Master filter
 					\masterFilterDecay, \masterFilterAnimate, \masterFilterMix  // Phase 15: Master filter
 				];
 				var targetIdx = targetMenu.value;
-				if(targetIdx > 0 and: { targetIdx != 15 }, {  // Skip separator
+				if(targetIdx > 0 and: { targetIdx != 18 }, {  // Skip separator (index 18 now)
 					var param = paramMap[targetIdx];
 					var min = minNum.value;
 					var max = maxNum.value;
 
-					// Phase 15: Route to master bus if master parameter
-					if(targetIdx >= 16, {
+					// Phase 15: Route to master bus if master parameter (index 19+)
+					if(targetIdx >= 19, {
 						trackManager.routeModulatorToMaster(trackNum, modNum, param, min, max);
 					}, {
 						trackManager.routeModulator(trackNum, modNum, param, min, max);
