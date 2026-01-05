@@ -273,6 +273,11 @@ Phase 7 Features:
 
 							soundFile.close;
 
+							// CRITICAL: Stop all synths BEFORE freeing buffer to prevent audio burst
+							if(track.grainSynth.notNil, { track.grainSynth.run(false) });
+							if(track.spectralSynth.notNil, { track.spectralSynth.run(false) });
+							if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(false) });
+
 							// Free old buffer and allocate new one matching file size
 							"Freeing old buffer...".postln;
 							track.recorder.buffer.free;
