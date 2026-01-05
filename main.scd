@@ -132,6 +132,11 @@ fork {
 		0.2.wait;
 		"  ✓ Spectral engine (Warp1) loaded".postln;
 
+		// Load direct playback engine (Phase 15)
+		(~config.corePath +/+ "direct-playback.scd").load;
+		0.2.wait;
+		"  ✓ Direct playback engine loaded".postln;
+
 		// Load buffer recorder
 		(~config.corePath +/+ "buffer-recorder.scd").load;
 		0.2.wait;

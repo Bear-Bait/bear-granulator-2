@@ -32,12 +32,21 @@ Usage:
 			var makeSlider;  // Phase 7: Slider helper function
 			var yPos;  // Phase 7: Y position for slider layout
 			var overlayView, updateRoutine;  // Phase 7: Grain visualization overlay
-			var playheadPos = 0;  // Phase 8: Real-time playhead position (0-1)
-			var oscListener;  // Phase 8: OSC responder for playhead updates
+			var grainPlayheadPos = 0;  // Phase 15: Grain engine playhead position (0-1)
+			var spectralPlayheadPos = 0;  // Phase 15: Spectral engine playhead position (0-1)
+			var directPlayheadPos = 0;  // Phase 15: Direct playback playhead position (0-1)
+			var recPlayheadPos = nil;  // Phase 15: Recording playhead position (0-1)
+			var grainOSCListener;  // Phase 15: OSC responder for grain playhead
+			var spectralOSCListener;  // Phase 15: OSC responder for spectral playhead
+			var directOSCListener;  // Phase 15: OSC responder for direct playback playhead
+			var recOSCListener;  // Phase 15: OSC responder for recording playhead
 			var spectrogramData, spectrogramOSC;  // Phase 11: FFT spectrogram data
 			var spectrogramEnabled = true;  // Phase 11: Toggle spectrogram display
 			var grainPulses = List.new;  // Phase 11: Grain trigger pulse animations
 			var grainPulseEnabled = true;  // Phase 11: Toggle grain pulse display
+			var cropMode = false;  // Phase 15: Crop mode toggle
+			var cropButton, applyCropButton;  // Phase 15: Crop UI elements
+			var grainEngineButton, spectralEngineButton;  // Phase 15: Engine toggle buttons
 
 			// Doom Material colors
 			colors = (
@@ -211,6 +220,9 @@ Usage:
 					var bufferDuration, grainSizePixels, positionPixels, jitterPixels;
 					var viewWidth = winWidth - 20, viewHeight = 200;
 					var loopStartPixels, loopEndPixels, fadeWidth;
+					var isRecording = track.recorder.isRecording;
+					var recPulse = (Main.elapsedTime * 2).sin.linlin(-1, 1, 0.3, 1.0);
+				var yOffset, grainActive, spectralActive;  // Phase 15
 
 					if(currentBuffer.notNil and: { currentBuffer.sampleRate.notNil }, {
 						bufferDuration = currentBuffer.numFrames / currentBuffer.sampleRate;
@@ -308,49 +320,250 @@ Usage:
 						Pen.line(Point(positionPixels, 0), Point(positionPixels, viewHeight));
 						Pen.stroke;
 
-						// === LAYER 4: Real-time Playhead (Phase 8 - sample-accurate @ 60Hz) ===
-						// This is the ACTUAL playhead from the grain engine's Phasor
-						// Shows true position when scanSpeed > 0 or when position is modulated
-						if(playheadPos.notNil and: { currentBuffer.notNil }, {
-							var realPlayheadPixels = playheadPos * viewWidth;
+						// === LAYER 4A: Grain Playhead (Phase 15 - sample-accurate @ 60Hz) ===
+						// Shows actual grain engine playhead position
+						if(grainPlayheadPos.notNil and: { currentBuffer.notNil }, {
+							grainActive = if(grainEngineButton.notNil, { grainEngineButton.value == 1 }, { false });
 
-							// Bright cyan line (distinct from position parameter)
-							Pen.color = colors.cyan.alpha_(0.9);
-							Pen.width = 2;
-							Pen.line(Point(realPlayheadPixels, 0), Point(realPlayheadPixels, viewHeight));
+							if(grainActive, {
+								var grainPlayheadPixels = grainPlayheadPos * viewWidth;
+
+								// Bright green line for grain engine
+								Pen.color = colors.green.alpha_(0.85);
+								Pen.width = 2;
+								Pen.line(Point(grainPlayheadPixels, 0), Point(grainPlayheadPixels, viewHeight));
+								Pen.stroke;
+
+								// Small label
+								Pen.stringAtPoint(
+									"Grain",
+									Point(grainPlayheadPixels + 5, viewHeight - 35),
+									Font("DejaVu Sans Mono", 8),
+									colors.green
+								);
+							});
+						});
+
+						// === LAYER 4B: Spectral Playhead (Phase 15 - sample-accurate @ 60Hz) ===
+						// Shows actual spectral engine playhead position
+						if(spectralPlayheadPos.notNil and: { currentBuffer.notNil }, {
+							spectralActive = if(spectralEngineButton.notNil, { spectralEngineButton.value == 1 }, { false });
+
+							if(spectralActive, {
+								var spectralPlayheadPixels = spectralPlayheadPos * viewWidth;
+
+								// Bright yellow line for spectral engine
+								Pen.color = colors.yellow.alpha_(0.85);
+								Pen.width = 2;
+								Pen.line(Point(spectralPlayheadPixels, 0), Point(spectralPlayheadPixels, viewHeight));
+								Pen.stroke;
+
+								// Small label
+								Pen.stringAtPoint(
+									"Spectral",
+									Point(spectralPlayheadPixels + 5, viewHeight - 20),
+									Font("DejaVu Sans Mono", 8),
+									colors.yellow
+								);
+							});
+						});
+
+						// === LAYER 4C: Direct Playback Playhead (Phase 15 - sample-accurate @ 60Hz) ===
+						// Shows actual direct playback engine playhead position
+						if(directPlayheadPos.notNil and: { currentBuffer.notNil }, {
+							var directActive = track.params[\engineMode] == 1;  // Check if in DIRECT mode
+
+							if(directActive, {
+								var directPlayheadPixels = directPlayheadPos * viewWidth;
+
+								// Bright white line for direct playback
+								Pen.color = Color.white.alpha_(0.9);
+								Pen.width = 3;
+								Pen.line(Point(directPlayheadPixels, 0), Point(directPlayheadPixels, viewHeight));
+								Pen.stroke;
+
+								// Small label
+								Pen.stringAtPoint(
+									"DIRECT",
+									Point(directPlayheadPixels + 5, viewHeight - 50),
+									Font("DejaVu Sans Mono", 8, true),
+									Color.white
+								);
+							});
+						});
+
+						// === LAYER 5: Recording Playhead (Phase 15 - @ 30Hz) ===
+						// Red playhead showing current recording position
+						if(recPlayheadPos.notNil and: { currentBuffer.notNil }, {
+							var recPlayheadPixels = recPlayheadPos * viewWidth;
+							var pulseAlpha = (Main.elapsedTime * 3).sin.abs;
+
+							// Bright red line with glow
+							Pen.color = Color.red.alpha_(0.95);
+							Pen.width = 3;
+							Pen.line(Point(recPlayheadPixels, 0), Point(recPlayheadPixels, viewHeight));
 							Pen.stroke;
 
-							// Small label to distinguish from position parameter
+							// Pulsing "REC" label
 							Pen.stringAtPoint(
-								"Live",
-								Point(realPlayheadPixels + 5, viewHeight - 20),
-								Font("DejaVu Sans Mono", 9),
-								colors.cyan
+								"REC",
+								Point(recPlayheadPixels + 5, 10),
+								Font("DejaVu Sans Mono", 10, true),
+								Color.red
+							);
+
+							// Pulsing red dot indicator
+							Pen.fillColor = Color.red.alpha_(pulseAlpha);
+							Pen.fillOval(Rect(recPlayheadPixels - 5, 5, 10, 10));
+						});
+
+						// === LAYER 5: GRAIN PULSE ANIMATION (Phase 11/15) ===
+						// Draw expanding/fading pulse rings at grain playhead position
+						// Only shows when grain engine is active
+						if(grainPulseEnabled and: { grainPlayheadPos.notNil }, {
+							grainActive = if(grainEngineButton.notNil, { grainEngineButton.value == 1 }, { false });
+
+							if(grainActive, {
+								var pulseX = grainPlayheadPos * viewWidth;
+								var pulseY = viewHeight / 2;
+								var overlap = track.params[\overlap] ? 4;
+
+								// Create subtle pulse effect based on grain density
+								// Higher overlap = more frequent pulses (visual feedback for grain density)
+								var pulsePhase = (Date.getDate.rawSeconds * overlap * 2).mod(1.0);
+								var pulseRadius = pulsePhase.linlin(0, 1, 5, 25);
+								var pulseAlpha = (1 - pulsePhase) * 0.3;
+
+								// Draw expanding ring (green for grain engine)
+								Pen.strokeColor = colors.green.alpha_(pulseAlpha);
+								Pen.width = 2;
+								Pen.strokeOval(Rect(
+									pulseX - pulseRadius,
+									pulseY - pulseRadius,
+									pulseRadius * 2,
+									pulseRadius * 2
+								));
+							});
+						});
+
+						// === LAYER 6: RECORDING INDICATOR (Phase 15) ===
+						if(isRecording, {
+							// Pulsing red border
+							Pen.strokeColor = Color.red.alpha_(recPulse);
+							Pen.width = 4;
+							Pen.strokeRect(Rect(0, 0, viewWidth, viewHeight));
+
+							// "RECORDING..." text with pulsing glow
+							Pen.stringAtPoint(
+								"RECORDING...",
+								Point(10, 10),
+								Font("DejaVu Sans Mono", 14, true),
+								Color.red.alpha_(recPulse)
+							);
+
+							// Progress bar (4-second buffer)
+							Pen.fillColor = Color.red.alpha_(0.3);
+							Pen.fillRect(Rect(0, viewHeight - 10, (recPlayheadPos ? 0) * viewWidth, 10));
+
+							// Pulsing red dot in corner
+							Pen.fillColor = Color.red.alpha_(recPulse);
+							Pen.fillOval(Rect(viewWidth - 20, 5, 15, 15));
+						});
+
+						// === LAYER 7: CROP MODE INDICATOR (Phase 15) ===
+						if(cropMode, {
+							var sel = sfv.selection(0);
+							var cropPulse = (Main.elapsedTime * 1.5).sin.linlin(-1, 1, 0.5, 1.0);
+
+							// Pulsing yellow border
+							Pen.strokeColor = colors.yellow.alpha_(cropPulse);
+							Pen.width = 3;
+							Pen.strokeRect(Rect(0, 0, viewWidth, viewHeight));
+
+							// "CROP MODE" text in top-right
+							Pen.stringAtPoint(
+								"CROP MODE - Select region to keep",
+								Point(viewWidth - 280, 10),
+								Font("DejaVu Sans Mono", 11, true),
+								colors.yellow.alpha_(cropPulse)
+							);
+
+							// Highlight selected region with yellow overlay
+							if(sel.notNil and: { sel[1] > 0 }, {
+								var selStart = (sel[0] / currentBuffer.numFrames) * viewWidth;
+								var selWidth = (sel[1] / currentBuffer.numFrames) * viewWidth;
+
+								// Semi-transparent yellow fill
+								Pen.fillColor = colors.yellow.alpha_(0.2);
+								Pen.fillRect(Rect(selStart, 0, selWidth, viewHeight));
+
+								// Bright yellow borders on selection
+								Pen.strokeColor = colors.yellow.alpha_(0.9);
+								Pen.width = 2;
+								Pen.strokeRect(Rect(selStart, 0, selWidth, viewHeight));
+							});
+						});
+
+						// === LAYER 8: ENGINE STATUS INDICATORS (Phase 15) ===
+						// Show which engines are currently running
+						yOffset = 40;  // Start below waveform instructions
+						grainActive = if(grainEngineButton.notNil, { grainEngineButton.value == 1 }, { false });
+						spectralActive = if(spectralEngineButton.notNil, { spectralEngineButton.value == 1 }, { false });
+
+						// Grain engine indicator
+						if(grainActive, {
+							var pulse = (Main.elapsedTime * 2).sin.linlin(-1, 1, 0.7, 1.0);
+
+							// Green dot
+							Pen.fillColor = colors.green.alpha_(pulse);
+							Pen.fillOval(Rect(10, yOffset, 12, 12));
+
+							// "GRAIN" text
+							Pen.stringAtPoint(
+								"GRAIN",
+								Point(25, yOffset - 2),
+								Font("DejaVu Sans Mono", 10, true),
+								colors.green.alpha_(0.9)
+							);
+
+							yOffset = yOffset + 18;
+						});
+
+						// Spectral engine indicator
+						if(spectralActive, {
+							var pulse = (Main.elapsedTime * 2).sin.linlin(-1, 1, 0.7, 1.0);
+
+							// Yellow dot
+							Pen.fillColor = colors.yellow.alpha_(pulse);
+							Pen.fillOval(Rect(10, yOffset, 12, 12));
+
+							// "SPECTRAL" text
+							Pen.stringAtPoint(
+								"SPECTRAL",
+								Point(25, yOffset - 2),
+								Font("DejaVu Sans Mono", 10, true),
+								colors.yellow.alpha_(0.9)
 							);
 						});
 
-						// === LAYER 5: GRAIN PULSE ANIMATION (Phase 11) ===
-						// Draw expanding/fading pulse rings at playhead position
-						if(grainPulseEnabled and: { playheadPos.notNil }, {
-							var pulseX = playheadPos * viewWidth;
-							var pulseY = viewHeight / 2;
-							var overlap = track.params[\overlap] ? 4;
+						// Concurrent mode badge (both engines running)
+						if(grainActive and: spectralActive, {
+							var concurrentPulse = (Main.elapsedTime * 1.5).sin.linlin(-1, 1, 0.6, 1.0);
 
-							// Create subtle pulse effect based on grain density
-							// Higher overlap = more frequent pulses (visual feedback for grain density)
-							var pulsePhase = (Date.getDate.rawSeconds * overlap * 2).mod(1.0);
-							var pulseRadius = pulsePhase.linlin(0, 1, 5, 25);
-							var pulseAlpha = (1 - pulsePhase) * 0.4;
+							// Bright cyan badge for concurrent mode
+							Pen.fillColor = colors.cyan.alpha_(0.15 * concurrentPulse);
+							Pen.fillRect(Rect(viewWidth - 140, 40, 130, 20));
 
-							// Draw expanding ring
-							Pen.strokeColor = colors.yellow.alpha_(pulseAlpha);
+							Pen.strokeColor = colors.cyan.alpha_(0.8 * concurrentPulse);
 							Pen.width = 2;
-							Pen.strokeOval(Rect(
-								pulseX - pulseRadius,
-								pulseY - pulseRadius,
-								pulseRadius * 2,
-								pulseRadius * 2
-							));
+							Pen.strokeRect(Rect(viewWidth - 140, 40, 130, 20));
+
+							Pen.stringAtPoint(
+								"CONCURRENT MODE",
+								Point(viewWidth - 135, 43),
+								Font("DejaVu Sans Mono", 9, true),
+								colors.cyan.alpha_(concurrentPulse)
+							);
 						});
 					});
 				});
@@ -363,16 +576,46 @@ Usage:
 				}
 			}).play(AppClock);
 
-			// Phase 8: OSC listener for sample-accurate playhead @ 60Hz
-			// Receives normalized position (0-1) from grain engine's SendReply
-			oscListener = OSCFunc({ arg msg, time, addr, recvPort;
-				var nodeID = msg[1];  // Synth node ID
-				var replyID = msg[2];  // '/playhead'
+			// Phase 15: OSC listener for grain engine playhead @ 60Hz
+			grainOSCListener = OSCFunc({ arg msg, time, addr, recvPort;
+				var nodeID = msg[1];
+				var replyID = msg[2];  // '/grainPlayhead'
 				var position = msg[3]; // Normalized position 0-1
 
-				// Update playhead position (this will be drawn in overlay)
-				playheadPos = position;
-			}, '/playhead');
+				// Update grain playhead position
+				grainPlayheadPos = position;
+			}, '/grainPlayhead');
+
+			// Phase 15: OSC listener for spectral engine playhead @ 60Hz
+			spectralOSCListener = OSCFunc({ arg msg, time, addr, recvPort;
+				var nodeID = msg[1];
+				var replyID = msg[2];  // '/spectralPlayhead'
+				var position = msg[3]; // Normalized position 0-1
+
+				// Update spectral playhead position
+				spectralPlayheadPos = position;
+			}, '/spectralPlayhead');
+
+			// Phase 15: OSC listener for direct playback playhead @ 60Hz
+			directOSCListener = OSCFunc({ arg msg, time, addr, recvPort;
+				var nodeID = msg[1];
+				var replyID = msg[2];  // '/directPlayhead'
+				var position = msg[3]; // Normalized position 0-1
+
+				// Update direct playhead position
+				directPlayheadPos = position;
+			}, '/directPlayhead');
+
+			// Phase 15: OSC listener for recording playhead @ 30Hz
+			// Receives normalized position (0-1) from buffer recorder's SendReply
+			recOSCListener = OSCFunc({ arg msg, time, addr, recvPort;
+				var nodeID = msg[1];
+				var replyID = msg[2];  // '/recPlayhead'
+				var position = msg[3]; // Normalized position 0-1
+
+				// Update recording playhead position (red line)
+				recPlayheadPos = position;
+			}, '/recPlayhead');
 
 			// Phase 11: Initialize spectrogram data (10 frequency bands × 60 time slices)
 			spectrogramData = Array.fill(60, { Array.fill(10, { 0.0 }) });
@@ -390,10 +633,13 @@ Usage:
 				{ overlayView.refresh }.defer;
 			}, '/s4_fft');
 
-			// Stop update routine and OSC listener when window closes
+			// Stop update routine and OSC listeners when window closes
 			win.onClose = {
 				updateRoutine.stop;
-				oscListener.free;  // Phase 8: Free OSC responder
+				grainOSCListener.free;  // Phase 15: Free grain playhead OSC responder
+				spectralOSCListener.free;  // Phase 15: Free spectral playhead OSC responder
+				directOSCListener.free;  // Phase 15: Free direct playback OSC responder
+				recOSCListener.free;  // Phase 15: Free recording OSC responder
 				spectrogramOSC.free;  // Phase 11: Free spectrogram OSC responder
 				windows[trackNum] = nil;
 				soundFileViews[trackNum] = nil;
@@ -452,15 +698,17 @@ Usage:
 					loopStart = (startFrame / numFrames).clip(0.0, 1.0);
 					loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
 
-					// Ensure minimum window size
-					if((loopEnd - loopStart) < 0.01, {
-						"Loop window too small (minimum 1% of buffer)".warn;
+					// Ensure minimum window size (SKIP in crop mode)
+					if(cropMode.not and: { (loopEnd - loopStart) < 0.01 }, {
+						"Loop window too small for playback (minimum 1%)".warn;
 						^this;
 					});
 
-					// Update engine
-					trackManager.setParam(trackNum, \loopStart, loopStart);
-					trackManager.setParam(trackNum, \loopEnd, loopEnd);
+					// Update engine (only if not in crop mode)
+					if(cropMode.not, {
+						trackManager.setParam(trackNum, \loopStart, loopStart);
+						trackManager.setParam(trackNum, \loopEnd, loopEnd);
+					});
 
 					// Post feedback
 					startTime = (loopStart * currentBuffer.numFrames / currentBuffer.sampleRate).round(0.001);
@@ -568,22 +816,43 @@ Usage:
 				.align_(\left);
 
 			// Control buttons (bottom right)
-			// Play button
-			Button(win, Rect(winWidth - 340, 290, 100, 30))
-				.states_([["▶ PLAY", Color.white, Color.green(0.6)]])
-				.font_(Font("Monaco", 12, true))
-				.action_({
-					trackManager.setParam(trackNum, \amp, 0.5);  // Set amp to 0.5 (playing)
-					"Track % PLAYING".format(trackNum + 1).postln;
+			// Phase 15: GRAIN ENGINE toggle
+			grainEngineButton = Button(win, Rect(winWidth - 340, 290, 100, 30))
+				.states_([
+					["GRAIN: OFF", Color.white, Color.gray(0.4)],
+					["GRAIN: ON", Color.black, colors.green]
+				])
+				.font_(Font("Monaco", 10, true))
+				.value_(0)  // Start OFF
+				.action_({ arg btn;
+					if(btn.value == 1, {
+						track.grainSynth.run(true);
+						trackManager.setParam(trackNum, \amp, 0.5);
+						"Track %: Grain engine RUNNING".format(trackNum + 1).postln;
+					}, {
+						track.grainSynth.run(false);
+						"Track %: Grain engine STOPPED".format(trackNum + 1).postln;
+					});
 				});
 
-			// Stop button
-			Button(win, Rect(winWidth - 230, 290, 100, 30))
-				.states_([["■ STOP", Color.white, Color.red(0.6)]])
-				.font_(Font("Monaco", 12, true))
-				.action_({
-					trackManager.setParam(trackNum, \amp, 0.0);  // Set amp to 0.0 (silent)
-					"Track % STOPPED".format(trackNum + 1).postln;
+			// Phase 15: SPECTRAL ENGINE toggle
+			spectralEngineButton = Button(win, Rect(winWidth - 230, 290, 100, 30))
+				.states_([
+					["SPECTRAL: OFF", Color.white, Color.gray(0.4)],
+					["SPECTRAL: ON", Color.black, colors.yellow]
+				])
+				.font_(Font("Monaco", 10, true))
+				.value_(0)  // Start OFF
+				.action_({ arg btn;
+					if(btn.value == 1, {
+						track.spectralSynth.run(true);
+						trackManager.setParam(trackNum, \spectralMix, 0.5);
+						trackManager.setParam(trackNum, \spectralAmp, 0.5);
+						"Track %: Spectral engine RUNNING".format(trackNum + 1).postln;
+					}, {
+						track.spectralSynth.run(false);
+						"Track %: Spectral engine STOPPED".format(trackNum + 1).postln;
+					});
 				});
 
 			// Refresh button
@@ -594,6 +863,117 @@ Usage:
 					self.updateWaveform(trackNum);
 				});
 
+			// Phase 15: CROP MODE button (below play controls)
+			cropButton = Button(win, Rect(winWidth - 340, 325, 100, 25))
+				.states_([
+					["CROP MODE", Color.white, Color.gray(0.4)],
+					["EXIT CROP", Color.black, colors.yellow]
+				])
+				.font_(Font("Monaco", 10, true))
+				.background_(Color.blue)  // DEBUG: Make button bright blue so it's visible
+				.action_({ arg btn;
+					"╔══════════════════════════════════════╗".postln;
+					"║ DEBUG: CROP BUTTON CLICKED!         ║".postln;
+					"║ Button value = %                    ║".format(btn.value).postln;
+					"╚══════════════════════════════════════╝".postln;
+					cropMode = btn.value.asBoolean;
+					if(cropMode, {
+						"✓ Crop mode enabled - Select region to keep".postln;
+						// Show apply crop button
+						{
+							applyCropButton.visible_(true);
+							"DEBUG: Apply crop button shown".postln;
+						}.defer;
+					}, {
+						"✓ Crop mode disabled".postln;
+						// Hide apply crop button
+						{
+							applyCropButton.visible_(false);
+							"DEBUG: Apply crop button hidden".postln;
+						}.defer;
+					});
+				});
+
+			"DEBUG: Crop button created at position (%, %)".format(winWidth - 340, 325).postln;
+
+			// Phase 15: APPLY CROP button (appears when crop mode active)
+			applyCropButton = Button(win, Rect(winWidth - 230, 325, 120, 25))
+				.states_([["✂ APPLY CROP", Color.white, Color.green(0.6)]])
+				.font_(Font("Monaco", 10, true))
+				.visible_(false)  // Hidden by default
+				.action_({
+					var sel = sfv.selection(0);
+					var currentBuffer = track.recorder.buffer;
+
+					if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
+						var startFrame = sel[0].asInteger;
+						var numFrames = sel[1].asInteger;
+						var newBuffer, tempPath;
+
+						fork {
+							"Cropping buffer: % frames starting at %...".format(numFrames, startFrame).postln;
+
+							// Create new buffer for cropped audio
+							newBuffer = Buffer.alloc(server, numFrames, 1);
+							server.sync;
+
+							// Copy selected region to new buffer
+							currentBuffer.copyData(newBuffer, dstStartAt: 0, srcStartAt: startFrame, numSamples: numFrames);
+							server.sync;
+
+							// Free old buffer
+							currentBuffer.free;
+							server.sync;
+
+							// Update track's buffer reference
+							track.recorder.buffer = newBuffer;
+
+							// Write to temp file for waveform display
+							tempPath = PathName.tmp +/+ "s4_cropped_" ++ Date.getDate.stamp ++ ".wav";
+							newBuffer.write(tempPath, "WAV", "int16");
+							server.sync;
+
+							// Update track file path
+							track.filePath = tempPath;
+							track.recorder.tempFilePath = tempPath;
+
+							// Reset loop bounds to full buffer
+							trackManager.setParam(trackNum, \loopStart, 0.0);
+							trackManager.setParam(trackNum, \loopEnd, 1.0);
+
+							// Update synth buffer references
+							track.grainSynth.set(\bufnum, newBuffer.bufnum);
+							track.spectralSynth.set(\bufnum, newBuffer.bufnum);
+
+							// Refresh waveform display
+							{
+								var soundFile = SoundFile.new;
+								if(soundFile.openRead(tempPath), {
+									{
+										sfv.soundfile = soundFile;
+										sfv.read(0, soundFile.numFrames);
+										soundFile.close;
+										sfv.setSelection(0, [0, newBuffer.numFrames]);
+										sfv.refresh;
+
+										// Exit crop mode
+										cropButton.value_(0);
+										cropMode = false;
+										applyCropButton.visible_(false);
+
+										"✓ Crop complete! New buffer: % frames (% seconds)".format(
+											newBuffer.numFrames,
+											(newBuffer.numFrames / server.sampleRate).round(0.01)
+										).postln;
+									}.defer;
+								});
+							}.defer(0.1);
+						};
+					}, {
+						"No region selected for cropping".warn;
+					});
+				});
+
 			// === PHASE 7: GRAIN CONTROL SLIDERS ===
 			StaticText(win, Rect(10, 335, 880, 20))
 				.string_("GRAIN CONTROLS")
@@ -602,6 +982,30 @@ Usage:
 
 			// Column 1: Position & Pitch
 			yPos = 360;
+
+			// ENGINE MODE toggle (Direct Playback vs Granular)
+			StaticText(win, Rect(10, yPos, 120, 20))
+				.string_("ENGINE MODE:")
+				.font_(Font("DejaVu Sans Mono", 10, true))
+				.stringColor_(colors.fg);
+
+			Button(win, Rect(135, yPos, 120, 20))
+				.states_([
+					["GRANULAR", Color.black, colors.cyan],
+					["DIRECT", Color.white, Color.blue(0.5)]
+				])
+				.font_(Font("DejaVu Sans Mono", 9, true))
+				.action_({ arg btn;
+					if(btn.value == 1, {
+						trackManager.setParam(trackNum, \engineMode, 1);
+						"✓ Track %: Switched to DIRECT playback".format(trackNum + 1).postln;
+					}, {
+						trackManager.setParam(trackNum, \engineMode, 0);
+						"✓ Track %: Switched to GRANULAR engine".format(trackNum + 1).postln;
+					});
+				});
+
+			yPos = yPos + 30;  // Shift down for next control
 			makeSlider.value(win, 10, yPos, "Position", ControlSpec(0, 1, \lin), \position, track.params[\position] ? 0.0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Scan Speed", ControlSpec(-4, 4, \lin), \scanSpeed, track.params[\scanSpeed] ? 0);

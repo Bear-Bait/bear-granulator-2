@@ -93,6 +93,32 @@ PREREQUISITE: Run main.scd first!
       }
   }).play;
   )
+
+//Slower 4x rotate
+(
+~spatialRotation = Task({
+    var angle = 0;
+    loop {
+        // Track 1
+        ~trackManager.setQuadPosition(0, angle.cos, angle.sin);
+        // Track 2 (90 deg offset)
+        ~trackManager.setQuadPosition(1, (angle + 1.5pi).cos, (angle + 1.5pi).sin);
+        // Track 3 (180 deg offset)
+        ~trackManager.setQuadPosition(2, (angle + pi).cos, (angle + pi).sin);
+        // Track 4 (270 deg offset)
+        ~trackManager.setQuadPosition(3, (angle + 0.5pi).cos, (angle + 0.5pi).sin);
+
+        // --- THE SPEED CONTROL ---
+        // Decrease this number to slow down the rotation
+        // 0.01 is 5x slower than your original 0.05
+        angle = angle + 0.01;
+
+        // Keep this at 0.05 or 0.1 for smooth movement
+        0.1.wait;
+    }
+}).play;
+)
+
 // Stop rotation
 ~spatialRotation.stop;
  ~spatialRotation2.stop;

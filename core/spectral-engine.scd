@@ -82,6 +82,11 @@ SynthDef(\s4SpectralEngine, {
 		interp: interp            // Interpolation quality
 	);
 
+	// Phase 15: Send playhead position for GUI visualization @ 60Hz
+	// Broadcasts normalized position (0-1) for viewfinder window
+	// Use '/spectralPlayhead' to distinguish from grain engine
+	SendReply.ar(Impulse.ar(60), '/spectralPlayhead', [pointer / bufFrames.max(1)]);
+
 	// Convert mono to stereo and apply pan
 	sig = Pan2.ar(sig, pan.lag(rampTime));
 

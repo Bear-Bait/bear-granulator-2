@@ -29,6 +29,7 @@ Usage:
 		buffer: nil,
 		isRecording: false,
 		tempFilePath: nil,  // For waveform display of recorded buffers
+		onRecordStop: nil,  // Callback function(tempFilePath) - called when recording stops
 
 		/*
 		Function: init
@@ -67,13 +68,16 @@ Usage:
 					// Create recording synth
 					recordSynth = {
 						arg in = 0, buf = 0, recLevel = 1.0, preLevel = 0.0;
-						var input, output;
+						var input, recordPhase, bufFrames;
 
 						// Get input signal (boosted 3x for better recording levels)
 						input = SoundIn.ar(in) * 3.0;
 
-						// Record to buffer (looping)
-						RecordBuf.ar(
+						// Get buffer size
+						bufFrames = BufFrames.kr(buf);
+
+						// Record to buffer (looping) and capture phase
+						recordPhase = RecordBuf.ar(
 							inputArray: input,
 							bufnum: buf,
 							offset: 0,
@@ -84,6 +88,10 @@ Usage:
 							doneAction: 0          // don't free synth when done
 						);
 
+						// Phase 15: Send recording position for GUI @ 30Hz
+						// Normalize to 0-1 range for viewfinder
+						SendReply.kr(Impulse.kr(30), '/recPlayhead', [recordPhase / bufFrames.max(1)]);
+
 						// Pass through for monitoring (optional)
 						// Silent - use Out.ar if you want monitoring
 						Silent.ar;
@@ -91,7 +99,7 @@ Usage:
 						server,
 						args: [
 							\in, inputChannel,
-							\buf, self.buffer,
+							\buf, self.buffer.bufnum,  // FIX: Pass buffer NUMBER, not Buffer object
 							\recLevel, 1.0,
 							\preLevel, if(overdub, 1.0, 0.0)
 						],
@@ -127,7 +135,14 @@ Usage:
 					self.tempFilePath = PathName.tmp +/+ "s4_recording_" ++ Date.getDate.stamp ++ ".wav";
 					self.buffer.write(self.tempFilePath, "WAV", "int16");
 					server.sync;
-					"Recording stopped. Temp file: %".format(self.tempFilePath).postln;
+					"✓ Recording stopped. Temp file: %".format(self.tempFilePath).postln;
+
+					// Notify callback if set (for viewfinder waveform update)
+					if(self.onRecordStop.notNil, {
+						var pathStr = self.tempFilePath.asString;
+						"DEBUG: Calling onRecordStop with path: %".format(pathStr).postln;
+						self.onRecordStop.(pathStr);  // Use .() syntax instead of .value()
+					});
 				};
 			});
 

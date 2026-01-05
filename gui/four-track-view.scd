@@ -261,11 +261,12 @@ Phase 7 Features:
 
 						if(soundFile.openRead(filePath), {
 							var numFrames = soundFile.numFrames;
-							var duration = numFrames / server.sampleRate;
+							var duration = numFrames / soundFile.sampleRate;  // Use FILE's sample rate, not server's
 							var numChannels = soundFile.numChannels;
 
 							"File opened successfully!".postln;
 							"  Frames: %".format(numFrames).postln;
+							"  Sample Rate: % Hz".format(soundFile.sampleRate).postln;
 							"  Channels: %".format(numChannels).postln;
 							"  Duration: % sec".format(duration.round(0.01)).postln;
 
@@ -310,7 +311,34 @@ Phase 7 Features:
 								});
 
 
-								"✓ Loaded: % (% seconds, % frames)".format(
+								// Phase 15: Also update direct playback synth
+							if(track.directPlaybackSynth.notNil, {
+								track.directPlaybackSynth.run(false);
+								track.directPlaybackSynth.set(\bufnum, track.recorder.buffer.bufnum);
+								"Track %: Direct playback synth updated to buffer %".format(
+									trackNum + 1,
+									track.recorder.buffer.bufnum
+								).postln;
+							});
+
+							// Phase 15: Auto-set grain size to sample duration
+							// This allows the full sample to play in GRANULAR mode
+							{
+								var sampleDuration = duration;  // Already calculated above
+								var maxGrainSize = 5.0;  // Cap at 5 seconds for safety
+
+								// Clamp grain size to reasonable range (0.005 to 5.0 seconds)
+								sampleDuration = sampleDuration.clip(0.005, maxGrainSize);
+
+								trackManager.setParam(trackNum, \grainSize, sampleDuration);
+
+								"Track %: Auto-set grain size to % seconds (sample duration)".format(
+									trackNum + 1,
+									sampleDuration.round(0.001)
+								).postln;
+							}.defer(0.1);  // Defer slightly to ensure everything is ready
+
+														"✓ Loaded: % (% seconds, % frames)".format(
 									PathName(filePath).fileName,
 									duration.round(0.01),
 									numFrames
@@ -337,23 +365,37 @@ Phase 7 Features:
 			])
 			.action_({ arg btn;
 				if(btn.value == 1, {
-					// PLAY - Start both grain and spectral synths
-					if(track.grainSynth.notNil, {
-						track.grainSynth.run(true);
+					// PLAY - Start synths based on engine mode
+					if(track.params[\engineMode] == 1, {
+						// DIRECT mode - only run direct playback synth
+						if(track.directPlaybackSynth.notNil, {
+							track.directPlaybackSynth.run(true);
+							"Track % DIRECT playback PLAYING".format(trackNum + 1).postln;
+						}, {
+							"ERROR: Direct playback synth is nil!".error;
+						});
 					}, {
-						"ERROR: Grain synth is nil!".error;
+						// GRANULAR mode - run grain and spectral synths
+						if(track.grainSynth.notNil, {
+							track.grainSynth.run(true);
+						}, {
+							"ERROR: Grain synth is nil!".error;
+						});
+						if(track.spectralSynth.notNil, {
+							track.spectralSynth.run(true);
+						});
+						"Track % engines PLAYING (Grain + Spectral)".format(trackNum + 1).postln;
 					});
-					if(track.spectralSynth.notNil, {
-						track.spectralSynth.run(true);
-					});
-					"Track % engines PLAYING (Grain + Spectral)".format(trackNum + 1).postln;
 				}, {
-					// STOP - Pause both synths
+					// STOP - Pause all synths
 					if(track.grainSynth.notNil, {
 						track.grainSynth.run(false);
 					});
 					if(track.spectralSynth.notNil, {
 						track.spectralSynth.run(false);
+					});
+					if(track.directPlaybackSynth.notNil, {
+						track.directPlaybackSynth.run(false);
 					});
 					"Track % engines STOPPED".format(trackNum + 1).postln;
 				});

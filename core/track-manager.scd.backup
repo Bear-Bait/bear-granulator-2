@@ -242,12 +242,6 @@ Public API:
 				track.spectralSynth = nil;
 			});
 
-			// Phase 15: Free direct playback synth
-			if(track.directPlaybackSynth.notNil, {
-				track.directPlaybackSynth.free;
-				track.directPlaybackSynth = nil;
-			});
-
 			if(track.recorder.notNil, {
 				track.recorder.free;
 				track.recorder = nil;
@@ -325,25 +319,13 @@ Public API:
 					track.spectralSynth.set(synthParam, value);
 				});
 			}, {
-				// Non-spectral parameters: route based on engine mode
-				if(track.params[\engineMode] == 1, {
-					// DIRECT mode: only send compatible params to direct playback
-					if(directPlaybackParams.includes(param), {
-						if(track.directPlaybackSynth.notNil, {
-							track.directPlaybackSynth.set(param, value);
-						});
-					});
-					// Grain parameters (grainSize, posJitter, etc.) are ignored in DIRECT mode
-				}, {
-					// GRANULAR mode: send to grain synth
-					track.grainSynth.set(param, value);
+				// Non-spectral parameters go to grain synth
+				track.grainSynth.set(param, value);
 
-					// Also update direct playback synth with compatible params
-					// (so they're ready when switching back to DIRECT mode)
-					if(directPlaybackParams.includes(param), {
-						if(track.directPlaybackSynth.notNil, {
-							track.directPlaybackSynth.set(param, value);
-						});
+				// Phase 15: Route based on engine mode (DIRECT vs GRANULAR)
+				if(directPlaybackParams.includes(param), {
+					if(track.directPlaybackSynth.notNil, {
+						track.directPlaybackSynth.set(param, value);
 					});
 				});
 			});

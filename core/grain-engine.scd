@@ -189,7 +189,8 @@ SynthDef(\s4GrainEngine, {
 
 	// Phase 8: Send playhead position for GUI visualization @ 60Hz
 	// Broadcasts normalized position (0-1) for viewfinder window
-	SendReply.ar(Impulse.ar(60), '/playhead', [scanPos]);
+	// Phase 15: Use '/grainPlayhead' to distinguish from spectral engine
+	SendReply.ar(Impulse.ar(60), '/grainPlayhead', [scanPos]);
 
 	// Buffer position calculation depends on mode
 	// Mode 0 (TAPE): Looping playback position

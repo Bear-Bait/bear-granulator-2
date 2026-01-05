@@ -1,0 +1,85 @@
+#+title: Phase15 Test
+
+ 1. Recording Features
+
+  Recording Visual Feedback
+
+  - Start recording → pulsing red border appears around waveform
+  - "RECORDING..." text displays in top-left with glow effect
+  - Progress bar fills from left to right during 4-second recording
+  - Red pulsing dot appears in top-right corner
+  - Red "REC" playhead line moves across waveform during recording
+  - All indicators disappear when recording stops
+
+  Sample Cropping
+
+  - Click "CROP MODE" button → yellow pulsing border appears
+  - "CROP MODE - Select region to keep" text displays
+  - Drag to select region → yellow highlight appears on selection
+  - "✂ APPLY CROP" button appears when crop mode active
+  - Click apply crop → buffer crops to selected region only
+  - Waveform updates to show cropped sample
+  - Loop bounds reset to 0-1 (full new buffer)
+  - Crop mode exits automatically after applying
+
+  ---
+  2. Concurrent Engine Mode
+
+  Engine Controls
+
+  - Both engines start OFF (gray buttons)
+  - Click "GRAIN: OFF" → turns ON (green), grain engine plays
+  - Click "SPECTRAL: OFF" → turns ON (yellow), spectral engine plays
+  - Both engines can run simultaneously
+  - Each engine can be toggled independently
+
+  Visual Status Indicators
+
+  - Grain engine ON → green pulsing dot + "GRAIN" label appears (top-left)
+  - Spectral engine ON → yellow pulsing dot + "SPECTRAL" label appears
+  - Both engines ON → cyan "CONCURRENT MODE" badge appears (top-right)
+  - Status indicators disappear when engines turn OFF
+
+  ---
+  3. Playhead Tracking (CRITICAL BUG FIX)
+
+  Separate Playhead Lines
+
+  - Grain engine ON → green playhead line labeled "Grain" appears
+  - Spectral engine ON → yellow playhead line labeled "Spectral" appears
+  - Both engines ON → both playheads visible simultaneously
+  - Playheads move independently at different speeds/positions
+  - Recording → red playhead line labeled "REC" appears
+  - All three playheads can be visible at same time (grain + spectral + recording)
+
+  Grain Pulse Animation
+
+  - Grain engine ON → green expanding pulse rings appear at playhead
+  - Spectral engine only → NO pulse rings (bug fix verification)
+  - Pulse frequency increases with higher overlap values
+
+  ---
+  4. Audio Verification
+
+  Concurrent Mode Audio
+
+  - Grain only → hear granular texture
+  - Spectral only → hear spectral time-stretch/freeze
+  - Both engines ON → hear summed output (layered sound)
+  - Turning engines ON/OFF works without clicks/pops
+  - No phase cancellation or audio artifacts in concurrent mode
+
+  ---
+  5. Known Issues to Watch For
+
+  - Recording playhead actually moves (user reported it wasn't moving before)
+  - ScanSpeed parameter affects grain playhead correctly (cyan line issue mentioned)
+  - No playhead conflicts when both engines run (the bug we just fixed)
+  - Crop function doesn't crash with edge cases (very small selections, etc.)
+
+  ---
+  Priority Tests:
+  1. Concurrent playheads (green + yellow lines visible together)
+  2. Recording playhead movement (red line actually advances)
+  3. Crop functionality (select, apply, verify new buffer)
+  4. Concurrent audio summing (both engines audible together)

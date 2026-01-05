@@ -59,14 +59,14 @@
 **Est. Time:** 3-4 hours
 
 **Task:**
-- [ ] Create `core/master-filterbank.scd`
-- [ ] Implement 128-band resonator using DynKlank.ar
-- [ ] 128 precise frequency ratios (20Hz - 18kHz log-spaced)
-- [ ] Buffer-driven frequency table
-- [ ] Optimize for M4 (target: **<30% CPU per track** - from Goals.md)
-- [ ] Add global resonance control
-- [ ] Add wet/dry mix control
-- [ ] Optional: Create spectrum visualizer
+- [x] Create `core/master-filterbank.scd`
+- [x] Implement 128-band resonator using DynKlank.ar
+- [x] 128 precise frequency ratios (20Hz - 18kHz log-spaced)
+- [x] Buffer-driven frequency table
+- [x] Optimize for M4 (target: **<30% CPU per track** - from Goals.md)
+- [x] Add global resonance control
+- [x] Add wet/dry mix control
+- [ ] Optional: Create spectrum visualizer -- needs optimization
 
 **Files:**
 - `core/master-filterbank.scd` (new)
@@ -314,3 +314,10 @@ If starting fresh, tackle in this order:
 
 **Last Updated:** January 4, 2026
 **Version:** Phase 14 Complete, Phase 15 Planning
+
+<!-- Local Variables: -->
+<!-- gptel-model: claude-haiku-4-5-20251001 -->
+<!-- gptel--backend-name: "Claude-Haiku-4.5" -->
+<!-- gptel-max-tokens: 6000 -->
+<!-- gptel--bounds: nil -->
+<!-- End: -->
