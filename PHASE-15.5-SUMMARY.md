@@ -130,6 +130,9 @@ Phase 15.5 focused on critical engine stability improvements and professional MI
 ~trackManager.setParam(0, \engineMix, 0.0);   // 100% grain
 ~trackManager.setParam(0, \engineMix, 0.5);   // 50/50 mix
 ~trackManager.setParam(0, \engineMix, 1.0);   // 100% direct
+
+// GUI: Click ENGINE MODE button to MIX, then use Engine Mix slider
+// (0=Grain only, 1=Direct only)
 ```
 
 ### Tempo-Synced LFOs
@@ -147,6 +150,9 @@ track.modulators[0].set(\syncMode, 3);   // 1/8 triplet
 track.modulators[0].set(\syncMode, 4);   // 1/16 triplet
 
 // LFO now follows MIDI clock automatically!
+
+// GUI: Open modulation window, toggle Tempo Sync ON/OFF,
+// select Mode from dropdown (1/4, 1/8, 1/16, 1/8t, 1/16t)
 ```
 
 ### Eco Mode
@@ -165,15 +171,37 @@ track.modulators[0].set(\syncMode, 4);   // 1/16 triplet
 ### Files Modified
 - `core/direct-playback.scd` - Stereo + conditional PitchShift
 - `core/track-manager.scd` - Engine crossfading
-- `core/effects-color.scd` - Oversampled saturation
+- `core/effects-color.scd` - Cascaded saturation with filtering
 - `core/midi-mapping.scd` - Velocity mapping + clock sync
 - `core/modulator.scd` - Tempo sync parameters
-- `core/mix-bus.scd` - Eco mode resonator
+- `core/mix-bus.scd` - Eco mode resonator (later removed)
+- `gui/viewfinder.scd` - **NEW: Engine Mix slider**
+- `gui/modulation-window.scd` - **NEW: Tempo Sync toggle + Mode selector**
 
 ### Lines Changed
 - **Total:** ~200 lines modified/added
 - **Core functionality:** 100% backward compatible
 - **Breaking changes:** None
+
+---
+
+## 🎨 GUI Controls (Phase 15.5)
+
+### Viewfinder Window (per track)
+- **Engine Mix Slider**: Crossfade between grain and direct engines in MIX mode
+  - Location: Right after ENGINE MODE button in Grain Controls section
+  - Range: 0.0 (100% Grain) to 1.0 (100% Direct)
+  - Only active when ENGINE MODE = MIX
+
+### Modulation Window (per modulator)
+- **Tempo Sync Toggle**: Enable/disable MIDI clock synchronization
+  - Location: Below Rate control, above Depth control
+  - States: OFF (free-running Hz) / ON (tempo-synced)
+
+- **Sync Mode Selector**: Choose note subdivision when tempo sync is ON
+  - Options: 1/4, 1/8, 1/16, 1/8t (triplet), 1/16t (triplet)
+  - Default: 1/8 note
+  - Follows MIDI clock BPM automatically
 
 ---
 

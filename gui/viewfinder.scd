@@ -1006,6 +1006,31 @@ Usage:
 				});
 
 			yPos = yPos + 30;  // Shift down for next control
+
+			// Phase 15.5: Engine Mix (crossfade between grain/direct in MIX mode)
+			StaticText(win, Rect(10, yPos, 120, 18))
+				.string_("Engine Mix")
+				.font_(Font("DejaVu Sans Mono", 10))
+				.stringColor_(colors.fg);
+			Slider(win, Rect(135, yPos, 150, 18))
+				.value_(track.params[\engineMix] ? 0.0)
+				.action_({ arg sl;
+					var val = sl.value;
+					trackManager.setParam(trackNum, \engineMix, val);
+				});
+			NumberBox(win, Rect(290, yPos, 60, 18))
+				.value_(track.params[\engineMix] ? 0.0)
+				.decimals_(2)
+				.font_(Font("DejaVu Sans Mono", 9))
+				.action_({ arg nb;
+					trackManager.setParam(trackNum, \engineMix, nb.value);
+				});
+			StaticText(win, Rect(355, yPos, 80, 18))
+				.string_("(0=G 1=D)")
+				.font_(Font("DejaVu Sans Mono", 8))
+				.stringColor_(Color.gray(0.6));
+			yPos = yPos + 22;
+
 			makeSlider.value(win, 10, yPos, "Position", ControlSpec(0, 1, \lin), \position, track.params[\position] ? 0.0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Scan Speed", ControlSpec(-4, 4, \lin), \scanSpeed, track.params[\scanSpeed] ? 0);

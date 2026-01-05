@@ -98,6 +98,42 @@ Opens a dedicated window for modulation control of a single track
 
 		yPos = yPos + 22;
 
+		// Phase 15.5: Tempo Sync controls
+		StaticText(parent, Rect(x + 10, yPos, 70, 18))
+			.string_("Tempo Sync:")
+			.font_(Font("Monaco", 9));
+
+		Button(parent, Rect(x + 85, yPos, 50, 18))
+			.states_([
+				["OFF", Color.gray(0.3), Color.gray(0.7)],
+				["ON", Color.black, Color.cyan]
+			])
+			.font_(Font("Monaco", 8, true))
+			.value_(0)
+			.action_({ arg btn;
+				trackManager.setModParam(trackNum, modNum, \tempoSync, btn.value);
+				if(btn.value == 1, {
+					"✓ Mod%: Tempo sync ON".format(modNum + 1).postln;
+				}, {
+					"✓ Mod%: Tempo sync OFF (free-running)".format(modNum + 1).postln;
+				});
+			});
+
+		StaticText(parent, Rect(x + 140, yPos, 40, 18))
+			.string_("Mode:")
+			.font_(Font("Monaco", 9));
+
+		PopUpMenu(parent, Rect(x + 185, yPos, 60, 18))
+			.items_(["1/4", "1/8", "1/16", "1/8t", "1/16t"])
+			.value_(1)  // Default to 1/8 note
+			.font_(Font("Monaco", 8))
+			.action_({ arg menu;
+				trackManager.setModParam(trackNum, modNum, \syncMode, menu.value);
+				"✓ Mod%: Sync mode = %".format(modNum + 1, menu.items[menu.value]).postln;
+			});
+
+		yPos = yPos + 22;
+
 		// Depth control
 		StaticText(parent, Rect(x + 10, yPos, 70, 18))
 			.string_("Depth:")
