@@ -24,7 +24,13 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 	// MIDI handlers (will be freed on cleanup)
 	ccHandlers: nil,
 	noteHandlers: nil,
+	midiClockHandler: nil,
 	enabled: false,
+
+	// Phase 15.5: MIDI Clock Tempo Tracking
+	tempo: 120.0,           // Current BPM from MIDI clock
+	lastClockTime: 0,       // For tempo calculation
+	clockCount: 0,          // MIDI clock pulses (24 per quarter note)
 
 	// Default CC mappings (KeyStep Pro encoders)
 	ccMappings: (
@@ -59,9 +65,12 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 		// Set up note handlers (polyphonic)
 		self.setupNoteHandlers;
 
+		// Phase 15.5: Set up MIDI clock handler for tempo sync
+		self.setupMIDIClockHandler;
+
 		self.enabled = true;
 
-		"MIDI mapping initialized. 5 encoders + polyphonic notes active.".postln;
+		"MIDI mapping initialized. 5 encoders + polyphonic notes + clock sync active.".postln;
 		"  CC 74 → Filter Cutoff (Track 1)".postln;
 		"  CC 71 → Grain Size (Track 1)".postln;
 		"  CC 76 → Overlap/Density (Track 1)".postln;
@@ -120,7 +129,10 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 
 			// Note On handler
 			noteOnHandler = MIDIFunc.noteOn({ arg vel, num, chan, src;
-				var velocity = vel / 127.0;
+				// Phase 15.5: LOGARITHMIC velocity mapping (sounds more "analog")
+				// Linear mapping feels static; exponential feels responsive like real instruments
+				// Maps MIDI 0-127 to 0.01-1.0 with exponential curve
+				var velocity = vel.linexp(1, 127, 0.01, 1.0);
 				var rate = (num - 60).midiratio;  // C3 (60) = 1.0, C4 (72) = 2.0
 				var track = self.trackManager.getTrack(trackNum);
 
@@ -133,9 +145,15 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 					track.noteOverlap = track.params[\overlap] ? 4;
 				});
 
-				// Boost overlap for note attack (velocity-sensitive)
+				// Boost overlap for note attack (velocity-sensitive with exponential response)
 				var attackOverlap = (track.noteOverlap * (1 + (velocity * 2))).min(128);
 				self.trackManager.setParam(trackNum, \overlap, attackOverlap);
+
+				// Phase 15.5: Map velocity to saturation & resonator (musical dynamics)
+				// Soft notes = clean, hard notes = saturated (like acoustic instruments)
+				// Uncomment to enable velocity→saturation mapping:
+				// self.trackManager.setParam(trackNum, \saturationDrive, velocity.linexp(0.01, 1.0, 0.5, 5.0));
+				// self.trackManager.setParam(trackNum, \filterRes, velocity.linlin(0.01, 1.0, 0.3, 0.9));
 
 				// Visual feedback: Green pulse in viewfinder
 				if(~viewfinder.notNil, {
@@ -163,6 +181,47 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 
 			self.noteHandlers.add(noteOnHandler);
 			self.noteHandlers.add(noteOffHandler);
+		});
+	},
+
+	// Phase 15.5: Set up MIDI clock handler for tempo-synced LFOs
+	setupMIDIClockHandler: { arg self;
+		// MIDI Clock sends 24 pulses per quarter note (PPQN)
+		// We measure time between pulses to calculate BPM
+		self.midiClockHandler = MIDIFunc.clock({ arg src;
+			var currentTime, timeDelta, calculatedBPM;
+
+			self.clockCount = self.clockCount + 1;
+
+			// Calculate tempo every 24 clocks (1 beat)
+			if(self.clockCount % 24 == 0, {
+				currentTime = Main.elapsedTime;
+				if(self.lastClockTime > 0, {
+					timeDelta = currentTime - self.lastClockTime;
+					// 24 clocks = 1 beat, so BPM = 60 / timeDelta
+					calculatedBPM = 60.0 / timeDelta;
+
+					// Smooth tempo changes (low-pass filter)
+					self.tempo = (self.tempo * 0.9) + (calculatedBPM * 0.1);
+
+					// Update all modulators with new tempo
+					// (Each track has 4 modulators)
+					4.do({ arg trackNum;
+						var track = self.trackManager.getTrack(trackNum);
+						4.do({ arg modNum;
+							if(track.modulators[modNum].notNil, {
+								track.modulators[modNum].set(\tempo, self.tempo);
+							});
+						});
+					});
+
+					// Debug: Show tempo every 4 beats
+					if(self.clockCount % 96 == 0, {
+						"MIDI Clock: % BPM".format(self.tempo.round(0.1)).postln;
+					});
+				});
+				self.lastClockTime = currentTime;
+			});
 		});
 	},
 
@@ -209,9 +268,11 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 
 			self.ccHandlers.do(_.free);
 			self.noteHandlers.do(_.free);
+			if(self.midiClockHandler.notNil, { self.midiClockHandler.free });
 
 			self.ccHandlers = nil;
 			self.noteHandlers = nil;
+			self.midiClockHandler = nil;
 			self.enabled = false;
 
 			"MIDI mapping freed.".postln;

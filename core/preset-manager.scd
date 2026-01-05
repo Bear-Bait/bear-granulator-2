@@ -1,419 +1,243 @@
 /*
-S-4 RIVAL: Preset Manager
-Phase 14 - Complete State Save/Load System
+S-4 Rival: Preset Manager
+Phase 15 - Save/Load parameter state
 
-Saves and loads complete S-4 RIVAL states including:
-- All 4 track parameters (grain, spectral, effects, filters)
-- Modulation routings (4 modulators × 4 tracks)
-- Mix settings (volume, pan, mute, solo)
-- Spatial positions (quad X/Y coordinates)
-- Material modes (TAPE/POLY/LIVE)
+Manages preset saving and loading for all track parameters including:
+- Grain parameters
+- Spectral parameters
+- Direct playback parameters
+- Effects parameters
+- Material modes
+- Engine modes
 
-File Format: JSON (human-readable, portable, version-safe)
-Storage Location: ~/Documents/supercollider/granular/presets/
-
-Public API:
-- init: Initialize preset manager and create presets directory
-- savePreset(name): Save current complete state
-- loadPreset(name): Recall saved state
-- listPresets: Show all saved presets
-- deletePreset(name): Remove a preset
-- exportPreset(name, path): Export preset to custom location
-- importPreset(path): Import preset from file
+Preset Format: JSON-style text files in presets/ directory
 */
 
-~s4PresetManager = { arg trackManager, server;
-	var presetDir, publicAPI;
+~s4PresetManager = { arg trackManager, presetFolder;
+	var presetPath, publicAPI;
 
-	// Preset storage directory
-	presetDir = Platform.userAppSupportDir +/+ "SuperCollider" +/+ "S4_RIVAL_Presets";
+	// Set preset directory (create if doesn't exist)
+	presetPath = presetFolder ?? { PathName(thisProcess.nowExecutingPath).parentPath +/+ "presets" };
+
+	// Create presets directory if it doesn't exist
+	if(File.exists(presetPath).not, {
+		("mkdir -p" + presetPath.quote).systemCmd;
+		"Preset directory created: %".format(presetPath).postln;
+	});
 
 	publicAPI = (
-		// Initialize preset manager
-		init: { arg self;
-			// Create presets directory if it doesn't exist
-			File.exists(presetDir).not.if({
-				File.mkdir(presetDir);
-				"Preset Manager: Created preset directory at %".format(presetDir).postln;
-			}, {
-				"Preset Manager: Using preset directory at %".format(presetDir).postln;
+		/*
+		Function: savePreset
+		Purpose: Save current track state to a preset file
+		Args: trackNum (0-3), presetName (string)
+		Returns: File path on success, nil on failure
+		*/
+		savePreset: { arg self, trackNum, presetName;
+			var track, params, filePath, file;
+			var presetData = ();
+
+			track = trackManager.getTrack(trackNum);
+			if(track.isNil, {
+				"ERROR: Track % not found".format(trackNum + 1).error;
+				^nil;
 			});
+
+			// Sanitize preset name (remove invalid filename characters)
+			presetName = presetName.replace(" ", "_").replace("/", "-");
+			filePath = presetPath +/+ "track" ++ trackNum ++ "_" ++ presetName ++ ".preset";
+
+			// Gather all track parameters
+			presetData[\trackNum] = trackNum;
+			presetData[\presetName] = presetName;
+			presetData[\timestamp] = Date.getDate.stamp;
+			presetData[\params] = track.params.copy;  // Deep copy of params
+			presetData[\filePath] = track.filePath;  // Sample file path (if any)
+			presetData[\mode] = track.mode;  // Material mode (TAPE/POLY/LIVE)
+
+			// Write to file as formatted text
+			file = File(filePath, "w");
+			if(file.isOpen.not, {
+				"ERROR: Could not create preset file: %".format(filePath).error;
+				^nil;
+			});
+
+			// Write header
+			file.write("// S-4 Rival Preset\n");
+			file.write("// Track: %\n".format(trackNum + 1));
+			file.write("// Name: %\n".format(presetName));
+			file.write("// Date: %\n".format(Date.getDate.asString));
+			file.write("(\n");
+
+			// Write parameters (sorted for readability)
+			[\trackNum, \presetName, \timestamp, \mode, \filePath].do({ arg key;
+				var value = presetData[key];
+				file.write("\t%: %,\n".format(key, value.asCompileString));
+			});
+
+			// Write params dictionary
+			file.write("\tparams: (\n");
+			track.params.keys.asArray.sort.do({ arg key, i;
+				var value = track.params[key];
+				var comma = if(i < (track.params.size - 1), ",", "");
+				file.write("\t\t%: %%\n".format(key, value.asCompileString, comma));
+			});
+			file.write("\t)\n");
+			file.write(")\n");
+
+			file.close;
+
+			"✓ Preset saved: %".format(filePath).postln;
+			filePath;
 		},
 
-		// Save complete state to preset file
-		savePreset: { arg self, presetName;
-			var state, filePath, file, jsonString;
-			var timestamp = Date.getDate.stamp;
+		/*
+		Function: loadPreset
+		Purpose: Load preset from file and apply to track
+		Args: trackNum (0-3), filePath (string)
+		Returns: true on success, false on failure
+		*/
+		loadPreset: { arg self, trackNum, filePath;
+			var track, presetData, file;
 
-			// Validate preset name
-			if(presetName.isNil or: { presetName.asString.isEmpty }, {
-				presetName = "preset_" ++ timestamp;
-				"Preset Manager: No name provided, using %".format(presetName).postln;
-			});
-
-			// Capture complete state
-			state = self.captureState();
-
-			// Add metadata
-			state[\metadata] = (
-				name: presetName.asString,
-				timestamp: timestamp,
-				version: "Phase 14",
-				sampleRate: server.sampleRate,
-				blockSize: server.options.blockSize
-			);
-
-			// Convert to JSON string
-			jsonString = self.stateToJSON(state);
-
-			// Write to file
-			filePath = presetDir +/+ (presetName.asString ++ ".json");
-			file = File(filePath, "w");
-
-			if(file.isOpen, {
-				file.write(jsonString);
-				file.close();
-				"✅ Preset Manager: Saved '%' to %".format(presetName, filePath).postln;
-				^true;
-			}, {
-				"❌ Preset Manager: Failed to save preset '%'".format(presetName).error;
+			track = trackManager.getTrack(trackNum);
+			if(track.isNil, {
+				"ERROR: Track % not found".format(trackNum + 1).error;
 				^false;
 			});
-		},
-
-		// Load preset from file
-		loadPreset: { arg self, presetName;
-			var filePath, file, jsonString, state;
-
-			filePath = presetDir +/+ (presetName.asString ++ ".json");
 
 			if(File.exists(filePath).not, {
-				"❌ Preset Manager: Preset '%' not found at %".format(presetName, filePath).error;
+				"ERROR: Preset file not found: %".format(filePath).error;
 				^false;
 			});
 
-			// Read file
-			file = File(filePath, "r");
-			if(file.isOpen, {
-				jsonString = file.readAllString();
-				file.close();
-
-				// Parse JSON
-				state = self.jsonToState(jsonString);
-
-				// Apply state to system
-				self.applyState(state);
-
-				"✅ Preset Manager: Loaded '%' (saved: %)".format(
-					presetName,
-					state[\metadata][\timestamp]
-				).postln;
-				^true;
-			}, {
-				"❌ Preset Manager: Failed to read preset '%'".format(presetName).error;
+			// Load preset data (interpret file as SC code)
+			presetData = filePath.load;
+			if(presetData.isNil, {
+				"ERROR: Could not parse preset file: %".format(filePath).error;
 				^false;
 			});
-		},
 
-		// Capture complete system state
-		captureState: { arg self;
-			var state = ();
-			var tracks = trackManager.getTracks();
+			"Loading preset: % → Track %".format(
+				presetData[\presetName] ? "Unnamed",
+				trackNum + 1
+			).postln;
 
-			// Capture each track's state
-			state[\tracks] = 4.collect({ arg i;
-				var track = tracks[i];
-				var trackState = ();
+			// Apply material mode
+			if(presetData[\mode].notNil, {
+				trackManager.setMode(trackNum, presetData[\mode]);
+			});
 
-				// Basic parameters (deep copy)
-				trackState[\params] = track[\params].copy;
-
-				// Mix settings
-				trackState[\volume] = track[\volume];
-				trackState[\pan] = track[\pan];
-				trackState[\mute] = track[\mute];
-				trackState[\solo] = track[\solo];
-				trackState[\mode] = track[\mode];
-
-				// Modulation routings (4 modulators per track)
-				trackState[\modulators] = 4.collect({ arg modNum;
-					var modState = ();
-					var modTarget = track[\modTargets][modNum];
-					var modRange = track[\modRanges][modNum];
-
-					// Only save if modulator is active
-					if(track[\modulators][modNum].notNil, {
-						modState[\active] = true;
-						modState[\target] = modTarget;
-						modState[\min] = modRange[\min];
-						modState[\max] = modRange[\max];
-					}, {
-						modState[\active] = false;
+			// Apply all parameters
+			if(presetData[\params].notNil, {
+				fork {
+					presetData[\params].keysValuesDo({ arg key, value;
+						trackManager.setParam(trackNum, key, value);
+						// Small delay to prevent message flooding
+						0.001.wait;
 					});
-
-					modState;
-				});
-
-				// Spatial position (quad X/Y)
-				trackState[\quadX] = track[\params][\quadX] ? 0.0;
-				trackState[\quadY] = track[\params][\quadY] ? 0.0;
-
-				trackState;
+				};
 			});
 
-			// Global settings (if any)
-			state[\global] = (
-				// Placeholder for future global settings
-				masterVolume: 1.0
+			// Load sample file if specified and exists
+			if(presetData[\filePath].notNil and: { File.exists(presetData[\filePath]) }, {
+				"  Sample file: %".format(presetData[\filePath]).postln;
+				// Note: File loading would need to be triggered via GUI
+				// Store the path for reference
+				track.filePath = presetData[\filePath];
+			});
+
+			"✓ Preset loaded: % (% params)".format(
+				presetData[\presetName] ? "Unnamed",
+				presetData[\params].size
+			).postln;
+
+			true;
+		},
+
+		/*
+		Function: listPresets
+		Purpose: Get list of all preset files in presets directory
+		Args: trackNum (optional, 0-3) - filter by track number
+		Returns: Array of preset file paths
+		*/
+		listPresets: { arg self, trackNum = nil;
+			var pattern, presetFiles;
+
+			pattern = if(trackNum.notNil, {
+				presetPath +/+ ("track" ++ trackNum ++ "_*.preset");
+			}, {
+				presetPath +/+ "*.preset";
+			});
+
+			presetFiles = (pattern).pathMatch;
+
+			if(presetFiles.size == 0, {
+				"No presets found in %".format(presetPath).postln;
+			}, {
+				"Found % preset(s) in %".format(presetFiles.size, presetPath).postln;
+			});
+
+			presetFiles;
+		},
+
+		/*
+		Function: deletePreset
+		Purpose: Delete a preset file
+		Args: filePath (string)
+		Returns: true on success, false on failure
+		*/
+		deletePreset: { arg self, filePath;
+			if(File.exists(filePath).not, {
+				"ERROR: Preset file not found: %".format(filePath).error;
+				^false;
+			});
+
+			File.delete(filePath);
+			"✓ Preset deleted: %".format(filePath).postln;
+			true;
+		},
+
+		/*
+		Function: getPresetInfo
+		Purpose: Get preset metadata without loading it
+		Args: filePath (string)
+		Returns: Event with preset info, or nil on failure
+		*/
+		getPresetInfo: { arg self, filePath;
+			var presetData;
+
+			if(File.exists(filePath).not, {
+				^nil;
+			});
+
+			presetData = filePath.load;
+			if(presetData.isNil, {
+				^nil;
+			});
+
+			(
+				name: presetData[\presetName] ? "Unnamed",
+				trackNum: presetData[\trackNum] ? 0,
+				timestamp: presetData[\timestamp] ? "",
+				filePath: filePath,
+				paramCount: presetData[\params].size ? 0
 			);
-
-			state;
 		},
 
-		// Apply saved state to system
-		applyState: { arg self, state;
-			var tracks = state[\tracks];
-
-			// Apply each track's state
-			tracks.do({ arg trackState, i;
-				var params = trackState[\params];
-
-				// Set all parameters
-				params.keysValuesDo({ arg param, value;
-					trackManager.setParam(i, param, value);
-				});
-
-				// Set mix controls
-				trackManager.setVolume(i, trackState[\volume]);
-				trackManager.setPan(i, trackState[\pan]);
-				trackManager.setMute(i, trackState[\mute]);
-				trackManager.setSolo(i, trackState[\solo]);
-
-				// Set material mode
-				if(trackState[\mode].notNil, {
-					trackManager.setParam(i, \mode, trackState[\mode]);
-				});
-
-				// Apply spatial position
-				if(trackState[\quadX].notNil and: { trackState[\quadY].notNil }, {
-					trackManager.setQuadPosition(i, trackState[\quadX], trackState[\quadY]);
-				});
-
-				// Note: Modulation routings are NOT automatically restored
-				// (requires modulation window to be open and manual re-routing)
-				// This prevents accidental synth creation on preset load
-			});
-
-			"Preset Manager: State applied to all 4 tracks".postln;
-		},
-
-		// Convert state dictionary to JSON string
-		stateToJSON: { arg self, state;
-			var json = "{\n";
-			var indent = "  ";
-
-			// Metadata section
-			json = json ++ indent ++ "\"metadata\": {\n";
-			json = json ++ indent ++ indent ++ "\"name\": \"" ++ state[\metadata][\name] ++ "\",\n";
-			json = json ++ indent ++ indent ++ "\"timestamp\": \"" ++ state[\metadata][\timestamp] ++ "\",\n";
-			json = json ++ indent ++ indent ++ "\"version\": \"" ++ state[\metadata][\version] ++ "\",\n";
-			json = json ++ indent ++ indent ++ "\"sampleRate\": " ++ state[\metadata][\sampleRate] ++ ",\n";
-			json = json ++ indent ++ indent ++ "\"blockSize\": " ++ state[\metadata][\blockSize] ++ "\n";
-			json = json ++ indent ++ "},\n";
-
-			// Tracks section
-			json = json ++ indent ++ "\"tracks\": [\n";
-			state[\tracks].do({ arg track, i;
-				json = json ++ indent ++ indent ++ "{\n";
-
-				// Track metadata
-				json = json ++ indent ++ indent ++ indent ++ "\"trackNum\": " ++ i ++ ",\n";
-				json = json ++ indent ++ indent ++ indent ++ "\"volume\": " ++ track[\volume] ++ ",\n";
-				json = json ++ indent ++ indent ++ indent ++ "\"pan\": " ++ track[\pan] ++ ",\n";
-				json = json ++ indent ++ indent ++ indent ++ "\"mute\": " ++ track[\mute].asInteger ++ ",\n";
-				json = json ++ indent ++ indent ++ indent ++ "\"solo\": " ++ track[\solo].asInteger ++ ",\n";
-				json = json ++ indent ++ indent ++ indent ++ "\"mode\": " ++ track[\mode] ++ ",\n";
-				json = json ++ indent ++ indent ++ indent ++ "\"quadX\": " ++ track[\quadX] ++ ",\n";
-				json = json ++ indent ++ indent ++ indent ++ "\"quadY\": " ++ track[\quadY] ++ ",\n";
-
-				// Parameters
-				json = json ++ indent ++ indent ++ indent ++ "\"params\": {\n";
-				track[\params].keys.asArray.sort.do({ arg key, j;
-					var value = track[\params][key];
-					var isLast = (j == (track[\params].size - 1));
-					json = json ++ indent ++ indent ++ indent ++ indent ++ "\"" ++ key ++ "\": " ++ value;
-					if(isLast.not, { json = json ++ "," });
-					json = json ++ "\n";
-				});
-				json = json ++ indent ++ indent ++ indent ++ "},\n";
-
-				// Modulators
-				json = json ++ indent ++ indent ++ indent ++ "\"modulators\": [\n";
-				track[\modulators].do({ arg mod, modIdx;
-					json = json ++ indent ++ indent ++ indent ++ indent ++ "{\n";
-					json = json ++ indent ++ indent ++ indent ++ indent ++ indent ++ "\"active\": " ++ mod[\active].asInteger ++ ",\n";
-					json = json ++ indent ++ indent ++ indent ++ indent ++ indent ++ "\"target\": \"" ++ (mod[\target] ? "") ++ "\",\n";
-					json = json ++ indent ++ indent ++ indent ++ indent ++ indent ++ "\"min\": " ++ (mod[\min] ? 0.0) ++ ",\n";
-					json = json ++ indent ++ indent ++ indent ++ indent ++ indent ++ "\"max\": " ++ (mod[\max] ? 1.0) ++ "\n";
-					json = json ++ indent ++ indent ++ indent ++ indent ++ "}";
-					if(modIdx < 3, { json = json ++ "," });
-					json = json ++ "\n";
-				});
-				json = json ++ indent ++ indent ++ indent ++ "]\n";
-
-				json = json ++ indent ++ indent ++ "}";
-				if(i < 3, { json = json ++ "," });
-				json = json ++ "\n";
-			});
-			json = json ++ indent ++ "],\n";
-
-			// Global section
-			json = json ++ indent ++ "\"global\": {\n";
-			json = json ++ indent ++ indent ++ "\"masterVolume\": " ++ state[\global][\masterVolume] ++ "\n";
-			json = json ++ indent ++ "}\n";
-
-			json = json ++ "}";
-
-			json;
-		},
-
-		// Parse JSON string to state dictionary (simple parser)
-		jsonToState: { arg self, jsonString;
-			// NOTE: This is a simplified JSON parser
-			// For production use, consider a proper JSON library
-			// For now, we'll use SuperCollider's built-in .interpret
-			var state;
-
-			// Remove whitespace and parse manually
-			// This is a basic implementation - works for our structured format
-			state = self.parseSimpleJSON(jsonString);
-
-			state;
-		},
-
-		// Simple JSON parser (basic implementation)
-		parseSimpleJSON: { arg self, jsonString;
-			var state = ();
-
-			// For now, use a simple regex-based parser
-			// This works because we control the JSON format
-
-			// Parse metadata
-			state[\metadata] = ();
-			jsonString.findRegexp("\"timestamp\": \"([^\"]+)\"").do({ arg match;
-				state[\metadata][\timestamp] = match[1];
-			});
-
-			// Parse tracks (we'll reconstruct the state from the JSON)
-			// For simplicity in Phase 14, we'll use a hybrid approach:
-			// Save as JSON for human readability, but also save as .scd for easy loading
-
-			state;
-		},
-
-		// List all available presets
-		listPresets: { arg self;
-			var files = PathName(presetDir).files;
-			var presets = files.select({ arg file; file.extension == "json" });
-
-			if(presets.size == 0, {
-				"Preset Manager: No presets found".postln;
-			}, {
-				"Preset Manager: Available presets (%):".format(presets.size).postln;
-				presets.do({ arg file, i;
-					var name = file.fileNameWithoutExtension;
-					var date = Date.fromString(file.mtime);
-					"  [%] % (modified: %)".format(i + 1, name, date.stamp).postln;
-				});
-			});
-
-			presets.collect({ arg file; file.fileNameWithoutExtension });
-		},
-
-		// Delete a preset
-		deletePreset: { arg self, presetName;
-			var filePath = presetDir +/+ (presetName.asString ++ ".json");
-
-			if(File.exists(filePath), {
-				File.delete(filePath);
-				"✅ Preset Manager: Deleted '%'".format(presetName).postln;
-				^true;
-			}, {
-				"❌ Preset Manager: Preset '%' not found".format(presetName).error;
-				^false;
-			});
-		},
-
-		// Export preset to custom path
-		exportPreset: { arg self, presetName, destPath;
-			var srcPath = presetDir +/+ (presetName.asString ++ ".json");
-			var file, contents;
-
-			if(File.exists(srcPath).not, {
-				"❌ Preset Manager: Preset '%' not found".format(presetName).error;
-				^false;
-			});
-
-			// Read source
-			file = File(srcPath, "r");
-			contents = file.readAllString();
-			file.close();
-
-			// Write to destination
-			file = File(destPath, "w");
-			if(file.isOpen, {
-				file.write(contents);
-				file.close();
-				"✅ Preset Manager: Exported '%' to %".format(presetName, destPath).postln;
-				^true;
-			}, {
-				"❌ Preset Manager: Failed to export preset".error;
-				^false;
-			});
-		},
-
-		// Import preset from file
-		importPreset: { arg self, srcPath;
-			var file, contents, presetName;
-
-			if(File.exists(srcPath).not, {
-				"❌ Preset Manager: Source file not found: %".format(srcPath).error;
-				^false;
-			});
-
-			// Extract preset name from filename
-			presetName = PathName(srcPath).fileNameWithoutExtension;
-
-			// Read source
-			file = File(srcPath, "r");
-			contents = file.readAllString();
-			file.close();
-
-			// Write to presets directory
-			file = File(presetDir +/+ (presetName ++ ".json"), "w");
-			if(file.isOpen, {
-				file.write(contents);
-				file.close();
-				"✅ Preset Manager: Imported '%' from %".format(presetName, srcPath).postln;
-				^true;
-			}, {
-				"❌ Preset Manager: Failed to import preset".error;
-				^false;
-			});
-		},
-
-		// Quick save (auto-named with timestamp)
-		quickSave: { arg self;
-			var timestamp = Date.getDate.format("%Y%m%d_%H%M%S");
-			var name = "quicksave_" ++ timestamp;
-			self.savePreset(name);
-		},
-
-		// Get preset directory path
-		getPresetDir: { arg self;
-			presetDir;
+		/*
+		Function: getPresetPath
+		Purpose: Get the presets directory path
+		Returns: String path
+		*/
+		getPresetPath: { arg self;
+			presetPath;
 		}
 	);
 
+	"✓ Preset Manager initialized".postln;
+	"  Preset directory: %".format(presetPath).postln;
+
 	publicAPI;
 };
+
+"✓ Preset Manager module loaded".postln;

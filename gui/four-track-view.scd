@@ -32,6 +32,7 @@ Phase 7 Features:
 	var makeTrackTab, makeMasterTab;
 	var colors;  // Doom Material color palette
 	var lastBrowsedFolder;  // Remember last folder for file dialogs
+	var presetTrackNum = 0;  // Currently selected track for preset operations
 
 	// Doom Material Color Palette
 	colors = (
@@ -366,26 +367,33 @@ Phase 7 Features:
 			.action_({ arg btn;
 				if(btn.value == 1, {
 					// PLAY - Start synths based on engine mode
-					if(track.params[\engineMode] == 1, {
-						// DIRECT mode - only run direct playback synth
-						if(track.directPlaybackSynth.notNil, {
-							track.directPlaybackSynth.run(true);
-							"Track % DIRECT playback PLAYING".format(trackNum + 1).postln;
-						}, {
-							"ERROR: Direct playback synth is nil!".error;
-						});
-					}, {
-						// GRANULAR mode - run grain and spectral synths
-						if(track.grainSynth.notNil, {
-							track.grainSynth.run(true);
-						}, {
-							"ERROR: Grain synth is nil!".error;
-						});
-						if(track.spectralSynth.notNil, {
-							track.spectralSynth.run(true);
-						});
-						"Track % engines PLAYING (Grain + Spectral)".format(trackNum + 1).postln;
-					});
+					case
+						{ track.params[\engineMode] == 0 } {  // GRANULAR mode
+							if(track.grainSynth.notNil, {
+								track.grainSynth.run(true);
+							});
+							if(track.spectralSynth.notNil, {
+								track.spectralSynth.run(true);
+							});
+							"Track % engines PLAYING (Grain + Spectral)".format(trackNum + 1).postln;
+						}
+						{ track.params[\engineMode] == 1 } {  // DIRECT mode
+							if(track.directPlaybackSynth.notNil, {
+								track.directPlaybackSynth.run(true);
+								"Track % DIRECT playback PLAYING".format(trackNum + 1).postln;
+							}, {
+								"ERROR: Direct playback synth is nil!".error;
+							});
+						}
+						{ track.params[\engineMode] == 2 } {  // MIX mode
+							if(track.grainSynth.notNil, {
+								track.grainSynth.run(true);
+							});
+							if(track.directPlaybackSynth.notNil, {
+								track.directPlaybackSynth.run(true);
+							});
+							"Track % MIX mode PLAYING (Grain + Direct)".format(trackNum + 1).postln;
+						};
 				}, {
 					// STOP - Pause all synths
 					if(track.grainSynth.notNil, {
@@ -678,6 +686,102 @@ Phase 7 Features:
 				});
 				"All tracks STOPPED".postln;
 			});
+
+		// === PHASE 15: PRESET SYSTEM ===
+		// Save/Load/Browse buttons for presets
+
+		// Track selector for preset operations
+		{
+		// Track selector
+		StaticText(parent, Rect(230, yPos, 80, 20))
+			.string_("Track:")
+			.font_(Font("DejaVu Sans Mono", 10))
+			.stringColor_(colors.fg);
+
+		Button(parent, Rect(280, yPos, 40, 20))
+			.states_([
+				["1", colors.black, colors.green],
+				["2", colors.black, colors.green],
+				["3", colors.black, colors.green],
+				["4", colors.black, colors.green]
+			])
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.action_({ arg btn;
+				presetTrackNum = btn.value;
+				"Preset operations: Track %".format(presetTrackNum + 1).postln;
+			});
+
+		// SAVE button
+		Button(parent, Rect(330, yPos, 80, 20))
+			.states_([["SAVE", colors.black, colors.cyan]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({
+				// Prompt for preset name
+				Dialog.getText(
+					prompt: "Enter preset name for Track %:".format(presetTrackNum + 1),
+					defaultString: "my_preset",
+					accept: { arg name;
+						if(name.notEmpty, {
+							fork {
+								var path = ~presetManager.savePreset(presetTrackNum, name);
+								if(path.notNil, {
+									"✓ Saved: %".format(PathName(path).fileName).postln;
+								});
+							};
+						});
+					}
+				);
+			});
+
+		// LOAD button
+		Button(parent, Rect(415, yPos, 80, 20))
+			.states_([["LOAD", colors.black, Color(1.0, 0.8, 0.2)]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({
+				var presets = ~presetManager.listPresets(presetTrackNum);
+				if(presets.size > 0, {
+					// Show file dialog to select preset
+					Dialog.openPanel({ arg path;
+						fork {
+							~presetManager.loadPreset(presetTrackNum, path);
+						};
+					}, {
+						"Load cancelled".postln;
+					}, ~presetManager.getPresetPath, [
+						"org.supercollider.preset"
+					]);
+				}, {
+					"No presets found for Track %".format(presetTrackNum + 1).warn;
+				});
+			});
+
+		// BROWSE button
+		Button(parent, Rect(500, yPos, 80, 20))
+			.states_([["BROWSE", colors.black, Color(0.8, 0.6, 1.0)]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({
+				var presets = ~presetManager.listPresets;
+				if(presets.size > 0, {
+					"═══════════════════════════════════".postln;
+					"  AVAILABLE PRESETS (% total)".format(presets.size).postln;
+					"═══════════════════════════════════".postln;
+					presets.do({ arg path;
+						var info = ~presetManager.getPresetInfo(path);
+						if(info.notNil, {
+							"  [Track %] % (% params)".format(
+								info.trackNum + 1,
+								info.name,
+								info.paramCount
+							).postln;
+						});
+					});
+					"═══════════════════════════════════".postln;
+				}, {
+					"No presets found in %".format(~presetManager.getPresetPath).postln;
+				});
+			});
+
+		}.defer(0.01);  // Defer to avoid timing issues
 
 		yPos = yPos + 20;
 

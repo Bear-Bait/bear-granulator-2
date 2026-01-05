@@ -12,7 +12,10 @@
       "Bash(git push:*)",
       "Bash(sclang:*)",
       "Bash(find:*)",
-      "Bash(/Applications/SuperCollider.app/Contents/MacOS/sclang:*)"
+      "Bash(/Applications/SuperCollider.app/Contents/MacOS/sclang:*)",
+      "Bash(echo:*)",
+      "Bash(timeout 3 /Applications/SuperCollider.app/Contents/MacOS/sclang:*)",
+      "Bash(timeout 5 /Applications/SuperCollider.app/Contents/MacOS/sclang:*)"
     ]
   }
 }

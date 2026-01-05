@@ -23,14 +23,16 @@ SynthDef(\s4DirectPlayback, {
 	    loopEnd = 1.0,      // Loop end (0-1)
 	    amp = 0.5,          // Output amplitude
 	    pan = 0.0,          // Stereo pan (-1 to 1)
-	    pitch = 0;          // Pitch shift in semitones (added to rate)
+	    pitch = 0,          // Pitch shift in semitones (added to rate)
+	    timeStretch = 1.0;  // Time stretch (speed without pitch change, 0.5-2.0)
 
-	var sig, bufFrames, loopStartFrame, loopEndFrame;
-	var playbackRate, phase;
-	var smoothRate, smoothLoopStart, smoothLoopEnd, smoothAmp, smoothPan;
+	var sig, bufFrames, loopStartFrame, loopEndFrame, bufChannels;
+	var playbackRate, phase, pitchShiftRatio, needsPitchShift;
+	var smoothRate, smoothLoopStart, smoothLoopEnd, smoothAmp, smoothPan, smoothTimeStretch;
 
 	// Get buffer info
 	bufFrames = BufFrames.kr(bufnum);
+	bufChannels = BufChannels.kr(bufnum);  // Auto-detect mono/stereo
 	loopStartFrame = loopStart * bufFrames;
 	loopEndFrame = loopEnd * bufFrames;
 
@@ -40,9 +42,15 @@ SynthDef(\s4DirectPlayback, {
 	smoothLoopEnd = loopEnd.lag(0.1);
 	smoothAmp = amp.lag(0.05);  // Smooth amplitude changes
 	smoothPan = pan.lag(0.05);  // Smooth pan changes
+	smoothTimeStretch = timeStretch.lag(0.1);  // Smooth time stretch changes
 
-	// Calculate playback rate (combine rate param + pitch shift)
-	playbackRate = smoothRate * (2 ** (pitch.lag(0.05) / 12));
+	// Calculate playback rate (combine rate param + pitch shift + time stretch)
+	// timeStretch affects speed, then PitchShift compensates to maintain pitch
+	playbackRate = smoothRate * (2 ** (pitch.lag(0.05) / 12)) * smoothTimeStretch;
+	pitchShiftRatio = 1.0 / smoothTimeStretch;  // Compensate for time stretch
+
+	// Only enable PitchShift when timeStretch != 1.0 (M4 CPU optimization)
+	needsPitchShift = (smoothTimeStretch - 1.0).abs > 0.01;
 
 	// Use Phasor to track position within loop boundaries
 	// This runs continuously without retriggering (fixes glitch issue)
@@ -54,15 +62,28 @@ SynthDef(\s4DirectPlayback, {
 		resetPos: smoothLoopStart  // Start at loop start
 	);
 
-	// Use BufRd instead of PlayBuf for smoother reading
-	// This eliminates the retriggering issue entirely
+	// Use BufRd with auto-detected channel count (stereo-aware)
+	// This prevents phase-cancellation "hollowness" with stereo samples
 	sig = BufRd.ar(
-		numChannels: 1,
+		numChannels: bufChannels,  // Match buffer channels (mono=1, stereo=2)
 		bufnum: bufnum,
 		phase: phase * bufFrames,  // Convert normalized phase to frame position
 		loop: 1,  // Always loop
 		interpolation: 4  // Cubic interpolation for smoother sound
 	);
+
+	// CONDITIONAL PitchShift: Only process when timeStretch != 1.0
+	// This saves significant CPU on M4 when not actively time-stretching
+	sig = Select.ar(needsPitchShift, [
+		sig,  // Bypass when timeStretch ~= 1.0
+		PitchShift.ar(
+			in: sig,
+			windowSize: 0.2,  // 200ms window for good quality
+			pitchRatio: pitchShiftRatio,  // Compensate for time stretch
+			pitchDispersion: 0.0,  // No pitch dispersion
+			timeDispersion: 0.0  // No time dispersion
+		)
+	]);
 
 	// Send playhead position @ 60Hz for GUI visualization
 	// Note: This sends with the synth's node ID automatically
@@ -73,7 +94,12 @@ SynthDef(\s4DirectPlayback, {
 
 	// Apply amplitude and pan with smoothing
 	sig = sig * smoothAmp;
-	sig = Pan2.ar(sig, smoothPan);
+
+	// Stereo-aware panning: Pan2 for mono sources, Balance2 for stereo
+	sig = Select.ar(bufChannels - 1, [
+		Pan2.ar(sig, smoothPan),      // Mono: use Pan2
+		Balance2.ar(sig[0], sig[1], smoothPan)  // Stereo: use Balance2
+	]);
 
 	Out.ar(out, sig);
 }).add;

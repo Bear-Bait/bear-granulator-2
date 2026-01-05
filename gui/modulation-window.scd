@@ -14,7 +14,7 @@ Opens a dedicated window for modulation control of a single track
 	// === HELPER: Create modulator controls ===
 	makeModulatorSection = { arg parent, x, y, modNum;
 		var yPos = y;
-		var typeMenu, rateSlider, rateNum, depthSlider, depthNum;
+		var typeMenu, rateSlider, rateNum, depthSlider, depthNum, scopeView, scopeUpdater;
 		var shapeMenu, targetMenu, minNum, maxNum;
 		var enableButton, statusText;
 
@@ -211,6 +211,67 @@ Opens a dedicated window for modulation control of a single track
 						.stringColor_(Color.cyan);
 				});
 			});
+
+
+		// Phase 15: Mini-scope waveform visualizer (80x40px)
+		scopeView = UserView(parent, Rect(x + 245, yPos - 40, 80, 40))
+			.background_(Color.black)
+			.drawFunc_({ arg view;
+				var w = view.bounds.width;
+				var h = view.bounds.height;
+				var midY = h / 2;
+				var numPoints = 60;  // 60 points for waveform
+				var rate = rateNum.value ? 1.0;
+				var shape = shapeMenu.value ? 0;  // 0=Sine, 1=Tri, 2=Saw, 3=Sqr
+				var time = Main.elapsedTime;
+				
+				// Draw grid lines
+				Pen.strokeColor = Color.gray(0.3);
+				Pen.width = 1;
+				Pen.line(Point(0, midY), Point(w, midY));  // Center line
+				Pen.stroke;
+				
+				// Draw waveform based on shape
+				Pen.strokeColor = Color.cyan.alpha_(0.8);
+				Pen.width = 1.5;
+				
+				numPoints.do({ arg i;
+					var x1 = (i / numPoints) * w;
+					var x2 = ((i + 1) / numPoints) * w;
+					var phase1 = (i / numPoints) + (time * rate * 0.5);  // Animate based on rate
+					var phase2 = ((i + 1) / numPoints) + (time * rate * 0.5);
+					var val1, val2, y1, y2;
+					
+					// Calculate waveform value based on shape
+					val1 = case
+						{ shape == 0 } { (phase1 * 2pi).sin }  // Sine
+						{ shape == 1 } { ((phase1 % 1) * 4 - 2).abs - 1 }  // Triangle
+						{ shape == 2 } { ((phase1 % 1) * 2) - 1 }  // Sawtooth
+						{ shape == 3 } { if((phase1 % 1) < 0.5, 1, -1) }  // Square
+						{ 0 };  // Default
+					
+					val2 = case
+						{ shape == 0 } { (phase2 * 2pi).sin }
+						{ shape == 1 } { ((phase2 % 1) * 4 - 2).abs - 1 }
+						{ shape == 2 } { ((phase2 % 1) * 2) - 1 }
+						{ shape == 3 } { if((phase2 % 1) < 0.5, 1, -1) }
+						{ 0 };
+
+					y1 = midY - (val1 * midY * 0.8);
+					y2 = midY - (val2 * midY * 0.8);
+					
+					Pen.line(Point(x1, y1), Point(x2, y2));
+				});
+				Pen.stroke;
+			});
+		
+		// Animate scope at 15fps
+		scopeUpdater = Routine({
+			loop {
+				{ scopeView.refresh }.defer;
+				(1/15).wait;  // 15fps refresh
+			};
+		}).play(AppClock);
 
 		yPos = yPos + 25;
 

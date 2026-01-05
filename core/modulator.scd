@@ -26,20 +26,39 @@ Each modulator outputs to a control bus (0-1 range)
 	SynthDef(\s4Modulator, {
 		arg modType = 0, out = 0, freq = 1.0, amp = 1.0, waveform = 0,
 		    attack = 0.01, decay = 0.1, sustain = 0.7, release = 0.3,
-		    audioIn = 0, smoothTime = 0.1, gate = 1;
+		    audioIn = 0, smoothTime = 0.1, gate = 1,
+		    // Phase 15.5: MIDI Clock Sync parameters
+		    tempo = 120,        // BPM from MIDI clock
+		    syncMode = 0,       // 0=Hz (free), 1=1/4, 2=1/8, 3=1/16, 4=1/8t, 5=1/16t
+		    tempoSync = 0;      // 0=off (use freq), 1=on (use tempo+syncMode)
 
 		var sig, lfoSig, envSig, randSig, envFollowSig;
+		var effectiveFreq, tempoBPS, beatDiv;
 
 		// Phase 13: Audio-Rate Modulation (48kHz vs 750Hz control-rate)
 
+		// Phase 15.5: Calculate effective frequency (Hz or tempo-synced)
+		tempoBPS = tempo / 60.0;  // Convert BPM to beats-per-second
+		beatDiv = Select.kr(syncMode, [
+			1.0,      // 0: 1/4 note (1 cycle per beat)
+			2.0,      // 1: 1/8 note (2 cycles per beat)
+			4.0,      // 2: 1/16 note (4 cycles per beat)
+			3.0,      // 3: 1/8 triplet (3 cycles per beat)
+			6.0       // 4: 1/16 triplet (6 cycles per beat)
+		]);
+		effectiveFreq = Select.kr(tempoSync, [
+			freq,                      // Free-running Hz
+			tempoBPS * beatDiv         // Tempo-synced divisions
+		]);
+
 		// === LFO (Type 0) - AUDIO RATE ===
 		lfoSig = Select.ar(waveform, [
-			SinOsc.ar(freq).range(0, 1),             // 0: Sine
-			LFTri.ar(freq).range(0, 1),              // 1: Triangle
-			LFSaw.ar(freq).range(0, 1),              // 2: Sawtooth
-			LFPulse.ar(freq, width: 0.5),            // 3: Square (already 0-1)
-			LFNoise1.ar(freq).range(0, 1),           // 4: Smooth random
-			LFNoise0.ar(freq).range(0, 1)            // 5: Stepped random
+			SinOsc.ar(effectiveFreq).range(0, 1),             // 0: Sine
+			LFTri.ar(effectiveFreq).range(0, 1),              // 1: Triangle
+			LFSaw.ar(effectiveFreq).range(0, 1),              // 2: Sawtooth
+			LFPulse.ar(effectiveFreq, width: 0.5),            // 3: Square (already 0-1)
+			LFNoise1.ar(effectiveFreq).range(0, 1),           // 4: Smooth random
+			LFNoise0.ar(effectiveFreq).range(0, 1)            // 5: Stepped random
 		]);
 
 		// === Envelope Follower (Type 1) - AUDIO RATE ===
@@ -51,8 +70,8 @@ Each modulator outputs to a control bus (0-1 range)
 
 		// === Random (Type 2) - AUDIO RATE ===
 		randSig = Select.ar(waveform.min(1), [
-			LFNoise0.ar(freq).range(0, 1),           // 0: Stepped
-			LFNoise1.ar(freq).range(0, 1)            // 1: Smooth
+			LFNoise0.ar(effectiveFreq).range(0, 1),           // 0: Stepped
+			LFNoise1.ar(effectiveFreq).range(0, 1)            // 1: Smooth
 		]);
 
 		// === Envelope (Type 3) - AUDIO RATE ===

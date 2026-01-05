@@ -992,17 +992,17 @@ Usage:
 			Button(win, Rect(135, yPos, 120, 20))
 				.states_([
 					["GRANULAR", Color.black, colors.cyan],
-					["DIRECT", Color.white, Color.blue(0.5)]
+					["DIRECT", Color.white, Color.blue(0.5)],
+					["MIX", Color.black, Color.green(0.7)]
 				])
 				.font_(Font("DejaVu Sans Mono", 9, true))
 				.action_({ arg btn;
-					if(btn.value == 1, {
-						trackManager.setParam(trackNum, \engineMode, 1);
-						"✓ Track %: Switched to DIRECT playback".format(trackNum + 1).postln;
-					}, {
-						trackManager.setParam(trackNum, \engineMode, 0);
-						"✓ Track %: Switched to GRANULAR engine".format(trackNum + 1).postln;
-					});
+					var mode = btn.value;
+					trackManager.setParam(trackNum, \engineMode, mode);
+					case
+						{ mode == 0 } { "✓ Track %: GRANULAR mode".format(trackNum + 1).postln }
+						{ mode == 1 } { "✓ Track %: DIRECT mode".format(trackNum + 1).postln }
+						{ mode == 2 } { "✓ Track %: MIX mode (Grain + Direct)".format(trackNum + 1).postln };
 				});
 
 			yPos = yPos + 30;  // Shift down for next control
@@ -1011,6 +1011,8 @@ Usage:
 			makeSlider.value(win, 10, yPos, "Scan Speed", ControlSpec(-4, 4, \lin), \scanSpeed, track.params[\scanSpeed] ? 0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Time Stretch", ControlSpec(0.25, 4, \exp), \timeStretch, track.params[\timeStretch] ? 1.0);
+			yPos = yPos + 22;
+			makeSlider.value(win, 10, yPos, "Rate (Speed)", ControlSpec(0.25, 4, \exp), \rate, track.params[\rate] ? 1.0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Pos Jitter", ControlSpec(0, 1, \lin), \posJitter, track.params[\posJitter] ? 0.1);
 			yPos = yPos + 22;
@@ -1035,6 +1037,26 @@ Usage:
 					trackManager.setParam(trackNum, \pitch, nb.value);
 					trackManager.setParam(trackNum, \spectralPitch, nb.value);
 				});
+
+			// Pitch Quantize toggle (Phase 15)
+			{
+				var pitchQuantize = false;
+				Button(win, Rect(355, yPos, 50, 18))
+					.states_([
+						["SMTH", Color.gray(0.3), Color.gray(0.7)],
+						["QNTZ", Color.black, Color.green]
+					])
+					.font_(Font("DejaVu Sans Mono", 7, true))
+					.value_(0)
+					.action_({ arg btn;
+						pitchQuantize = (btn.value == 1);
+						if(pitchQuantize, {
+							"✓ Pitch quantize: ON (semitones)".postln;
+						}, {
+							"✓ Pitch quantize: OFF (smooth)".postln;
+						});
+					});
+			}.value;
 			yPos = yPos + 22;
 
 			makeSlider.value(win, 10, yPos, "Grain Pitch", ControlSpec(-24, 24, \lin), \pitch, track.params[\pitch] ? 0);

@@ -152,6 +152,11 @@ fork {
 		0.2.wait;
 		"  ✓ Track manager loaded".postln;
 
+		// Load preset manager (Phase 15)
+		(~config.corePath +/+ "preset-manager.scd").load;
+		0.2.wait;
+		"  ✓ Preset manager loaded".postln;
+
 		// Load master mix bus (Phase 4)
 		(~config.corePath +/+ "mix-bus.scd").load;
 		0.2.wait;
@@ -211,6 +216,11 @@ fork {
 		~trackManager.init;
 		0.2.wait;
 		"  ✓ Track manager initialized".postln;
+
+		// Initialize preset manager (Phase 15)
+		~presetManager = ~s4PresetManager.value(~trackManager);
+		0.1.wait;
+		"  ✓ Preset manager initialized".postln;
 
 		// Create 4 track instances (stagger to avoid CPU spike)
 		4.do({ |i|

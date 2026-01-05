@@ -52,6 +52,8 @@ SynthDef(\s4MasterBus, {
 	    filterTuning = 0,
 	    filterSpread = 1.5,
 	    filterMix = 0.5,
+	    // Phase 15.5: Eco Mode (128 → 32 bands for MIX mode CPU savings)
+	    ecoMode = 0,  // 0=128 bands (full quality), 1=32 bands (eco mode)
 
 	    // Master output
 	    masterVol = 0.8,
@@ -59,6 +61,7 @@ SynthDef(\s4MasterBus, {
 
 	var t1, t2, t3, t4, mix, filtered;
 	var rampTime = 0.05; // Smooth parameter changes
+	var numBands, bandNormalization;
 
 	// Read from track buses (stereo)
 	t1 = In.ar(track1Bus, 2);
@@ -81,33 +84,37 @@ SynthDef(\s4MasterBus, {
 	// Sum all 4 tracks
 	mix = t1 + t2 + t3 + t4;
 
-	// === PHASE 15: 128-BAND RESONATOR (M4 Extreme Plan) ===
-	// Upgraded from 48 bands to 128 bands using DynKlank for efficiency
-	// Provides professional spectral resolution and smooth morphing
+	// Phase 15.5: Calculate band count based on eco mode
+	numBands = Select.kr(ecoMode, [128, 32]);  // 128 (full) or 32 (eco)
+	bandNormalization = numBands.sqrt.reciprocal;  // Normalize by sqrt(numBands)
+
+	// === PHASE 15: VARIABLE-BAND RESONATOR (M4 Extreme Plan) ===
+	// 128 bands (full quality) or 32 bands (eco mode for MIX mode)
+	// Eco mode saves ~75% CPU when all 3 engines are active
 
 	filtered = Select.ar(filterOn > 0.5, [
 		// Filter off: pass through
 		mix,
-		// Filter on: process through 128-band resonator
+		// Filter on: process through variable-band resonator
 		[
-			// Left channel: 128-band DynKlank resonator
+			// Left channel: Variable-band DynKlank resonator
 			DynKlank.ar(
 				// Specifications: [frequencies, amplitudes, ring times]
 				`[
-					// Frequencies: 128 harmonic bands
-					Array.fill(128, { arg i;
+					// Frequencies: harmonic bands (32 or 128)
+					Array.fill(numBands, { arg i;
 						var harmonic = i + 1;
 						filterFreq * harmonic * (filterTuning.linlin(0, 1, 0.98, 1.02));
 					}),
 					// Amplitudes: Decay envelope with animation
-					Array.fill(128, { arg i;
-						var bandGain = 1.0 - ((i / 128) * (1.0 - filterDecay));
-						var phase = (i / 128) * 2pi * filterSpread;
+					Array.fill(numBands, { arg i;
+						var bandGain = 1.0 - ((i / numBands) * (1.0 - filterDecay));
+						var phase = (i / numBands) * 2pi * filterSpread;
 						var modulation = SinOsc.kr(filterAnimRate, phase);
 						bandGain * (1 + (modulation * filterAnimate * 0.5));
 					}),
 					// Ring times: Controlled by resonance parameter
-					Array.fill(128, { arg i;
+					Array.fill(numBands, { arg i;
 						filterRes.linexp(0.01, 1, 0.1, 2.0);
 					})
 				],
@@ -119,23 +126,23 @@ SynthDef(\s4MasterBus, {
 				freqoffset: 0,
 				// Decay time scaling
 				decayscale: 1.0
-			) / 128.sqrt,
+			) * bandNormalization,
 
-			// Right channel: 128-band DynKlank resonator (slight detuning for width)
+			// Right channel: Variable-band DynKlank resonator (slight detuning for width)
 			DynKlank.ar(
 				`[
-					Array.fill(128, { arg i;
+					Array.fill(numBands, { arg i;
 						var harmonic = i + 1;
 						var detune = filterSpread.linlin(1.0, 2.0, 1.0, 1.01); // Stereo width
 						filterFreq * harmonic * (filterTuning.linlin(0, 1, 0.98, 1.02)) * detune;
 					}),
-					Array.fill(128, { arg i;
-						var bandGain = 1.0 - ((i / 128) * (1.0 - filterDecay));
-						var phase = (i / 128) * 2pi * filterSpread;
+					Array.fill(numBands, { arg i;
+						var bandGain = 1.0 - ((i / numBands) * (1.0 - filterDecay));
+						var phase = (i / numBands) * 2pi * filterSpread;
 						var modulation = SinOsc.kr(filterAnimRate, phase);
 						bandGain * (1 + (modulation * filterAnimate * 0.5));
 					}),
-					Array.fill(128, { arg i;
+					Array.fill(numBands, { arg i;
 						filterRes.linexp(0.01, 1, 0.1, 2.0);
 					})
 				],
@@ -143,7 +150,7 @@ SynthDef(\s4MasterBus, {
 				freqscale: 1.0 + (filterMorph * 0.5),
 				freqoffset: 0,
 				decayscale: 1.0
-			) / 128.sqrt
+			) * bandNormalization
 		]
 	]);
 
