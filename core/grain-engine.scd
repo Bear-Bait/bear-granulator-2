@@ -447,8 +447,11 @@ SynthDef(\s4GrainEngine, {
 		}.value
 	]);
 
-	// Apply panning and amplitude
-	sig = Balance2.ar(sig[0], sig[1], pan, amp);
+	// Apply amplitude (stereo field already created by GrainBuf panning)
+	sig = sig * amp;
+
+	// THEN apply master pan control (adjusts the pre-panned stereo field)
+	sig = Balance2.ar(sig[0], sig[1], pan);
 
 	// Soft limiter to prevent clipping
 	sig = sig.tanh;
