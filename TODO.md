@@ -4,9 +4,9 @@
 
 ---
 
-## 🎯 **Current Phase: 15.5 (Stabilization Complete)**
+## 🎯 **Current Phase: 15.5 (Stabilization + Bugfixes Complete)**
 
-**Status:** ✅ TIER 1 & TIER 2 Complete
+**Status:** ✅ TIER 1 & TIER 2 Complete + Critical Bugfixes
 **Date:** January 5, 2026
 
 ---
@@ -29,18 +29,15 @@ All critical engine stability improvements and MIDI features are now **PRODUCTIO
    - Uses `Select.ar` for glitch-free bypass
    - File: `core/direct-playback.scd`
 
-3. **✅ Dynamic Engine Crossfading**
-   - Added `engineMix` parameter (0=grain, 0.5=equal, 1=direct)
-   - Amplitude-based morphing (NO CLICKS!)
-   - 0.7 scaling factor in MIX mode prevents clipping
-   - Both engines always running (silenced when not needed)
+3. **✅ Simple Engine Toggle (REVERTED from crossfading)**
+   - Simple DIRECT vs GRANULAR toggle (MIX mode removed)
+   - Uses `.run(true/false)` for clean switching
    - File: `core/track-manager.scd`
 
-4. **✅ TRUE 4x Oversampled Saturation**
-   - `Upsample.ar(4)` → Saturate @ 192kHz → `Downsample.ar(4)`
-   - Boutique-quality harmonics (like FabFilter Saturn)
-   - Zero aliasing artifacts
-   - 2-stage cascaded tanh for analog warmth
+4. **✅ Cascaded Saturation with Anti-Aliasing**
+   - 4-stage cascaded saturation with aggressive filtering
+   - Multi-stage soft clipping + DC removal
+   - Approximates oversampling without sc3-plugins dependency
    - File: `core/effects-color.scd`
 
 ### TIER 2: Musical Scaling & Performance ✅
@@ -59,12 +56,31 @@ All critical engine stability improvements and MIDI features are now **PRODUCTIO
    - Updates all 16 modulators (4 tracks × 4 mods) automatically
    - Files: `core/modulator.scd`, `core/midi-mapping.scd`
 
-7. **✅ Resonator Eco Mode (CPU Saver)**
-   - Added `ecoMode` parameter to master bus
-   - 128 bands (full quality) or 32 bands (eco mode)
-   - **~75% CPU savings** when MIX mode + filter are active
-   - Dynamic `numBands` and `bandNormalization`
+7. **❌ Resonator Eco Mode (REMOVED)**
+   - Attempted dynamic band count (128 vs 32 bands)
+   - Runtime error: Array.fill size must be literal integer
+   - Reverted to fixed 128-band resonator
    - File: `core/mix-bus.scd`
+
+### Critical Bugfixes (Jan 5, 2026) ✅
+
+8. **✅ Audio Burst on Sample Load (FIXED)**
+   - Root cause: Synths reading from buffer during free()
+   - Fix: Stop all synths BEFORE freeing old buffer
+   - File: `gui/four-track-view.scd`
+   - Commit: d2020c2
+
+9. **✅ Grain Engine Stereo Balance (FIXED)**
+   - Root cause: Balance2.ar misuse (amp as 4th parameter)
+   - Fix: Apply amplitude first, then Balance2 for pan only
+   - Stereo field now perfectly balanced
+   - File: `core/grain-engine.scd`
+   - Commit: c258bc1
+
+10. **✅ GUI Controls Added**
+    - Tempo Sync toggle + Mode selector in modulation window
+    - Removed engineMix slider (MIX mode removed)
+    - File: `gui/modulation-window.scd`
 
 ---
 
@@ -141,7 +157,9 @@ track.modulators[0].set(\syncMode, 1);   // 1/8 note
 
 ## 🐛 **Known Issues**
 
-- None reported (system is stable)
+- "Too many grains!" warnings when density/overlap is very high (reduce settings)
+- Phase 15.5 features need extended real-world testing
+- Tempo sync GUI controls added but need user testing
 
 ---
 
