@@ -62,15 +62,26 @@ SynthDef(\s4DirectPlayback, {
 		resetPos: smoothLoopStart  // Start at loop start
 	);
 
-	// Use BufRd with auto-detected channel count (stereo-aware)
-	// This prevents phase-cancellation "hollowness" with stereo samples
-	sig = BufRd.ar(
-		numChannels: bufChannels,  // Match buffer channels (mono=1, stereo=2)
-		bufnum: bufnum,
-		phase: phase * bufFrames,  // Convert normalized phase to frame position
-		loop: 1,  // Always loop
-		interpolation: 4  // Cubic interpolation for smoother sound
-	);
+	// Stereo-aware BufRd: Read mono or stereo based on buffer
+	// BufRd needs literal numChannels, so we read both and select
+	sig = Select.ar((bufChannels - 1).min(1), [
+		// Mono path: read 1 channel
+		BufRd.ar(
+			numChannels: 1,
+			bufnum: bufnum,
+			phase: phase * bufFrames,
+			loop: 1,
+			interpolation: 4
+		),
+		// Stereo path: read 2 channels
+		BufRd.ar(
+			numChannels: 2,
+			bufnum: bufnum,
+			phase: phase * bufFrames,
+			loop: 1,
+			interpolation: 4
+		)
+	]);
 
 	// CONDITIONAL PitchShift: Only process when timeStretch != 1.0
 	// This saves significant CPU on M4 when not actively time-stretching
@@ -86,7 +97,6 @@ SynthDef(\s4DirectPlayback, {
 	]);
 
 	// Send playhead position @ 60Hz for GUI visualization
-	// Note: This sends with the synth's node ID automatically
 	SendReply.ar(Impulse.ar(60), '/directPlayhead', [phase]);
 
 	// Debug: Send a trigger on synth creation
@@ -95,10 +105,10 @@ SynthDef(\s4DirectPlayback, {
 	// Apply amplitude and pan with smoothing
 	sig = sig * smoothAmp;
 
-	// Stereo-aware panning: Pan2 for mono sources, Balance2 for stereo
-	sig = Select.ar(bufChannels - 1, [
-		Pan2.ar(sig, smoothPan),      // Mono: use Pan2
-		Balance2.ar(sig[0], sig[1], smoothPan)  // Stereo: use Balance2
+	// Stereo-aware panning based on buffer channels
+	sig = Select.ar((bufChannels - 1).min(1), [
+		Pan2.ar(sig, smoothPan),                    // Mono: use Pan2
+		Balance2.ar(sig[0], sig[1], smoothPan)      // Stereo: use Balance2
 	]);
 
 	Out.ar(out, sig);
