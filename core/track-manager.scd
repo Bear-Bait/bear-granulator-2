@@ -96,8 +96,7 @@ Public API:
 			defaultParams = (
 				// Grain parameters
 				mode: 0,  // Phase 6: Default to TAPE mode
-				engineMode: 0,  // Phase 15: 0=GRANULAR, 1=DIRECT playback, 2=MIX
-				engineMix: 0.0,  // Phase 15.5: 0=grain only, 0.5=equal, 1=direct only (smooth crossfade)
+				engineMode: 0,  // Phase 15: 0=GRANULAR, 1=DIRECT playback
 				grainSize: 0.1,
 				density: 30,      // Legacy parameter
 				overlap: 1,       // Phase 6b: Default overlap count (1 = full sample playback)
@@ -218,8 +217,8 @@ Public API:
 				\pitch, track.params[\pitch]
 			], track.instrumentGroup);
 
-			// Phase 15.5: Direct synth stays RUNNING but with amp=0 (starts in GRANULAR mode)
-			track.directPlaybackSynth.set(\amp, 0.0);
+			// Phase 15: Direct synth starts STOPPED (granular mode is default)
+			track.directPlaybackSynth.run(false);
 
 			"Track manager: Track % created (bus: %) - Grain + Spectral + Direct - STOPPED (press PLAY to start)".format(
 				trackNum + 1,
@@ -281,46 +280,20 @@ Public API:
 			// Update stored parameter
 			track.params[param] = value;
 
-			// Phase 15.5: Handle engine mode/mix with SMOOTH CROSSFADING
-			// Instead of hard .run() switching, we use amplitude control for glitch-free transitions
-			// Also recalculate when \amp changes to maintain correct engine balance
-			if(param == \engineMode or: { param == \engineMix } or: { param == \amp }, {
-				var grainAmp, directAmp, baseAmp, engineMix;
-
-				// Get base amplitude and mix amount
-				baseAmp = track.params[\amp] ? 0.5;
-				engineMix = track.params[\engineMix] ? 0.0;
-
-				// Calculate amplitude for each engine based on mode
+			// Phase 15: Simple engine mode toggle (DIRECT vs GRANULAR)
+			if(param == \engineMode, {
 				case
-					{ track.params[\engineMode] == 0 } {  // GRANULAR mode only
-						grainAmp = baseAmp;
-						directAmp = 0.0;
-						if(param == \engineMode, {
-							"Track %: ✓ GRANULAR mode".format(trackNum + 1).postln;
-						});
+					{ value == 0 } {  // GRANULAR mode
+						track.grainSynth.run(true);
+						track.directPlaybackSynth.run(false);
+						"Track %: ✓ GRANULAR mode".format(trackNum + 1).postln;
 					}
-					{ track.params[\engineMode] == 1 } {  // DIRECT mode only
-						grainAmp = 0.0;
-						directAmp = baseAmp;
-						if(param == \engineMode, {
-							"Track %: ✓ DIRECT mode".format(trackNum + 1).postln;
-						});
-					}
-					{ track.params[\engineMode] == 2 } {  // MIX mode - use engineMix for crossfade
-						// engineMix: 0.0=grain only, 0.5=equal, 1.0=direct only
-						grainAmp = baseAmp * (1.0 - engineMix) * 0.7;  // 0.7 prevents clipping when summed
-						directAmp = baseAmp * engineMix * 0.7;
-						if(param == \engineMode, {
-							"Track %: ✓ MIX mode (engineMix=%)".format(trackNum + 1, engineMix).postln;
-						});
+					{ value == 1 } {  // DIRECT mode
+						track.grainSynth.run(false);
+						track.directPlaybackSynth.run(true);
+						"Track %: ✓ DIRECT mode".format(trackNum + 1).postln;
 					};
-
-				// Apply smoothly via .set() instead of .run() - NO CLICKS!
-				track.grainSynth.set(\amp, grainAmp);
-				track.directPlaybackSynth.set(\amp, directAmp);
-
-				^this;  // Don't send to synths again, we just handled it
+				^this;  // Don't send to synths, we used .run()
 			});
 
 

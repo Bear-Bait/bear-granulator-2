@@ -992,8 +992,7 @@ Usage:
 			Button(win, Rect(135, yPos, 120, 20))
 				.states_([
 					["GRANULAR", Color.black, colors.cyan],
-					["DIRECT", Color.white, Color.blue(0.5)],
-					["MIX", Color.black, Color.green(0.7)]
+					["DIRECT", Color.white, Color.blue(0.5)]
 				])
 				.font_(Font("DejaVu Sans Mono", 9, true))
 				.action_({ arg btn;
@@ -1001,35 +1000,10 @@ Usage:
 					trackManager.setParam(trackNum, \engineMode, mode);
 					case
 						{ mode == 0 } { "✓ Track %: GRANULAR mode".format(trackNum + 1).postln }
-						{ mode == 1 } { "✓ Track %: DIRECT mode".format(trackNum + 1).postln }
-						{ mode == 2 } { "✓ Track %: MIX mode (Grain + Direct)".format(trackNum + 1).postln };
+						{ mode == 1 } { "✓ Track %: DIRECT mode".format(trackNum + 1).postln };
 				});
 
 			yPos = yPos + 30;  // Shift down for next control
-
-			// Phase 15.5: Engine Mix (crossfade between grain/direct in MIX mode)
-			StaticText(win, Rect(10, yPos, 120, 18))
-				.string_("Engine Mix")
-				.font_(Font("DejaVu Sans Mono", 10))
-				.stringColor_(colors.fg);
-			Slider(win, Rect(135, yPos, 150, 18))
-				.value_(track.params[\engineMix] ? 0.0)
-				.action_({ arg sl;
-					var val = sl.value;
-					trackManager.setParam(trackNum, \engineMix, val);
-				});
-			NumberBox(win, Rect(290, yPos, 60, 18))
-				.value_(track.params[\engineMix] ? 0.0)
-				.decimals_(2)
-				.font_(Font("DejaVu Sans Mono", 9))
-				.action_({ arg nb;
-					trackManager.setParam(trackNum, \engineMix, nb.value);
-				});
-			StaticText(win, Rect(355, yPos, 80, 18))
-				.string_("(0=G 1=D)")
-				.font_(Font("DejaVu Sans Mono", 8))
-				.stringColor_(Color.gray(0.6));
-			yPos = yPos + 22;
 
 			makeSlider.value(win, 10, yPos, "Position", ControlSpec(0, 1, \lin), \position, track.params[\position] ? 0.0);
 			yPos = yPos + 22;
