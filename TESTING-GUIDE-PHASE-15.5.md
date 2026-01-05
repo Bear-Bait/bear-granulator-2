@@ -180,6 +180,280 @@ s.meter;
 
 ---
 
+## 🎹 KeyStep Pro MIDI Testing
+
+**Hardware:** Arturia KeyStep Pro
+**First time using MIDI with SuperCollider?** This section covers everything!
+
+### Setup: Check MIDI Connection
+
+**Step 1: Verify MIDI is connected**
+```supercollider
+// Check if MIDI devices are detected
+MIDIClient.init;
+MIDIClient.sources;  // Should list your KeyStep Pro
+
+// You should see something like:
+// MIDIEndPoint("Arturia KeyStep Pro", "Arturia KeyStep Pro MIDI 1")
+```
+
+**Step 2: Monitor incoming MIDI (see what's being received)**
+```supercollider
+// This will print ALL MIDI messages - great for debugging!
+MIDIIn.connectAll;
+
+// Note On/Off monitor
+MIDIFunc.noteOn({ arg vel, num, chan, src;
+    "NOTE ON  | Channel: % | Note: % | Velocity: %".format(chan + 1, num, vel).postln;
+});
+
+MIDIFunc.noteOff({ arg vel, num, chan, src;
+    "NOTE OFF | Channel: % | Note: %".format(chan + 1, num).postln;
+});
+
+// CC (encoder) monitor
+MIDIFunc.cc({ arg val, num, chan, src;
+    "CC       | Channel: % | CC#: % | Value: %".format(chan + 1, num, val).postln;
+});
+
+// MIDI Clock monitor
+MIDIFunc.clock({ arg src;
+    "CLOCK    | Tick".postln;  // Prints 24 times per quarter note
+});
+```
+
+**What you should see:**
+- Turn encoder → `CC | Channel: 1 | CC#: 74 | Value: 64`
+- Press key → `NOTE ON | Channel: 1 | Note: 60 | Velocity: 100`
+- Release key → `NOTE OFF | Channel: 1 | Note: 60`
+- Start clock → `CLOCK | Tick` (repeated rapidly)
+
+**If you see nothing:** Check KeyStep Pro USB cable, power, and MIDI settings
+
+---
+
+### Test 1: Encoder Control (CC Messages) 🎛️
+
+**KeyStep Pro Setup:**
+- Set sequencer track 1 to MIDI Channel 1
+
+**Test Steps:**
+```supercollider
+// Granulator should already be listening to these CCs:
+// Encoder 1 (CC 74) → Filter Cutoff
+// Encoder 2 (CC 71) → Grain Size
+// Encoder 3 (CC 76) → Overlap/Density
+// Encoder 4 (CC 77) → Spectral Mix
+// Encoder 5 (CC 78) → Filter Drive
+
+// Just turn the encoders and listen!
+// You should hear immediate parameter changes
+
+// Optional: Watch parameter values change
+~trackManager.getTrack(0).params.postln;
+```
+
+**What to Listen For:**
+- ✅ Encoder 1 (CC 74): Filter cutoff sweeps (bright → dark)
+- ✅ Encoder 2 (CC 71): Grain size changes (short grains → long grains)
+- ✅ Encoder 3 (CC 76): Density increases (sparse → thick texture)
+- ✅ Encoder 4 (CC 77): Spectral mix (dry → wet spectral processing)
+- ✅ Encoder 5 (CC 78): Filter drive/resonance
+
+**What to Watch For:**
+- ❌ No response to encoder turns
+- ❌ Parameters jump instead of smooth changes
+- ❌ Wrong parameter responds
+
+---
+
+### Test 2: Note Triggering (4-Track Polyphonic) 🎹
+
+**KeyStep Pro Setup:**
+- Sequencer Track 1 → MIDI Channel 1 → Granulator Track 1
+- Sequencer Track 2 → MIDI Channel 2 → Granulator Track 2
+- Sequencer Track 3 → MIDI Channel 3 → Granulator Track 3
+- Sequencer Track 4 → MIDI Channel 4 → Granulator Track 4
+
+**Test Steps:**
+```supercollider
+// Load samples on all 4 tracks first
+~trackManager.loadSample(0, "/path/to/sample1.wav");
+~trackManager.loadSample(1, "/path/to/sample2.wav");
+~trackManager.loadSample(2, "/path/to/sample3.wav");
+~trackManager.loadSample(3, "/path/to/sample4.wav");
+
+// Play notes on KeyStep Pro keyboard
+// MIDI Channel 1 (Track 1 on KeyStep) = Granulator Track 1
+```
+
+**Note Number → Pitch Mapping:**
+```
+C3 (MIDI 60) = Normal pitch (1.0x)
+C4 (MIDI 72) = Octave up (2.0x)
+C2 (MIDI 48) = Octave down (0.5x)
+```
+
+**Velocity → Grain Density:**
+```
+Soft hit (vel 1-30)    = Sparse grains (subtle)
+Medium hit (vel 50-80) = Normal density
+Hard hit (vel 100-127) = Dense grains (aggressive)
+```
+
+**What to Listen For:**
+- ✅ Higher notes = higher pitch
+- ✅ Lower notes = lower pitch
+- ✅ Soft hits = quieter, fewer grains
+- ✅ Hard hits = louder, more grains
+- ✅ Different tracks respond to different MIDI channels
+
+**What to Watch For:**
+- ❌ All notes same pitch
+- ❌ Velocity has no effect
+- ❌ Wrong track responds to wrong channel
+
+---
+
+### Test 3: MIDI Clock Sync (Tempo-Synced LFOs) ⏱️
+
+**KeyStep Pro Setup:**
+- Enable "MIDI Clock Out" in KeyStep settings
+- Set tempo (e.g., 120 BPM)
+
+**Test Steps:**
+```supercollider
+// Method 1: Via GUI (NEW!)
+~modulationWindow.createWindow(0, 0);  // Track 1, Modulator 1
+
+// In the modulation window:
+// 1. Click "Tempo Sync" button to ON (turns cyan)
+// 2. Select sync mode from dropdown:
+//    - 1/4 = quarter notes
+//    - 1/8 = eighth notes
+//    - 1/16 = sixteenth notes
+//    - 1/8t = eighth note triplets
+//    - 1/16t = sixteenth note triplets
+// 3. Route modulator to "Grain Size" or "Position"
+// 4. Start clock on KeyStep Pro
+
+// Method 2: Via code
+var track = ~trackManager.getTrack(0);
+track.modulators[0].set(\tempoSync, 1);    // Enable sync
+track.modulators[0].set(\syncMode, 1);     // 1/8 note
+~trackManager.routeModulator(0, 0, \grainSize, 0.01, 1.0);
+
+// Start KeyStep clock and watch modulation sync!
+```
+
+**What to Listen For:**
+- ✅ LFO rate locks to KeyStep tempo
+- ✅ Changing KeyStep tempo changes LFO rate
+- ✅ Different sync modes = different rates
+
+**What to Watch For:**
+- ❌ LFO drifts out of sync
+- ❌ Tempo doesn't follow KeyStep changes
+- ❌ Sync mode has no effect
+
+---
+
+### Test 4: Visual Feedback ✨
+
+**Test Steps:**
+```supercollider
+// Open viewfinder
+~viewfinder.createWindow(0);
+
+// Play notes on KeyStep Pro
+// You should see:
+// - Green pulses on note attacks
+// - Brighter pulses for harder velocity
+// - Cyan overlays during sustained notes
+```
+
+**What to Watch For:**
+- ✅ Pulses appear on note hits
+- ✅ Pulse brightness matches velocity
+- ✅ Visual feedback is immediate (< 20ms latency)
+
+---
+
+### Troubleshooting MIDI Issues
+
+**Problem: No MIDI messages received**
+```supercollider
+// Re-initialize MIDI
+MIDIClient.init;
+MIDIIn.connectAll;
+
+// List all sources
+MIDIClient.sources.do({ arg src, i;
+    "  [%] %".format(i, src.name).postln;
+});
+
+// If KeyStep not listed:
+// 1. Check USB cable connection
+// 2. Restart KeyStep Pro
+// 3. Check macOS MIDI settings (Audio MIDI Setup app)
+```
+
+**Problem: Wrong CC numbers**
+```supercollider
+// Check what CCs your KeyStep is actually sending
+MIDIFunc.cc({ arg val, num, chan, src;
+    "CC#: % = %".format(num, val).postln;
+}).permanent_(true);
+
+// Turn encoders and note the CC numbers
+// Update mappings if needed in core/midi-mapping.scd
+```
+
+**Problem: Tempo sync not working**
+```supercollider
+// Check if clock is being received
+MIDIFunc.clock({ arg src;
+    "Clock tick".postln;
+}).permanent_(true);
+
+// Start KeyStep clock - should print rapidly (24x per beat)
+// If nothing: Enable "MIDI Clock Out" in KeyStep settings
+```
+
+**Problem: Note velocity not working**
+```supercollider
+// Check velocity values
+MIDIFunc.noteOn({ arg vel, num, chan, src;
+    "Velocity: %".format(vel).postln;
+});
+
+// Play soft → hard
+// Should see values from 1-127
+// If always 127: Check KeyStep velocity curve settings
+```
+
+---
+
+### Advanced: Custom CC Mappings
+
+Want to map different encoders to different parameters?
+
+**Edit:** `core/midi-mapping.scd` (lines 36-42)
+```supercollider
+ccMappings: (
+    74: (\filterFreq, 0),    // Encoder 1 → Track 1 Filter
+    71: (\grainSize, 0),     // Encoder 2 → Track 1 Grain Size
+    76: (\overlap, 0),       // Encoder 3 → Track 1 Density
+    77: (\spectralMix, 0),   // Encoder 4 → Track 1 Spectral Mix
+    78: (\filterDecay, 0)    // Encoder 5 → Track 1 Drive
+),
+
+// Change to any parameter:
+// \position, \pitch, \pitchShift, \stereoSpread, \amp, \pan, etc.
+```
+
+---
+
 ## 🧪 Stress Tests
 
 ### Test 1: Rapid Mode Switching
