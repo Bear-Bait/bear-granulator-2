@@ -983,24 +983,50 @@ Usage:
 			// Column 1: Position & Pitch
 			yPos = 360;
 
-			// ENGINE MODE toggle (Direct Playback vs Granular)
+			// ENGINE MODE - Three separate buttons (GRANULAR, DIRECT, MIX)
 			StaticText(win, Rect(10, yPos, 120, 20))
 				.string_("ENGINE MODE:")
 				.font_(Font("DejaVu Sans Mono", 10, true))
 				.stringColor_(colors.fg);
 
-			Button(win, Rect(135, yPos, 120, 20))
+			Button(win, Rect(135, yPos, 90, 20))
 				.states_([
-					["GRANULAR", Color.black, colors.cyan],
-					["DIRECT", Color.white, Color.blue(0.5)]
+					["GRANULAR", Color.white, Color.gray(0.5)],
+					["GRANULAR", Color.black, colors.cyan]
+				])
+				.font_(Font("DejaVu Sans Mono", 9, true))
+				.value_(1)  // Start as selected
+				.action_({ arg btn;
+					if(btn.value == 1, {
+						trackManager.setParam(trackNum, \engineMode, 0);
+						"✓ Track %: GRANULAR mode".format(trackNum + 1).postln;
+					});
+				});
+
+			Button(win, Rect(230, yPos, 70, 20))
+				.states_([
+					["DIRECT", Color.white, Color.gray(0.5)],
+					["DIRECT", Color.black, Color.blue(0.6)]
 				])
 				.font_(Font("DejaVu Sans Mono", 9, true))
 				.action_({ arg btn;
-					var mode = btn.value;
-					trackManager.setParam(trackNum, \engineMode, mode);
-					case
-						{ mode == 0 } { "✓ Track %: GRANULAR mode".format(trackNum + 1).postln }
-						{ mode == 1 } { "✓ Track %: DIRECT mode".format(trackNum + 1).postln };
+					if(btn.value == 1, {
+						trackManager.setParam(trackNum, \engineMode, 1);
+						"✓ Track %: DIRECT mode".format(trackNum + 1).postln;
+					});
+				});
+
+			Button(win, Rect(305, yPos, 55, 20))
+				.states_([
+					["MIX", Color.white, Color.gray(0.5)],
+					["MIX", Color.black, Color.green(0.6)]
+				])
+				.font_(Font("DejaVu Sans Mono", 9, true))
+				.action_({ arg btn;
+					if(btn.value == 1, {
+						trackManager.setParam(trackNum, \engineMode, 2);
+						"✓ Track %: MIX mode (both engines)".format(trackNum + 1).postln;
+					});
 				});
 
 			yPos = yPos + 30;  // Shift down for next control
@@ -1009,9 +1035,9 @@ Usage:
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Scan Speed", ControlSpec(-4, 4, \lin), \scanSpeed, track.params[\scanSpeed] ? 0);
 			yPos = yPos + 22;
-			makeSlider.value(win, 10, yPos, "Time Stretch", ControlSpec(0.25, 4, \exp), \timeStretch, track.params[\timeStretch] ? 1.0);
+			makeSlider.value(win, 10, yPos, "Time Stretch", ControlSpec(0.001, 4, \exp), \timeStretch, track.params[\timeStretch] ? 1.0);
 			yPos = yPos + 22;
-			makeSlider.value(win, 10, yPos, "Rate (Speed)", ControlSpec(0.25, 4, \exp), \rate, track.params[\rate] ? 1.0);
+			makeSlider.value(win, 10, yPos, "Rate (Speed)", ControlSpec(0.001, 4, \exp), \rate, track.params[\rate] ? 1.0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Pos Jitter", ControlSpec(0, 1, \lin), \posJitter, track.params[\posJitter] ? 0.1);
 			yPos = yPos + 22;

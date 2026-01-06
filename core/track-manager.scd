@@ -76,6 +76,10 @@ Public API:
 			// Bus allocation: Track 0 → Bus 10-11, Track 1 → Bus 12-13, etc.
 			track.audioBus = Bus.audio(server, 2);
 
+			// Phase 16: Create shared phase bus for rhythmic synchronization
+			// Allows all engines (Grain, Direct, Spectral) to share same playhead position
+			track.phaseBus = Bus.control(server, 1);
+
 			// Create buffer recorder instance
 			track.recorder = ~s4BufferRecorder.value(server);
 			track.recorder.init;
@@ -96,7 +100,10 @@ Public API:
 			defaultParams = (
 				// Grain parameters
 				mode: 0,  // Phase 6: Default to TAPE mode
-				engineMode: 0,  // Phase 15: 0=GRANULAR, 1=DIRECT playback
+				engineMode: 0,  // Phase 15: 0=GRANULAR, 1=DIRECT playback, 2=MIX
+				engineMorph: 0,  // Phase 16: Smooth crossfade between engines (0-2)
+				scale: [0, 2, 4, 5, 7, 9, 11],  // Phase 16: Major scale (MIDI note offsets)
+				quantizePitch: 0,  // Phase 16: Enable pitch quantization (0=off, 1=on)
 				grainSize: 0.1,
 				density: 30,      // Legacy parameter
 				overlap: 1,       // Phase 6b: Default overlap count (1 = full sample playback)
@@ -277,6 +284,28 @@ Public API:
 				^nil;
 			});
 
+			// Phase 16: Pitch quantization to musical scales
+			if((param == \pitch or: { param == \pitchShift or: { param == \spectralPitch }}) and: {
+				track.params[\quantizePitch] == 1
+			}, {
+				var scale = track.params[\scale] ? [0, 2, 4, 5, 7, 9, 11];
+				var roundedPitch = value.round;
+				var octave = (roundedPitch / 12).floor * 12;
+				var degree = roundedPitch % 12;
+				var nearestDegree;
+
+				// Find nearest scale degree
+				nearestDegree = scale.minItem({ |deg|
+					(degree - deg).abs
+				});
+
+				// Quantize to nearest scale degree
+				value = octave + nearestDegree;
+				"Track %: Quantized pitch % to scale degree %".format(
+					trackNum + 1, param, value
+				).postln;
+			});
+
 			// Update stored parameter
 			track.params[param] = value;
 
@@ -314,25 +343,18 @@ Public API:
 					track.spectralSynth.set(synthParam, value);
 				});
 			}, {
-				// Non-spectral parameters: route based on engine mode
-				if(track.params[\engineMode] == 1, {
-					// DIRECT mode: only send compatible params to direct playback
-					if(directPlaybackParams.includes(param), {
-						if(track.directPlaybackSynth.notNil, {
-							track.directPlaybackSynth.set(param, value);
-						});
-					});
-					// Grain parameters (grainSize, posJitter, etc.) are ignored in DIRECT mode
-				}, {
-					// GRANULAR mode: send to grain synth
-					track.grainSynth.set(param, value);
+				// Non-spectral parameters: ALWAYS send to ALL engines
+				// This ensures parameters update even when engine is paused
 
-					// Also update direct playback synth with compatible params
-					// (so they're ready when switching back to DIRECT mode)
-					if(directPlaybackParams.includes(param), {
-						if(track.directPlaybackSynth.notNil, {
-							track.directPlaybackSynth.set(param, value);
-						});
+				// Send to grain synth (always update, even if paused)
+				if(track.grainSynth.notNil, {
+					track.grainSynth.set(param, value);
+				});
+
+				// Send to direct playback synth if parameter is compatible
+				if(directPlaybackParams.includes(param), {
+					if(track.directPlaybackSynth.notNil, {
+						track.directPlaybackSynth.set(param, value);
 					});
 				});
 			});

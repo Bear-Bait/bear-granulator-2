@@ -206,7 +206,7 @@ Phase 7 Features:
 
 		// Viewfinder button (Phase 7)
 		Button(parent, Rect(675, 10, 70, 40))
-			.states_([["LOOP\nVIEW", colors.fg, colors.blue]])
+			.states_([["TRACK\nVIEW", colors.fg, colors.blue]])
 			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
 				if(~viewfinder.notNil, {
@@ -216,25 +216,12 @@ Phase 7 Features:
 				});
 			});
 
-		// Phase 12: Quad Panner button (only show on Track 1)
-		if(trackNum == 0, {
-			Button(parent, Rect(750, 10, 70, 40))
-				.states_([["QUAD\nPANNER", colors.black, colors.orange]])
-				.font_(Font("DejaVu Sans Mono", 9, true))
-				.action_({
-					if(~quadPanner.notNil, {
-						~quadPanner.createWindow();
-					}, {
-						"Quad panner not loaded. Restart main.scd.".warn;
-					});
-				});
-		});
-
-		// === COLUMN 1: RECORDING + GRAIN ===
+		// === SECTION 1: AUDIO SOURCE ===
 		yPos = 60;
 		StaticText(parent, Rect(col1X, yPos, 350, 20))
-			.string_("RECORDING + GRAIN")
-			.font_(Font("DejaVu Sans Mono", 12, true));
+			.string_("━ AUDIO SOURCE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.stringColor_(colors.cyan);
 
 		yPos = yPos + 25;
 
@@ -363,101 +350,98 @@ Phase 7 Features:
 
 		yPos = yPos + 35;
 
-		// Play/Stop buttons for grain + spectral engines (Phase 8)
-		Button(parent, Rect(col1X, yPos, 70, 25))
-			.states_([
-				["PLAY", colors.black, colors.green],
-				["STOP", colors.fg, colors.red]
-			])
-			.action_({ arg btn;
-				if(btn.value == 1, {
-					// PLAY - Start synths based on engine mode
-					case
-						{ track.params[\engineMode] == 0 } {  // GRANULAR mode
-							if(track.grainSynth.notNil, {
-								track.grainSynth.run(true);
-							});
-							if(track.spectralSynth.notNil, {
-								track.spectralSynth.run(true);
-							});
-							"Track % engines PLAYING (Grain + Spectral)".format(trackNum + 1).postln;
-						}
-						{ track.params[\engineMode] == 1 } {  // DIRECT mode
-							if(track.directPlaybackSynth.notNil, {
-								track.directPlaybackSynth.run(true);
-								"Track % DIRECT playback PLAYING".format(trackNum + 1).postln;
-							}, {
-								"ERROR: Direct playback synth is nil!".error;
-							});
-						}
-						{ track.params[\engineMode] == 2 } {  // MIX mode
-							if(track.grainSynth.notNil, {
-								track.grainSynth.run(true);
-							});
-							if(track.directPlaybackSynth.notNil, {
-								track.directPlaybackSynth.run(true);
-							});
-							"Track % MIX mode PLAYING (Grain + Direct)".format(trackNum + 1).postln;
-						};
-				}, {
-					// STOP - Pause all synths
-					if(track.grainSynth.notNil, {
-						track.grainSynth.run(false);
-					});
-					if(track.spectralSynth.notNil, {
-						track.spectralSynth.run(false);
-					});
-					if(track.directPlaybackSynth.notNil, {
-						track.directPlaybackSynth.run(false);
-					});
-					"Track % engines STOPPED".format(trackNum + 1).postln;
-				});
-			});
-
-		yPos = yPos + 30;
-
-		// Input selector
+		// Input selector + Record buttons
 		StaticText(parent, Rect(col1X, yPos, 50, 20))
-			.string_("Input")
+			.string_("Input:")
 			.font_(Font("DejaVu Sans Mono", 9));
-		PopUpMenu(parent, Rect(col1X + 55, yPos, 70, 20))
+		PopUpMenu(parent, Rect(col1X + 45, yPos, 70, 20))
 			.items_(["In 1", "In 2", "In 3", "In 4", "In 5", "In 6", "In 7", "In 8"])
 			.value_(2)
 			.action_({ arg menu;
 				("Track " ++ (trackNum + 1) ++ " input: " ++ menu.value).postln;
 			});
 
-		// Record button
-		Button(parent, Rect(col1X + 130, yPos, 70, 25))
+		Button(parent, Rect(col1X + 125, yPos, 50, 25))
 			.states_([
-				["REC", colors.black, colors.green],
-				["STOP", colors.fg, colors.red]
+				["● REC", colors.black, colors.red]
 			])
 			.action_({ arg btn;
-				if(btn.value == 1, {
-					track.recorder.startRecording(2, overdub: false);
-				}, {
-					track.recorder.stopRecording;
-					fork {
-						0.4.wait;  // Wait for temp file to be written
-
-						// Copy temp file path to track for viewfinder
-						if(track.recorder.tempFilePath.notNil, {
-							track.filePath = track.recorder.tempFilePath;
-							"Track %: Recorded buffer saved to temp file for waveform display".format(trackNum + 1).postln;
-						});
-
-					};
-				});
+				track.recorder.startRecording(2, overdub: false);
 			});
 
-		yPos = yPos + 40;
+		Button(parent, Rect(col1X + 180, yPos, 70, 25))
+			.states_([
+				["■ STOP", colors.fg, colors.brightBlack]
+			])
+			.action_({
+				track.recorder.stopRecording;
+				fork {
+					0.4.wait;  // Wait for temp file to be written
 
-		// Grain controls
+					// Copy temp file path to track for viewfinder
+					if(track.recorder.tempFilePath.notNil, {
+						track.filePath = track.recorder.tempFilePath;
+						"Track %: Recorded buffer saved to temp file for waveform display".format(trackNum + 1).postln;
+					});
+				};
+			});
+
+		yPos = yPos + 35;
+
+		// === SECTION 2: PLAYBACK ===
+		StaticText(parent, Rect(col1X, yPos, 350, 20))
+			.string_("━ PLAYBACK ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.stringColor_(colors.green);
+
+		yPos = yPos + 25;
+
+		// Play/Stop buttons for engines
+		Button(parent, Rect(col1X, yPos, 80, 30))
+			.states_([
+				["▶ PLAY", colors.black, colors.green]
+			])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({ arg btn;
+				// Start ALL engines - blend controlled by engineMorph slider
+				if(track.grainSynth.notNil, {
+					track.grainSynth.run(true);
+				});
+				if(track.spectralSynth.notNil, {
+					track.spectralSynth.run(true);
+				});
+				if(track.directPlaybackSynth.notNil, {
+					track.directPlaybackSynth.run(true);
+				});
+				"Track % PLAYING (blend controlled by slider)".format(trackNum + 1).postln;
+			});
+
+		Button(parent, Rect(col1X + 85, yPos, 80, 30))
+			.states_([
+				["■ STOP", colors.fg, colors.red]
+			])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({
+				// Stop all synths
+				if(track.grainSynth.notNil, {
+					track.grainSynth.run(false);
+				});
+				if(track.spectralSynth.notNil, {
+					track.spectralSynth.run(false);
+				});
+				if(track.directPlaybackSynth.notNil, {
+					track.directPlaybackSynth.run(false);
+				});
+				"Track % engines STOPPED".format(trackNum + 1).postln;
+			});
+
+		yPos = yPos + 50;  // Add spacing after playback section
+
+		// Note about detailed grain controls
 		StaticText(parent, Rect(col1X, yPos, 400, 18))
-			.string_("→ All grain controls in LOOP VIEW window")
-			.font_(Font("DejaVu Sans Mono", 10))
-			.stringColor_(colors.cyan);
+			.string_("→ Detailed grain controls in TRACK VIEW window")
+			.font_(Font("DejaVu Sans Mono", 9))
+			.stringColor_(Color.gray(0.6));
 
 		yPos = yPos + 30;
 		StaticText(parent, Rect(col1X, yPos, 120, 18))
@@ -819,6 +803,18 @@ Phase 7 Features:
 					~trackManager.setMasterBusMode(btn.value);
 				}, {
 					"Track manager not initialized".warn;
+				});
+			});
+
+		// Quad Panner button (next to Stereo/Quad toggle)
+		Button(parent, Rect(425, yPos, 120, 25))
+			.states_([["QUAD PANNER", colors.black, colors.orange]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({
+				if(~quadPanner.notNil, {
+					~quadPanner.createWindow();
+				}, {
+					"Quad panner not loaded. Restart main.scd.".warn;
 				});
 			});
 

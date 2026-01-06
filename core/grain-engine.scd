@@ -235,7 +235,7 @@ SynthDef(\s4GrainEngine, {
 		sndbuf: bufnum,
 		rate: pitchRatio,
 		pos: bufPos,
-		interp: 2, // cubic interpolation
+		interp: 4, // cubic interpolation (highest quality)
 		pan: stereoSpread.neg, // pan left
 		envbufnum: -1, // use default envelope for now
 		maxGrains: 64 // Fixed at compile time
@@ -249,7 +249,7 @@ SynthDef(\s4GrainEngine, {
 		sndbuf: bufnum,
 		rate: pitchRatio,
 		pos: bufPos,
-		interp: 2,
+		interp: 4, // cubic interpolation (highest quality)
 		pan: stereoSpread, // pan right
 		envbufnum: -1,
 		maxGrains: 64 // Fixed at compile time

@@ -137,6 +137,11 @@ fork {
 		0.2.wait;
 		"  ✓ Direct playback engine loaded".postln;
 
+		// Load per-track effects chain (Phase 16)
+		(~config.corePath +/+ "per-track-effects.scd").load;
+		0.2.wait;
+		"  ✓ Per-track effects chain loaded".postln;
+
 		// Load buffer recorder
 		(~config.corePath +/+ "buffer-recorder.scd").load;
 		0.2.wait;

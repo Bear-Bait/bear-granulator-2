@@ -62,6 +62,37 @@ PREREQUISITE: Run main.scd first!
   }).play;
   )
 
+
+
+  // Slowly rotate Track 3 around the quad field
+  (
+  ~spatialRotation2 = Task({
+      var angle = 0;
+      loop {
+          var x = angle.cos;
+          var y = angle.sin;
+          ~trackManager.setQuadPosition(2, x, y);  // Track 2 is index 1
+          angle = angle + 0.05;  // Speed of rotation
+          0.1.wait; // Update rate (10Hz)
+      }
+  }).play;
+  )
+
+  // Slowly rotate Track 4 around the quad field
+  (
+  ~spatialRotation2 = Task({
+      var angle = 0;
+      loop {
+          var x = angle.cos;
+          var y = angle.sin;
+          ~trackManager.setQuadPosition(3, x, y);  // Track 2 is index 1
+          angle = angle + 0.05;  // Speed of rotation
+          0.1.wait; // Update rate (10Hz)
+      }
+  }).play;
+  )
+
+
   // Rotate Track 1 clockwise, Track 2 counter-clockwise
   (
   ~spatialRotation = Task({
