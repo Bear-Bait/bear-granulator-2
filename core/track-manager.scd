@@ -99,7 +99,7 @@ Public API:
 			// Default parameters for grain synth
 			defaultParams = (
 				// Grain parameters
-				mode: 0,  // Phase 6: Default to TAPE mode
+				grainMode: 0,  // Phase 6: Default to TAPE mode (v2.1: renamed from mode)
 				engineMode: 0,  // Phase 15: 0=GRANULAR, 1=DIRECT playback, 2=MIX
 				engineMorph: 0,  // Phase 16: Smooth crossfade between engines (0-2)
 				scale: [0, 2, 4, 5, 7, 9, 11],  // Phase 16: Major scale (MIDI note offsets)
@@ -115,6 +115,9 @@ Public API:
 				pitchShift: 0,    // Phase 7: True pitch shift (preserves speed)
 				posJitter: 0.1,
 				pitchJitter: 0,
+				// v2.1: 64-step sequencer arrays (KeyStep Pro/Digitone standard)
+				posSeq: Array.fill(64, 0),
+				pitchSeq: Array.fill(64, 0),
 				envType: 1,
 				stereoSpread: 0.5,
 				amp: 0.5,
@@ -378,7 +381,7 @@ Public API:
 
 			// Update mode
 			track.mode = newMode;
-			track.grainSynth.set(\mode, newMode);
+			track.grainSynth.set(\grainMode, newMode);  // v2.1: renamed to grainMode
 
 			"Track %: Mode set to % (%)".format(trackNum + 1, newMode, modeNames[newMode]).postln;
 		},

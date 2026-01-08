@@ -32,6 +32,13 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 	lastClockTime: 0,       // For tempo calculation
 	clockCount: 0,          // MIDI clock pulses (24 per quarter note)
 
+	// v2.1: MIDI Learn for 64-Step Sequencer
+	learnMode: false,       // Is learn mode active?
+	learnType: \pitch,      // \pitch or \position
+	learnTrack: 0,          // Which track to apply to
+	learnBuffer: nil,       // Captured notes (up to 64)
+	learnCount: 0,          // How many notes captured
+
 	// Default CC mappings (KeyStep Pro encoders)
 	ccMappings: (
 		74: (\filterFreq, 0),    // Encoder 1 → Track 1 Filter Cutoff
@@ -129,6 +136,12 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 
 			// Note On handler
 			noteOnHandler = MIDIFunc.noteOn({ arg vel, num, chan, src;
+				// v2.1: MIDI Learn mode intercepts notes
+				if(self.learnMode, {
+					self.captureLearnNote(num);
+					^nil;  // Don't trigger normal note behavior
+				});
+
 				// Phase 15.5: LOGARITHMIC velocity mapping (sounds more "analog")
 				// Linear mapping feels static; exponential feels responsive like real instruments
 				// Maps MIDI 0-127 to 0.01-1.0 with exponential curve
@@ -259,6 +272,103 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 		// Reinitialize CC handlers with new mapping
 		self.ccHandlers.do(_.free);
 		self.setupCCHandlers;
+	},
+
+	// v2.1: Enable MIDI Learn Mode for 64-Step Sequencer
+	enableLearn: { arg self, trackNum = 0, type = \pitch;
+		self.learnMode = true;
+		self.learnType = type;
+		self.learnTrack = trackNum;
+		self.learnBuffer = Array.newClear(64);
+		self.learnCount = 0;
+
+		"".postln;
+		"═══════════════════════════════════════════".postln;
+		"  MIDI LEARN MODE ACTIVE".postln;
+		"═══════════════════════════════════════════".postln;
+		"Track: % | Type: %".format(trackNum + 1, type).postln;
+		"Play up to 64 notes on your MIDI controller...".postln;
+		"".postln;
+	},
+
+	// v2.1: Disable MIDI Learn Mode
+	disableLearn: { arg self;
+		self.learnMode = false;
+		"MIDI Learn Mode: OFF".postln;
+	},
+
+	// v2.1: Capture MIDI note during learn mode (called from note handler)
+	captureLearnNote: { arg self, noteNum;
+		var value;
+
+		if(self.learnCount < 64, {
+			// Convert MIDI note to appropriate value
+			value = case
+				{ self.learnType == \pitch } {
+					// Pitch: Store as semitone offset from middle C
+					(noteNum - 60)
+				}
+				{ self.learnType == \position } {
+					// Position: Map note number 0-127 to position 0-1
+					noteNum.linlin(0, 127, -0.5, 0.5)
+				};
+
+			self.learnBuffer[self.learnCount] = value;
+			self.learnCount = self.learnCount + 1;
+
+			// Progress indicator
+			if(self.learnCount % 16 == 0, {
+				"  → Captured % / 64 notes".format(self.learnCount).postln;
+			});
+
+			// Auto-finish at 64 notes
+			if(self.learnCount == 64, {
+				self.finishLearn;
+			});
+		});
+	},
+
+	// v2.1: Apply captured sequence to track
+	finishLearn: { arg self;
+		var param, finalBuffer;
+
+		if(self.learnCount == 0, {
+			"MIDI Learn: No notes captured.".postln;
+			self.disableLearn;
+			^nil;
+		});
+
+		// Pad buffer to 64 if needed (repeat pattern)
+		finalBuffer = Array.fill(64, { |i|
+			self.learnBuffer[i % self.learnCount]
+		});
+
+		// Apply to track
+		param = case
+			{ self.learnType == \pitch } { \pitchSeq }
+			{ self.learnType == \position } { \posSeq };
+
+		self.trackManager.setParam(self.learnTrack, param, finalBuffer);
+
+		// Enable jitter to activate sequence
+		if(self.learnType == \pitch, {
+			self.trackManager.setParam(self.learnTrack, \pitchJitter, 1);
+		}, {
+			self.trackManager.setParam(self.learnTrack, \posJitter, 1);
+		});
+
+		"".postln;
+		"═══════════════════════════════════════════".postln;
+		"  SEQUENCE CAPTURED!".postln;
+		"═══════════════════════════════════════════".postln;
+		"Captured % notes (repeated to fill 64 steps)".format(self.learnCount).postln;
+		"Applied to Track % % sequence".format(
+			self.learnTrack + 1,
+			self.learnType
+		).postln;
+		"".postln;
+
+		self.disableLearn;
 	},
 
 	// Cleanup: Free all MIDI handlers

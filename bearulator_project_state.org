@@ -1,8 +1,28 @@
 #+TITLE: Bearulator Project State: Master Document
 #+AUTHOR: Bear-Bait
-#+DATE: 2026-01-07
-#+DESCRIPTION: Comprehensive design document, code, and sprint plan for the SuperCollider S-4 Rival project.
+#+DATE: 2026-01-08
+#+DESCRIPTION: Comprehensive design document, code, and sprint plan for the SuperCollider S-4 Rival project named Bearulator.
 
+* 0. Project Status & Deployment Strategy (Read First)
+:PROPERTIES:
+:LAST_UPDATE: 2026-01-08
+:CURRENT_PHASE: v2.1 Deployment
+:WORKTREE_STATUS: v2.0 (Legacy/Buggy)
+:DOC_STATUS: v2.1 (Master Definition)
+:END:
+
+** Critical Context
+- **Codebase Discrepancy:** The currently running code in your worktree is **v2.0**. It is functional but contains critical audio bugs (Filter Pops, Parameter Collisions). The code in *Section 5* of this document is **v2.1 (Staged)** and contains the fixes for these issues.
+- **Scope Definition:** "Bearulator" is the **Granular Voice Architecture** (Engine). The project goal is a **4-Track Workstation** (Torso S-4 Rival) that hosts four instances of this engine.
+
+** Immediate Priorities (The "48-Hour Push")
+1. **Deploy v2.1:** You must overwrite `grain-engine.scd` with the code in Section 5 of this document. This is the only way to fix the "Filter Pop" (Issue #2) and "Mode Collision" (Issue #5).
+2. **Verify Audio:** Use the deployment script to confirm that switching filters and modes no longer causes audio glitches.
+3. **UI Refactor:** Do not touch the GUI (Play/Stop buttons) until the v2.1 engine is deployed and verified stable.
+
+** Active Decision Log
+- **Dynamic Swapper:** [HOLD] We will NOT implement dynamic synth swapping (Issue #9) in this sprint. We prioritize preserving reverb tails (audio quality) over minor CPU optimization on the M4 chip.
+  
 * 1. System Overview
 :PROPERTIES:
 :VERSION: v2.1 (64-Step Hardware Standard)
@@ -12,29 +32,30 @@
 :END:
 
 ** Core Philosophy
-The "Bearulator" is a **Sample Generation Workstation** designed to rival the Torso S-4. It is not just a texture generator, but a "Sample Factory" for studio soundtracks.
+The "Bearulator" is a **Sample Generation Workstation** designed to rival the Torso S-4.
+It is not just a texture generator, but a "Sample Factory" for studio soundtracks.
 - **Workflow:** Sample -> Granulate (Tape/Poly/Live) -> Filter -> Color -> Space -> Capture.
 - **Goal:** Create complex, evolving textures (IDM/Ambient) that can be recorded for further composition.
 
 * 2. Architecture & Signal Flow
 The signal path mimics the S-4 hardware chain.
 
-[cite_start]** A. Material & Granular Engine (v2.1 Refactor) [cite: 140]
+** A. Material & Granular Engine (v2.1 Refactor)
 - **Source:** `GrainBuf` with Sub-sample accuracy logic.
-- **Time/Pitch:** Decoupled `scanRate` (Tape Head) and `grainRate` (Pitch). [cite_start]Allows artifact-free "Tape Stop" and "Freeze"[cite: 145].
+- **Time/Pitch:** Decoupled `scanRate` (Tape Head) and `grainRate` (Pitch). Allows artifact-free "Tape Stop" and "Freeze".
 - **Modulation:** Replaced statistical `LFNoise` with `Demand` UGens.
-- **Sequencer:** **64-step** `posSeq` and `pitchSeq` arrays. [cite_start]Matches KeyStep Pro/Digitone pattern lengths[cite: 141].
+- **Sequencer:** **64-step** `posSeq` and `pitchSeq` arrays. Matches KeyStep Pro/Digitone pattern lengths.
 
-[cite_start]** B. Filterbank (Phase 10) [cite: 31]
+** B. Filterbank (Phase 10)
 - **Dual Topology:** Morphing between Moog Ladder (Liquid/Self-Osc) and SVF (Clean/Notch).
 - **Drive:** Pre-filter saturation (`filterDecay` parameter).
 
-[cite_start]** C. Color Effects (Phase 3) [cite: 37]
+** C. Color Effects (Phase 3)
 - **Distortion:** Dual-band saturation (Low/High drive).
 - **Bitcrush:** Sample rate reduction + Bit depth reduction.
 - **Compression:** Master bus glue.
 
-[cite_start]** D. Space Effects (Phase 3) [cite: 38]
+** D. Space Effects (Phase 3)
 - **Reverb:** `FreeVerb` with freeze capability.
 - **Delay:** Ping-pong delay with filter.
 - **Shimmer:** Pitch-shifted feedback loop (Glassy textures).
@@ -45,239 +66,245 @@ The signal path mimics the S-4 hardware chain.
    - [ ] **Verify:** `timeStretch` at 0.0 should freeze audio without pitch drop.
    - [ ] **Verify:** `pitchSeq` accepts 64-step arrays.
 
-[cite_start]** TODO [#B] The "Sigur Ros" Preset (Generative Ambient) [cite: 148]
+** TODO [#B] The "Sigur Ros" Preset (Generative Ambient)
    - *Objective:* Rival the "1-5fq" generative code using samples.
    - *Recipe:*
      - Sample: Pure Rhodes, Chime, or Female Vocal.
      - Settings: `timeStretch` = 0.1, `reverbMix` = 0.7, `shimmerMix` = 0.5.
      - Sequencer: 64-step slow drift (Pentatonic scale).
 
-[cite_start]** TODO [#C] Future Capture Workflow [cite: 150]
+** TODO [#C] Future Capture Workflow
    - *Task:* Implement `DiskOut` to record output directly to WAV for library building.
 
 * 4. Active Issues & Bug Fixes
 ** CLOSED (Pending Verify) - Quantum Playhead Jitter
    - *Issue:* GUI playhead jumped wildly due to modulators.
-   - [cite_start]*Fix (v2.0):* Engine now exports `scanPos` (smooth phasor) via `SendReply`, decoupling visualization from jitter[cite: 96, 120].
+   - *Fix (v2.0):* Engine now exports `scanPos` (smooth phasor) via `SendReply`, decoupling visualization from jitter.
 
-[cite_start]** OPEN - Master Pitch Quantize Scope Trap [cite: 59]
+** OPEN - Master Pitch Quantize Scope Trap
    - *Issue:* `pitchQuantizeBtn` in `viewfinder.scd` is trapped in a closure.
    - *Fix:* Declare variables at the top of the block ("Scope Fix").
+
+** HOLD - Resource Optimization (Dynamic Swapper)
+   - *Issue (From Testing Notes):* Suggestion to free/create synths dynamically to save CPU (Issue 9).
+   - *Decision:* **Do not implement the full "Dynamic Swapper" yet.** Stick to the monolithic v2.1 engine for now. The M4 chip is powerful enough to handle 4 dormant synths. The audio quality of preserved reverb tails is more important than saving negligible CPU on an M4.
 
 * 5. Complete Code: S-4 Rival Engine v2.1
 *Combines v2.1 Granular Core (64-Step) with Original Effects Chain*
 
 #+BEGIN_SRC supercollider
 SynthDef(\s4GrainEngine, {
-	arg bufnum = 0,
-	    mode = 0,          // 0=TAPE, 1=POLY, 2=LIVE
-	    grainSize = 0.1,
-	    overlap = 4,
-	    useOverlap = 1,
-	    position = 0.5,
-	    scanSpeed = 1,     // Normal playback speed
+    arg bufnum = 0,
+        grainMode = 0,     // 0=TAPE, 1=POLY, 2=LIVE (Renamed from 'mode' to avoid conflict)
+        grainSize = 0.1,
+        overlap = 4,
+        useOverlap = 1,
+        position = 0.5,
+        scanSpeed = 1,     // Normal playback speed
 
-	    // --- TIME & PITCH (v2.1 Decoupled) ---
-	    timeStretch = 1.0, // Multiplier for scan speed (Time only)
-	    pitch = 0,         // Coarse pitch (semitones)
-	    pitchShift = 0,    // Fine pitch (semitones)
+        // --- TIME & PITCH (v2.1 Decoupled) ---
+        timeStretch = 1.0, // Multiplier for scan speed (Time only)
+        pitch = 0,         // Coarse pitch (semitones)
+        pitchShift = 0,    // Fine pitch (semitones)
 
-	    // --- MUSICAL JITTER CONTROLS (64 STEPS) ---
-	    posJitter = 0.0,   // Amplitude of the Position Sequence
-	    pitchJitter = 0.0, // Amplitude of the Pitch Sequence
+        // --- MUSICAL JITTER CONTROLS (64 STEPS) ---
+        posJitter = 0.0,   // Amplitude of the Position Sequence
+        pitchJitter = 0.0, // Amplitude of the Pitch Sequence
 
-	    // 64-step arrays (KeyStep/Digitone standard)
-	    posSeq = #[
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		],
-	    pitchSeq = #[
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		],
+        // 64-step arrays (KeyStep/Digitone standard)
+        posSeq = #[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ],
+        pitchSeq = #[
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ],
 
-	    // --- STANDARD PARAMS ---
-	    phaseAlign = 0, envType = 1, stereoSpread = 0.5,
-	    amp = 0.5, pan = 0, loopStart = 0.0, loopEnd = 1.0,
+        // --- STANDARD PARAMS ---
+        phaseAlign = 0, envType = 1, stereoSpread = 0.5,
+        amp = 0.5, pan = 0, loopStart = 0.0, loopEnd = 1.0,
 
-	    // --- FILTER PARAMS ---
-	    filterOn=0, filterFreq=200, filterMorph=0.5, filterRes=0.5, 
-	    filterDecay=0.5, filterMix=0.5,
-	    
-	    // --- COLOR PARAMS ---
-	    colorOn = 0, distCrossover = 500, distLoDrive = 1, distHiDrive = 1, distMix = 0,
-	    crushRate = 8000, crushBits = 8, crushMix = 0,
-	    compThresh = 0.5, compRatio = 4, compAttack = 0.01, compRelease = 0.1,
-	    noiseType = 0, noiseAmount = 0,
+        // --- FILTER PARAMS ---
+        filterOn=0, filterFreq=200, filterMorph=0.5, filterRes=0.5, 
+        filterDecay=0.5, filterMix=0.5,
+        
+        // --- COLOR PARAMS ---
+        colorOn = 0, distCrossover = 500, distLoDrive = 1, distHiDrive = 1, distMix = 0,
+        crushRate = 8000, crushBits = 8, crushMix = 0,
+        compThresh = 0.5, compRatio = 4, compAttack = 0.01, compRelease = 0.1,
+        noiseType = 0, noiseAmount = 0,
 
-	    // --- SPACE PARAMS ---
-	    spaceOn = 0, reverbSize = 0.5, reverbDamp = 0.5, reverbFreeze = 0, reverbMix = 0.3,
-	    delayTime = 0.25, delayFeedback = 0.5, delayFilter = 5000, delayPingPong = 0, delayMix = 0.3,
-	    shimmerTime = 0.5, shimmerFeedback = 0.6, shimmerPitch = 12, shimmerWindowSize = 0.2, shimmerMix = 0,
-	    out = 0;
+        // --- SPACE PARAMS ---
+        spaceOn = 0, reverbSize = 0.5, reverbDamp = 0.5, reverbFreeze = 0, reverbMix = 0.3,
+        delayTime = 0.25, delayFeedback = 0.5, delayFilter = 5000, delayPingPong = 0, delayMix = 0.3,
+        shimmerTime = 0.5, shimmerFeedback = 0.6, shimmerPitch = 12, shimmerWindowSize = 0.2, shimmerMix = 0,
+        out = 0;
 
-	// Variables
-	var sig, trig, bufPos, bufFrames, pitchRatio;
-	var grainDur, actualDensity, trigL, trigR, phasor, scanPos;
-	var scanRate, grainRate;
-	var posPattern, pitchPattern, musicalPosJitter, musicalPitchJitter;
+    // Variables
+    var sig, trig, bufPos, bufFrames, pitchRatio;
+    var grainDur, actualDensity, trigL, trigR, phasor, scanPos;
+    var scanRate, grainRate;
+    var posPattern, pitchPattern, musicalPosJitter, musicalPitchJitter;
 
-	bufFrames = BufFrames.kr(bufnum);
+    bufFrames = BufFrames.kr(bufnum);
 
-	// 1. CALCULATE DECOUPLED RATES (v2.1)
-	grainRate = (pitch + pitchShift).midiratio;
-	scanRate = scanSpeed * BufRateScale.kr(bufnum) * timeStretch;
+    // 1. CALCULATE DECOUPLED RATES (v2.1)
+    grainRate = (pitch + pitchShift).midiratio;
+    scanRate = scanSpeed * BufRateScale.kr(bufnum) * timeStretch;
 
-	// 2. DENSITY & TRIGGER
-	grainDur = (grainSize / timeStretch.clip(0.25, 4)).max(0.001);
-	actualDensity = Select.kr(useOverlap, [
-		density * timeStretch, 
-		(overlap / grainDur).max(0.1)
-	]);
-	trig = Impulse.ar(actualDensity);
+    // 2. DENSITY & TRIGGER
+    grainDur = (grainSize / timeStretch.clip(0.25, 4)).max(0.001);
+    actualDensity = Select.kr(useOverlap, [
+        density * timeStretch, 
+        (overlap / grainDur).max(0.1)
+    ]);
+    trig = Impulse.ar(actualDensity);
 
-	// 3. MUSICAL JITTER (Demand UGens)
-	// Position Sequence
-	posPattern = Dseq(posSeq, inf);
-	musicalPosJitter = Demand.ar(trig, 0, posPattern) * posJitter;
+    // 3. MUSICAL JITTER (Demand UGens)
+    // Position Sequence
+    posPattern = Dseq(posSeq, inf);
+    musicalPosJitter = Demand.ar(trig, 0, posPattern) * posJitter;
 
-	// Pitch Sequence
-	pitchPattern = Dseq(pitchSeq, inf);
-	musicalPitchJitter = Demand.ar(trig, 0, pitchPattern);
-	musicalPitchJitter = (musicalPitchJitter * (pitchJitter > 0)).midiratio;
+    // Pitch Sequence
+    pitchPattern = Dseq(pitchSeq, inf);
+    musicalPitchJitter = Demand.ar(trig, 0, pitchPattern);
+    musicalPitchJitter = (musicalPitchJitter * (pitchJitter > 0)).midiratio;
 
-	// 4. STEREO TRIGGERS
-	trigL = Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg*5, stereoSpread*5));
-	trigR = Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg*5, stereoSpread*5));
+    // 4. STEREO TRIGGERS
+    trigL = Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg*5, stereoSpread*5));
+    trigR = Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg*5, stereoSpread*5));
 
-	// 5. PHASOR (TAPE HEAD)
-	phasor = Phasor.ar(0, scanRate, loopStart*bufFrames, loopEnd*bufFrames, loopStart*bufFrames) / bufFrames;
+    // 5. PHASOR (TAPE HEAD)
+    phasor = Phasor.ar(0, scanRate, loopStart*bufFrames, loopEnd*bufFrames, loopStart*bufFrames) / bufFrames;
 
-	// Smooth scan position (for scrubbing & GUI)
-	scanPos = XFade2.ar(K2A.ar(position), phasor, (scanSpeed.abs > 0.01).lag(0.1).linlin(0, 1, -1, 1));
-	
-	// FIX: GUI Feedback uses smooth scanPos (Fixes Quantum Jitter Bug)
-	SendReply.ar(Impulse.ar(60), '/grainPlayhead', [scanPos]);
+    // Smooth scan position (for scrubbing & GUI)
+    scanPos = XFade2.ar(K2A.ar(position), phasor, (scanSpeed.abs > 0.01).lag(0.1).linlin(0, 1, -1, 1));
 
-	// 6. APPLY JITTER
-	bufPos = Select.kr(mode, [
-		(scanPos.linlin(0, 1, loopStart, loopEnd) + musicalPosJitter).wrap(loopStart, loopEnd), // TAPE
-		scanPos + musicalPosJitter, // POLY
-		(1.0 - scanPos + musicalPosJitter).wrap(0, 1) // LIVE
-	]);
+    // FIX: GUI Feedback uses smooth scanPos (Fixes Quantum Jitter Bug)
+    SendReply.ar(Impulse.ar(60), '/grainPlayhead', [scanPos]);
 
-	pitchRatio = grainRate * musicalPitchJitter;
+    // 6. APPLY JITTER (Updated 'grainMode' variable)
+    bufPos = Select.kr(grainMode, [
+        (scanPos.linlin(0, 1, loopStart, loopEnd) + musicalPosJitter).wrap(loopStart, loopEnd), // TAPE
+        scanPos + musicalPosJitter, // POLY
+        (1.0 - scanPos + musicalPosJitter).wrap(0, 1) // LIVE
+    ]);
+    pitchRatio = grainRate * musicalPitchJitter;
 
-	// 7. GRAIN GENERATION
-	sig = [
-		GrainBuf.ar(1, trigL, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 64),
-		GrainBuf.ar(1, trigR, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread, -1, 64)
-	] * 2.0; // Boost
+    // 7. GRAIN GENERATION
+    sig = [
+        GrainBuf.ar(1, trigL, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 64),
+        GrainBuf.ar(1, trigR, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread, -1, 64)
+    ] * 2.0;
 
-	// --- FILTER SECTION (Phase 10) ---
-	sig = Select.ar(filterOn > 0.5, [
-		sig,
-		{
-			var filtered = sig;
-			var freq = filterFreq.linexp(0, 1, 20, 18000);
-			var rq = filterRes.linexp(0.01, 1, 1.0, 0.01);
-			// Pre-Filter Drive
-			var driven = Select.ar(filterDecay > 0.01, [
-				filtered, (filtered * filterDecay.linexp(0.01, 1, 1, 10)).tanh
-			]);
-			
-			// Moog Ladder
-			var ladder = Select.ar(filterMorph < 0.33, [
-				DC.ar(0),
-				{
-					var m = MoogFF.ar(driven, freq, filterRes.linlin(0, 1, 0, 3.5));
-					m + (BLowPass.ar(driven, 100, 1.0) * filterRes * 0.3);
-				}.value
-			]);
-			
-			// SVF (State Variable)
-			var svf = Select.ar(filterMorph >= 0.33, [
-				DC.ar(0),
-				{
-					var morph = (filterMorph - 0.33) / 0.67;
-					var lp = RLPF.ar(driven, freq, rq);
-					var bp = BPF.ar(driven, freq, rq);
-					var hp = RHPF.ar(driven, freq, rq);
-					(lp * (1 - (morph * 2)).clip(0, 1)) + 
-					(bp * (1 - ((morph - 0.5).abs * 2)).clip(0, 1)) + 
-					(hp * ((morph - 0.5) * 2).clip(0, 1));
-				}.value
-			]);
+    // --- FILTER SECTION (Phase 10) ---
+    // FIXED: Use SelectX with lag to prevent clicks when switching
+    sig = SelectX.ar(filterOn.lag(0.05), [
+        sig,
+        {
+            var filtered = sig;
+            var freq = filterFreq.linexp(0, 1, 20, 18000);
+            var rq = filterRes.linexp(0.01, 1, 1.0, 0.01);
+            // Pre-Filter Drive
+            var driven = Select.ar(filterDecay > 0.01, [
+                filtered, (filtered * filterDecay.linexp(0.01, 1, 1, 10)).tanh
+            ]);
+            
+            // Moog Ladder
+            var ladder = Select.ar(filterMorph < 0.33, [
+                DC.ar(0),
+                {
+                    var m = MoogFF.ar(driven, freq, filterRes.linlin(0, 1, 0, 3.5));
+                    m + (BLowPass.ar(driven, 100, 1.0) * filterRes * 0.3);
+                }.value
+            ]);
+            
+            // SVF (State Variable)
+            var svf = Select.ar(filterMorph >= 0.33, [
+                DC.ar(0),
+                {
+                    var morph = (filterMorph - 0.33) / 0.67;
+                    var lp = RLPF.ar(driven, freq, rq);
+                    var bp = BPF.ar(driven, freq, rq);
+                    var hp = RHPF.ar(driven, freq, rq);
+                    (lp * (1 - (morph * 2)).clip(0, 1)) + 
+                    (bp * (1 - ((morph - 0.5).abs * 2)).clip(0, 1)) + 
+                    (hp * ((morph - 0.5) * 2).clip(0, 1));
+                }.value
+            ]);
 
-			filtered = Select.ar(filterMorph < 0.33, [svf, ladder]);
-			XFade2.ar(sig, filtered, filterMix.linlin(0, 1, -1, 1));
-		}.value
-	]);
+            filtered = Select.ar(filterMorph < 0.33, [svf, ladder]);
+            XFade2.ar(sig, filtered, filterMix.linlin(0, 1, -1, 1));
+        }.value
+    ]);
 
-	// --- COLOR EFFECTS (Phase 3) ---
-	sig = Select.ar(colorOn > 0.5, [
-		sig,
-		{
-			var colored = sig;
-			var low, high, loProc, hiProc, distorted, crushed;
+    // --- COLOR EFFECTS (Phase 3) ---
+    // FIXED: Use SelectX with lag to prevent clicks
+    sig = SelectX.ar(colorOn.lag(0.05), [
+        sig,
+        {
+            var colored = sig;
+            var low, high, loProc, hiProc, distorted, crushed;
 
-			// Distortion
-			low = LPF.ar(colored, distCrossover);
-			high = HPF.ar(colored, distCrossover);
-			loProc = (low * distLoDrive).tanh;
-			hiProc = (high * distHiDrive).tanh;
-			colored = XFade2.ar(colored, loProc + hiProc, distMix.linlin(0, 1, -1, 1));
+            // Distortion
+            low = LPF.ar(colored, distCrossover);
+            high = HPF.ar(colored, distCrossover);
+            loProc = (low * distLoDrive).tanh;
+            hiProc = (high * distHiDrive).tanh;
+            colored = XFade2.ar(colored, loProc + hiProc, distMix.linlin(0, 1, -1, 1));
 
-			// Bitcrush
-			crushed = Latch.ar(colored, Impulse.ar(crushRate));
-			crushed = crushed.round(0.5 ** crushBits);
-			colored = XFade2.ar(colored, crushed, crushMix.linlin(0, 1, -1, 1));
-			
-			// Compressor
-			Compander.ar(colored, colored, compThresh, 1.0, 1.0/compRatio, compAttack, compRelease);
-		}.value
-	]);
+            // Bitcrush
+            crushed = Latch.ar(colored, Impulse.ar(crushRate));
+            crushed = crushed.round(0.5 ** crushBits);
+            colored = XFade2.ar(colored, crushed, crushMix.linlin(0, 1, -1, 1));
+            
+            // Compressor
+            Compander.ar(colored, colored, compThresh, 1.0, 1.0/compRatio, compAttack, compRelease);
+        }.value
+    ]);
 
-	// --- SPACE EFFECTS (Phase 3) ---
-	sig = Select.ar(spaceOn > 0.5, [
-		sig,
-		{
-			var spaced = sig;
-			var wet, freezeGain, delayL, delayR, wetL, wetR, shimL, shimR;
-			
-			// Reverb
-			freezeGain = reverbFreeze.linlin(0, 1, 0.9, 0.9999);
-			wet = [
-				FreeVerb.ar(spaced[0], 1.0, reverbSize * freezeGain, reverbDamp),
-				FreeVerb.ar(spaced[1], 1.0, reverbSize * freezeGain, reverbDamp)
-			];
-			spaced = XFade2.ar(spaced, wet, reverbMix.linlin(0, 1, -1, 1));
+    // --- SPACE EFFECTS (Phase 3) ---
+    // FIXED: Use SelectX with lag to prevent clicks
+    sig = SelectX.ar(spaceOn.lag(0.05), [
+        sig,
+        {
+            var spaced = sig;
+            var wet, freezeGain, delayL, delayR, wetL, wetR, shimL, shimR;
+            
+            // Reverb
+            freezeGain = reverbFreeze.linlin(0, 1, 0.9, 0.9999);
+            wet = [
+                FreeVerb.ar(spaced[0], 1.0, reverbSize * freezeGain, reverbDamp),
+                FreeVerb.ar(spaced[1], 1.0, reverbSize * freezeGain, reverbDamp)
+            ];
+            spaced = XFade2.ar(spaced, wet, reverbMix.linlin(0, 1, -1, 1));
 
-			// Delay
-			delayL = LocalIn.ar(1); delayR = LocalIn.ar(1);
-			wetL = DelayC.ar(spaced[0] + delayL, 2.0, delayTime);
-			wetR = DelayC.ar(spaced[1] + delayR, 2.0, delayTime);
-			LocalOut.ar([
-				LPF.ar(wetL, delayFilter) * delayFeedback,
-				LPF.ar(wetR, delayFilter) * delayFeedback
-			]);
-			spaced = XFade2.ar(spaced, [wetL, wetR], delayMix.linlin(0, 1, -1, 1));
-			
-			// Shimmer (Simplified for v2.1)
-			shimL = PitchShift.ar(spaced[0], 0.2, shimmerPitch.midiratio);
-			shimR = PitchShift.ar(spaced[1], 0.2, shimmerPitch.midiratio);
-			XFade2.ar(spaced, [shimL, shimR], shimmerMix.linlin(0, 1, -1, 1));
-		}.value
-	]);
+            // Delay
+            delayL = LocalIn.ar(1); delayR = LocalIn.ar(1);
+            wetL = DelayC.ar(spaced[0] + delayL, 2.0, delayTime);
+            wetR = DelayC.ar(spaced[1] + delayR, 2.0, delayTime);
+            LocalOut.ar([
+                LPF.ar(wetL, delayFilter) * delayFeedback,
+                LPF.ar(wetR, delayFilter) * delayFeedback
+            ]);
+            spaced = XFade2.ar(spaced, [wetL, wetR], delayMix.linlin(0, 1, -1, 1));
+            
+            // Shimmer (Simplified for v2.1)
+            shimL = PitchShift.ar(spaced[0], 0.2, shimmerPitch.midiratio);
+            shimR = PitchShift.ar(spaced[1], 0.2, shimmerPitch.midiratio);
+            XFade2.ar(spaced, [shimL, shimR], shimmerMix.linlin(0, 1, -1, 1));
+        }.value
+    ]);
 
-	// Output
-	sig = sig * amp;
-	sig = Balance2.ar(sig[0], sig[1], pan);
-	Out.ar(out, sig.tanh);
+    // Output
+    sig = sig * amp;
+    sig = Balance2.ar(sig[0], sig[1], pan);
+    Out.ar(out, sig.tanh);
 }).add;
 #+END_SRC
 
@@ -289,9 +316,11 @@ SynthDef(\s4GrainEngine, {
    - *Goal:* Replace FreeVerb with Greyhole for "Blackhole" style spaces.
 ** [ ] Implement "Spectral Split"
    - *Goal:* Use `PV_HainsworthFoote` or `FluidHPSS` to route transients away from reverb.
-    #+BEGIN_SRC supercollider
-        // --- SPACE EFFECTS (v2.1 Upgrade) ---
-    sig = Select.ar(spaceOn > 0.5, [
+
+#+BEGIN_SRC supercollider
+    // --- SPACE EFFECTS (v2.1 Upgrade) ---
+    // FIXED: Updated to SelectX for click-free switching
+    sig = SelectX.ar(spaceOn.lag(0.05), [
         sig,
         {
             var spaced = sig;
@@ -321,11 +350,10 @@ SynthDef(\s4GrainEngine, {
             
             // 3. STEREO SPREAD (Widener)
             wet = Splay.ar(wet, stereoSpread);
-
             XFade2.ar(spaced, wet, reverbMix.linlin(0, 1, -1, 1));
         }.value
     ]);
-    #+END_SRC
+#+END_SRC
 
 * Future Expansions (Color & Filter)
 ** [ ] Implement "Barberpole" Phaser
@@ -334,9 +362,11 @@ SynthDef(\s4GrainEngine, {
    - *Target:* `VADDiodeFilter` (TB-303 style) for squelchy resonance.
 ** [ ] Add "Squiz" Artifacts
    - *Target:* Use `Squiz` UGen for aliasing/downsampling effects (IDM texture).
-     #+BEGIN_SRC supercollider
-     // --- FILTER & COLOR CHAIN (v2.1 "Acid & Space") ---
-    sig = Select.ar(filterOn > 0.5, [
+
+#+BEGIN_SRC supercollider
+    // --- FILTER & COLOR CHAIN (v2.1 "Acid & Space") ---
+    // FIXED: Updated to SelectX for click-free switching
+    sig = SelectX.ar(filterOn.lag(0.05), [
         sig,
         {
             var processed = sig;
@@ -373,12 +403,12 @@ SynthDef(\s4GrainEngine, {
             
             // 4. SATURATION (Soft Clipper)
             processed = (processed * filterDecay.linexp(0, 1, 1, 50)).tanh;
-            
             // Mix dry/wet
             XFade2.ar(sig, processed, filterMix.linlin(0, 1, -1, 1));
         }.value
     ]);
 #+END_SRC 
+
 * 6. Usage Examples
 ** Glitch Drums (Position Jitter)
 #+BEGIN_SRC supercollider
@@ -403,4 +433,154 @@ x.set(\pitchSeq, Array.fill(64, { [0, 2, 4, 7, 9].choose }));
   - **Decoupled Time/Pitch:** Uses `scanRate` vs `grainRate` (no FFT pitch shifting).
   - **Musical Jitter:** Uses `Demand` UGens to sequence chaos.
 - **Immediate Task:** User is deploying v2.1 code. Next steps involve mapping the 64-step arrays to the KeyStep Pro or creating a GUI helper.
+- ** create a small "Deploy Script" that automatically loads this new engine and sets up the 64-step arrays, to test the new "no-click" filters immediately.
+#+BEGIN
+ (
+s.waitForBoot({
+    // 1. LOAD A TEST SAMPLE
+    // We use a standard SC sound so this works immediately
+    var buf = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
+    
+    // 2. DEFINE THE v2.1 ENGINE (With Click-Fixes)
+    SynthDef(\s4GrainEngine, {
+        arg bufnum = 0,
+            grainMode = 0,     // CHANGED: Renamed from 'mode'
+            grainSize = 0.1,
+            overlap = 4,
+            useOverlap = 1,
+            position = 0.5,
+            scanSpeed = 1,
+            
+            // --- TIME & PITCH ---
+            timeStretch = 1.0,
+            pitch = 0,
+            pitchShift = 0,
+
+            // --- JITTER & SEQUENCER ---
+            posJitter = 0.0,
+            pitchJitter = 0.0,
+            
+            // 64-Step Arrays (Initialized to 0)
+            posSeq = #[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            pitchSeq = #[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                         0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+
+            // --- STANDARD PARAMS ---
+            phaseAlign = 0, envType = 1, stereoSpread = 0.5,
+            amp = 0.5, pan = 0, loopStart = 0.0, loopEnd = 1.0,
+
+            // --- FILTER PARAMS ---
+            filterOn=0, filterFreq=200, filterMorph=0.5, filterRes=0.5, 
+            filterDecay=0.5, filterMix=0.5,
+            
+            // --- COLOR & SPACE PARAMS ---
+            colorOn = 0, distCrossover = 500, distLoDrive = 1, distHiDrive = 1, distMix = 0,
+            crushRate = 8000, crushBits = 8, crushMix = 0,
+            compThresh = 0.5, compRatio = 4, compAttack = 0.01, compRelease = 0.1,
+            noiseType = 0, noiseAmount = 0,
+            spaceOn = 0, reverbSize = 0.5, reverbDamp = 0.5, reverbFreeze = 0, reverbMix = 0.3,
+            out = 0;
+
+        var sig, trig, bufPos, bufFrames, pitchRatio;
+        var grainDur, actualDensity, trigL, trigR, phasor, scanPos;
+        var scanRate, grainRate;
+        var posPattern, pitchPattern, musicalPosJitter, musicalPitchJitter;
+
+        bufFrames = BufFrames.kr(bufnum);
+
+        // RATE CALCULATIONS
+        grainRate = (pitch + pitchShift).midiratio;
+        scanRate = scanSpeed * BufRateScale.kr(bufnum) * timeStretch;
+
+        // DENSITY
+        grainDur = (grainSize / timeStretch.clip(0.25, 4)).max(0.001);
+        actualDensity = Select.kr(useOverlap, [density * timeStretch, (overlap / grainDur).max(0.1)]);
+        trig = Impulse.ar(actualDensity);
+
+        // JITTER (64-Step Support)
+        posPattern = Dseq(posSeq, inf);
+        musicalPosJitter = Demand.ar(trig, 0, posPattern) * posJitter;
+        pitchPattern = Dseq(pitchSeq, inf);
+        musicalPitchJitter = Demand.ar(trig, 0, pitchPattern);
+        musicalPitchJitter = (musicalPitchJitter * (pitchJitter > 0)).midiratio;
+
+        // PLAYHEAD
+        phasor = Phasor.ar(0, scanRate, loopStart*bufFrames, loopEnd*bufFrames, loopStart*bufFrames) / bufFrames;
+        scanPos = XFade2.ar(K2A.ar(position), phasor, (scanSpeed.abs > 0.01).lag(0.1).linlin(0, 1, -1, 1));
+        
+        // APPLY JITTER (Using 'grainMode')
+        bufPos = Select.kr(grainMode, [
+            (scanPos.linlin(0, 1, loopStart, loopEnd) + musicalPosJitter).wrap(loopStart, loopEnd),
+            scanPos + musicalPosJitter,
+            (1.0 - scanPos + musicalPosJitter).wrap(0, 1)
+        ]);
+        pitchRatio = grainRate * musicalPitchJitter;
+
+        // GRAINS
+        trigL = Impulse.ar(actualDensity);
+        trigR = Impulse.ar(actualDensity);
+        sig = [
+            GrainBuf.ar(1, trigL, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1),
+            GrainBuf.ar(1, trigR, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread, -1)
+        ];
+
+        // --- FILTER (FIXED: SelectX + Lag) ---
+        sig = SelectX.ar(filterOn.lag(0.05), [
+            sig,
+            LPF.ar(sig, filterFreq) // Simplified filter for test
+        ]);
+
+        // --- SPACE (FIXED: SelectX + Lag) ---
+        sig = SelectX.ar(spaceOn.lag(0.05), [
+            sig,
+            FreeVerb.ar(sig, 1, 0.9, 0.5) // Simplified verb for test
+        ]);
+
+        Out.ar(out, sig * amp);
+    }).add;
+
+    s.sync;
+
+    // 3. RUN THE VERIFICATION
+    "--- STARTING v2.1 DEPLOYMENT TEST ---".postln;
+    
+    x = Synth(\s4GrainEngine, [\bufnum, buf, \amp, 0.6, \loopEnd, 1.0]);
+
+    Routine({
+        // TEST A: Playback Check
+        "1. Audio Started...".postln;
+        1.wait;
+
+        // TEST B: The 'Filter Pop' Fix
+        "2. TESTING FILTER SWITCH (Listen for Clicks)...".postln;
+        x.set(\filterFreq, 500);
+        
+        "   > Filter ON (Should fade in)...".postln;
+        x.set(\filterOn, 1);
+        1.wait;
+        
+        "   > Filter OFF (Should fade out)...".postln;
+        x.set(\filterOn, 0);
+        1.wait;
+        "   > PASSED if smooth.".postln;
+
+        // TEST C: 64-Step Arrays
+        "3. TESTING 64-STEP SEQUENCER...".postln;
+        "   > Injecting 64-step pitch sequence...".postln;
+        x.set(\pitchJitter, 1);
+        
+        // Create a 64-step major scale pattern
+        x.set(\pitchSeq, Array.fill(64, { [0, 4, 7, 12].choose }));
+        
+        4.wait;
+        x.set(\pitchJitter, 0);
+        "   > Sequence Finished.".postln;
+
+        "--- TEST COMPLETE ---".postln;
+        "Type x.free to stop.".postln;
+    }).play;
+});
+)
+#+END_SRC
 :END:

@@ -1035,7 +1035,7 @@ Usage:
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Scan Speed", ControlSpec(-4, 4, \lin), \scanSpeed, track.params[\scanSpeed] ? 0);
 			yPos = yPos + 22;
-			makeSlider.value(win, 10, yPos, "Time Stretch", ControlSpec(0.001, 4, \exp), \timeStretch, track.params[\timeStretch] ? 1.0);
+			makeSlider.value(win, 10, yPos, "Time Stretch", ControlSpec(0.25, 4, \exp), \timeStretch, track.params[\timeStretch] ? 1.0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Rate (Speed)", ControlSpec(0.001, 4, \exp), \rate, track.params[\rate] ? 1.0);
 			yPos = yPos + 22;

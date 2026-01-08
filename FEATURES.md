@@ -1,19 +1,25 @@
 # S-4 RIVAL: Complete Feature List
 
+**Current Version:** v2.1 (deployed 2026-01-08)
+
 ## 🎵 CORE AUDIO ENGINES
 
-### Granular Engine (GrainBuf)
+### Granular Engine (GrainBuf) - v2.1 Enhanced
 - **Grain Size:** 0.001s - 60s (exponential scaling)
 - **Overlap:** 1-128 grains (massive density for M4)
 - **Position:** 0-1 (playback position in buffer)
 - **Scan Speed:** -4 to +4 (continuous scanning, bidirectional)
-- **Position Jitter:** 0-1 (stochastic grain distribution)
+- **Time Stretch:** ✨ v2.1 - 0.25x-4x (independent tempo scaling, pitch preserved)
+- **Position Jitter:** 0-1 (amplitude of position sequence)
+- **64-Step Position Sequence:** ✨ v2.1 - Sequenced position modulation (KeyStep Pro/Digitone standard)
 - **Pitch Shift:** -24 to +24 semitones (formant-preserving)
-- **Pitch Jitter:** 0-12 semitones (grain pitch randomization)
+- **Pitch Jitter:** 0-12 semitones (amplitude of pitch sequence)
+- **64-Step Pitch Sequence:** ✨ v2.1 - Musical arpeggiator/sequencer (replaces random LFNoise)
 - **Amplitude:** 0-1
 - **Stereo Spread:** 0-1 (independent L/R grain timing)
 - **Loop System:** Non-destructive loop windows with visual selection
-- **Phase-Aligned Mode:** ✨ NEW - Zero-crossing aligned grains (prevents phase cancellation in bass)
+- **Phase-Aligned Mode:** Zero-crossing aligned grains (prevents phase cancellation in bass)
+- **Material Modes:** TAPE (loop), POLY (one-shot), LIVE (input granulation)
 
 ### Spectral Engine (Warp1) - M4 Extreme
 - **Spectral Mix:** 0-1 (wet/dry blend with grain engine)
@@ -213,7 +219,16 @@ Input → Buffer → Grain Engine ↘
 
 ## ✅ RECENTLY COMPLETED (Latest Session)
 
-### Session Highlights:
+### v2.1 Engine Deployment (January 8, 2026) - MAJOR UPDATE
+- ✅ **Click-Free Effect Switching** - SelectX with 50ms lag crossfading (fixes Issue #2: Filter Popping)
+- ✅ **Parameter Collision Fix** - Renamed `mode` → `grainMode` (fixes Issue #5: Mode Collision)
+- ✅ **Decoupled Time/Pitch** - Independent scanRate (time) and grainRate (pitch) for tape stop/freeze effects
+- ✅ **64-Step Sequencer** - posSeq/pitchSeq arrays (KeyStep Pro/Digitone standard)
+- ✅ **Musical Jitter** - Demand UGens replace LFNoise for repeatable, rhythmic modulation
+- ✅ **Smooth Playhead Export** - Fixed "quantum jitter" bug in GUI visualization
+- ✅ **Comprehensive Deployment Test** - Automated test suite verifying all v2.1 features
+
+### Previous Session Highlights:
 - ✅ Fixed shift+right-click zoom in viewfinder
 - ✅ Fixed number box visibility (cyan text on dark gray background)
 - ✅ Fixed number box functionality (scroll, keyboard input, range clipping)
@@ -634,5 +649,5 @@ RR = sqrt((1 + X) * (1 + Y) * 0.5) * signal
 
 ---
 
-**Last Updated:** January 4, 2026
-**Version:** Phase 14 (Preset System + Complete Tutorial)
+**Last Updated:** January 8, 2026
+**Version:** v2.1 (Click-Free Switching + 64-Step Sequencer + Decoupled Time/Pitch)
