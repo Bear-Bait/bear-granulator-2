@@ -39,13 +39,13 @@ Usage:
 			var grainOSCListener;  // Phase 15: OSC responder for grain playhead
 			var spectralOSCListener;  // Phase 15: OSC responder for spectral playhead
 			var directOSCListener;  // Phase 15: OSC responder for direct playback playhead
-			var recOSCListener;  // Phase 15: OSC responder for recording playhead
+			var recOSCListener;    // Phase 15: OSC responder for recording playhead
 			var spectrogramData, spectrogramOSC;  // Phase 11: FFT spectrogram data
-			var spectrogramEnabled = true;  // Phase 11: Toggle spectrogram display
+			var spectrogramEnabled = true; // Phase 11: Toggle spectrogram display
 			var grainPulses = List.new;  // Phase 11: Grain trigger pulse animations
-			var grainPulseEnabled = true;  // Phase 11: Toggle grain pulse display
+			var grainPulseEnabled = true; // Phase 11: Toggle grain pulse display
 			var cropMode = false;  // Phase 15: Crop mode toggle
-			var cropButton, applyCropButton;  // Phase 15: Crop UI elements
+			var cropButton, applyCropButton; // Phase 15: Crop UI elements
 			var grainEngineButton, spectralEngineButton;  // Phase 15: Engine toggle buttons
 
 			// Doom Material colors
@@ -152,7 +152,8 @@ Usage:
 				.gridResolution_(0.1) // Grid every 100ms
 				.setSelectionColor(0, Color.yellow.alpha_(0.3))  // Selection color
 				.setEditableSelectionStart(0, true)   // Enable native zoom
-				.setEditableSelectionSize(0, true);   // SHIFT+right-click to zoom
+				.setEditableSelectionSize(0, true);
+				// SHIFT+right-click to zoom
 
 			// Selection is enabled by default in SoundFileView
 
@@ -160,7 +161,6 @@ Usage:
 			{
 				var soundFile;
 				server.sync;
-
 				// Check if track has a file path stored
 				if(track.filePath.notNil, {
 					soundFile = SoundFile.new;
@@ -222,7 +222,7 @@ Usage:
 					var loopStartPixels, loopEndPixels, fadeWidth;
 					var isRecording = track.recorder.isRecording;
 					var recPulse = (Main.elapsedTime * 2).sin.linlin(-1, 1, 0.3, 1.0);
-				var yOffset, grainActive, spectralActive;  // Phase 15
+					var yOffset, grainActive, spectralActive;  // Phase 15
 
 					if(currentBuffer.notNil and: { currentBuffer.sampleRate.notNil }, {
 						bufferDuration = currentBuffer.numFrames / currentBuffer.sampleRate;
@@ -506,7 +506,8 @@ Usage:
 
 						// === LAYER 8: ENGINE STATUS INDICATORS (Phase 15) ===
 						// Show which engines are currently running
-						yOffset = 40;  // Start below waveform instructions
+						yOffset = 40;
+						// Start below waveform instructions
 						grainActive = if(grainEngineButton.notNil, { grainEngineButton.value == 1 }, { false });
 						spectralActive = if(spectralEngineButton.notNil, { spectralEngineButton.value == 1 }, { false });
 
@@ -582,8 +583,10 @@ Usage:
 				var replyID = msg[2];  // '/grainPlayhead'
 				var position = msg[3]; // Normalized position 0-1
 
-				// Update grain playhead position
-				grainPlayheadPos = position;
+				// SECURITY CHECK: Only update if the message comes from THIS track's grain synth
+				if(track.grainSynth.notNil and: { nodeID == track.grainSynth.nodeID }, {
+					grainPlayheadPos = position;
+				});
 			}, '/grainPlayhead');
 
 			// Phase 15: OSC listener for spectral engine playhead @ 60Hz
@@ -592,8 +595,10 @@ Usage:
 				var replyID = msg[2];  // '/spectralPlayhead'
 				var position = msg[3]; // Normalized position 0-1
 
-				// Update spectral playhead position
-				spectralPlayheadPos = position;
+				// SECURITY CHECK: Only update if the message comes from THIS track's spectral synth
+				if(track.spectralSynth.notNil and: { nodeID == track.spectralSynth.nodeID }, {
+					spectralPlayheadPos = position;
+				});
 			}, '/spectralPlayhead');
 
 			// Phase 15: OSC listener for direct playback playhead @ 60Hz
@@ -602,8 +607,10 @@ Usage:
 				var replyID = msg[2];  // '/directPlayhead'
 				var position = msg[3]; // Normalized position 0-1
 
-				// Update direct playhead position
-				directPlayheadPos = position;
+				// SECURITY CHECK: Only update if the message comes from THIS track's direct synth
+				if(track.directPlaybackSynth.notNil and: { nodeID == track.directPlaybackSynth.nodeID }, {
+					directPlayheadPos = position;
+				});
 			}, '/directPlayhead');
 
 			// Phase 15: OSC listener for recording playhead @ 30Hz
@@ -636,11 +643,14 @@ Usage:
 			// Stop update routine and OSC listeners when window closes
 			win.onClose = {
 				updateRoutine.stop;
-				grainOSCListener.free;  // Phase 15: Free grain playhead OSC responder
+				grainOSCListener.free;
+				// Phase 15: Free grain playhead OSC responder
 				spectralOSCListener.free;  // Phase 15: Free spectral playhead OSC responder
-				directOSCListener.free;  // Phase 15: Free direct playback OSC responder
+				directOSCListener.free;
+				// Phase 15: Free direct playback OSC responder
 				recOSCListener.free;  // Phase 15: Free recording OSC responder
-				spectrogramOSC.free;  // Phase 11: Free spectrogram OSC responder
+				spectrogramOSC.free;
+				// Phase 11: Free spectrogram OSC responder
 				windows[trackNum] = nil;
 				soundFileViews[trackNum] = nil;
 				"Viewfinder % closed".format(trackNum + 1).postln;
@@ -687,7 +697,8 @@ Usage:
 			// === Finalize on mouse up ===
 			sfv.mouseUpAction = { arg view;
 				var sel = view.selection(0);
-				var currentBuffer = track.recorder.buffer;  // Get buffer from track
+				var currentBuffer = track.recorder.buffer;
+				// Get buffer from track
 				if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
 					var startFrame = sel[0];
 					var duration = sel[1];
@@ -1043,25 +1054,35 @@ Usage:
 			yPos = yPos + 22;
 
 			// Master Pitch - controls BOTH engines simultaneously
-			StaticText(win, Rect(10, yPos, 120, 18))
-				.string_("MASTER Pitch")
-				.font_(Font("DejaVu Sans Mono", 10, true))
-				.stringColor_(colors.cyan);
-			Slider(win, Rect(135, yPos, 150, 18))
-				.value_(0.5)
-				.action_({ arg sl;
+			{
+				var pitchSlider, pitchNumBox;
+				StaticText(win, Rect(10, yPos, 120, 18))
+					.string_("MASTER Pitch")
+					.font_(Font("DejaVu Sans Mono", 10, true))
+					.stringColor_(colors.cyan);
+
+				pitchSlider = Slider(win, Rect(135, yPos, 150, 18))
+					.value_(0.5);
+
+				pitchNumBox = NumberBox(win, Rect(290, yPos, 60, 18))
+					.value_(0)
+					.decimals_(1)
+					.font_(Font("DejaVu Sans Mono", 9));
+
+				pitchSlider.action_({ arg sl;
 					var val = sl.value.linlin(0, 1, -24, 24);
+					pitchNumBox.value_(val);
 					trackManager.setParam(trackNum, \pitch, val);
 					trackManager.setParam(trackNum, \spectralPitch, val);
 				});
-			NumberBox(win, Rect(290, yPos, 60, 18))
-				.value_(0)
-				.decimals_(1)
-				.font_(Font("DejaVu Sans Mono", 9))
-				.action_({ arg nb;
+
+				pitchNumBox.action_({ arg nb;
+					var normVal = nb.value.linlin(-24, 24, 0, 1);
+					pitchSlider.value_(normVal);
 					trackManager.setParam(trackNum, \pitch, nb.value);
 					trackManager.setParam(trackNum, \spectralPitch, nb.value);
 				});
+			}.value;
 
 			// Pitch Quantize toggle (Phase 15)
 			{
@@ -1121,7 +1142,8 @@ Usage:
 				.decimals_(3)
 				.font_(Font("DejaVu Sans Mono", 9))
 				.normalColor_(colors.green)
-				.enabled_(false);  // Read-only
+				.enabled_(false);
+				// Read-only
 
 			yPos = yPos + 30;
 			StaticText(win, Rect(450, yPos, 200, 40))
@@ -1136,7 +1158,6 @@ Usage:
 				.string_("SPECTRAL ENGINE")
 				.font_(Font("DejaVu Sans Mono", 10, true))
 				.stringColor_(colors.yellow);
-
 			yPos = yPos + 25;
 			makeSlider.value(win, 450, yPos, "Spectral Mix", ControlSpec(0, 1, \lin), \spectralMix, track.params[\spectralMix] ? 0.0);
 			yPos = yPos + 22;
@@ -1173,7 +1194,6 @@ Usage:
 		// Update waveform display (call after loading new buffer)
 		updateWaveform: { arg self, trackNum = 0;
 			var sfv, track, buffer, soundFile;
-
 			sfv = soundFileViews[trackNum];
 			if(sfv.isNil, {
 				"Viewfinder: No window open for track %".format(trackNum + 1).warn;
@@ -1182,7 +1202,6 @@ Usage:
 
 			track = trackManager.getTrack(trackNum);
 			buffer = track.recorder.buffer;
-
 			if(buffer.notNil and: { track.filePath.notNil }, {
 				soundFile = SoundFile.new;
 				if(soundFile.openRead(track.filePath), {
@@ -1216,7 +1235,6 @@ Usage:
 			{
 				var win = windows[trackNum];
 				var overlayText;
-
 				if(win.notNil and: { win.isClosed.not }, {
 					// Create temporary overlay text
 					overlayText = StaticText(win, Rect(350, 50, 200, 30))
@@ -1273,7 +1291,6 @@ USAGE EXAMPLES:
 
 // Open viewfinder for Track 1
 ~viewfinder.createWindow(0);
-
 // Open viewfinder for Track 2
 ~viewfinder.createWindow(1);
 
@@ -1282,7 +1299,6 @@ USAGE EXAMPLES:
 
 // Update waveform after loading new file
 ~viewfinder.updateWaveform(0);
-
 // Close all viewfinders
 ~viewfinder.closeAll;
 
