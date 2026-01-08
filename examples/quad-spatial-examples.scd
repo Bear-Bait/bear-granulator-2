@@ -368,3 +368,19 @@ MIDIFunc.cc({ arg val, cc;
 });
 "All spatial automation stopped.".postln;
 )
+
+
+// Test on Track 4 (Index 3)
+fork {
+	"Testing QUANTIZED Pitch (Integers)...".postln;
+	[0, 2, 4, 5, 7, 9, 11, 12].do { |note|
+		// The .round(1) is technically redundant here since I typed integers,
+		// but this is the math your button will do:
+		var qVal = note.round(1); 
+		
+		"Playing Semitone: %".format(qVal).postln;
+		~trackManager.setParam(3, \pitch, qVal);
+		~trackManager.setParam(3, \spectralPitch, qVal);
+		0.4.wait;
+	}
+};
