@@ -17,6 +17,10 @@ patterns that sync with hardware (KeyStep Pro, Digitone).
 posJitter/pitchJitter act as "volume knobs" for the sequences.
 Set to 0 to disable, 1 to use full sequence range.
 
+**HOW TO USE THIS FILE:**
+Select ONE example at a time (including its surrounding parentheses)
+and execute it with Cmd+Enter. Do NOT try to run the whole file at once.
+
 ═══════════════════════════════════════════════════════════════════
 */
 
@@ -228,10 +232,10 @@ var sinePattern = Array.fill(64, { |i|
 
 // Generate random walk
 (
-var walkPattern = Array.fill(64, { |i|
-	if(i == 0, { 0 }, {
-		walkPattern[i-1] + [0, 1, -1].choose;  // Random walk
-	});
+var walkPattern = Array.newClear(64);
+walkPattern[0] = 0;
+(1..63).do({ |i|
+	walkPattern[i] = walkPattern[i-1] + [0, 1, -1].choose;
 });
 ~trackManager.setParam(0, \pitchSeq, walkPattern);
 ~trackManager.setParam(0, \pitchJitter, 1);

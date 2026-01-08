@@ -1,18 +1,3 @@
-# S-4 Rival Testing Guide
-## v2.1 Engine - Ready for Testing
-
-**Last Updated:** 2026-01-08
-**Previous Guide:** Phase 15 (2026-01-04)
-
----
-
-## 🎯 v2.1 DEPLOYMENT TESTING
-
-### Quick Verification
-Run the automated deployment test:
-```supercollider
-"tests/v2.1-deployment-test.scd".loadRelative;
-```
 
 This tests all v2.1 features in ~30 seconds:
 - Click-free effect switching
@@ -194,10 +179,10 @@ s.freeAll;
 
 Before marking v2.1 as fully tested:
 
-- [ ] Deployment test passes (no clicks)
-- [ ] Sequencer test passes (melodic patterns)
-- [ ] Time stretch test passes (tempo independent of pitch)
-- [ ] Edge cases test passes (no crashes)
+- [x] Deployment test passes (no clicks)
+- [x] Sequencer test passes (melodic patterns)
+- [x] Time stretch test passes (tempo independent of pitch)
+- [x] Edge cases test passes (no crashes)
 - [ ] Regression tests pass (old features work)
 - [ ] GUI timeStretch slider functional
 - [ ] Example presets load correctly
@@ -387,3 +372,10 @@ When reporting bugs, please include:
 4. Which track/engine mode you were using
 
 **Happy Testing!** 🎹🎚️🎛️
+
+<!-- Local Variables: -->
+<!-- gptel-model: claude-haiku-4-5-20251001 -->
+<!-- gptel--backend-name: "Claude-Haiku-4.5" -->
+<!-- gptel-max-tokens: 6000 -->
+<!-- gptel--bounds: nil -->
+<!-- End: -->

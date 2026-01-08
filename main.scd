@@ -207,6 +207,16 @@ fork {
 		0.2.wait;
 		"  ✓ Preset system loaded".postln;
 
+		// v2.1: Load pattern library (30 built-in sequencer patterns)
+		(~config.corePath +/+ "pattern-library.scd").load;
+		0.2.wait;
+		"  ✓ Pattern library loaded (30 patterns)".postln;
+
+		// v2.1: Load pattern browser GUI
+		(~config.guiPath +/+ "pattern-browser.scd").load;
+		0.2.wait;
+		"  ✓ Pattern browser GUI loaded".postln;
+
 		0.5.wait;
 
 		// ============================================
