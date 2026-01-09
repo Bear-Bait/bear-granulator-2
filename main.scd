@@ -289,8 +289,17 @@ fork {
 		0.1.wait;
 
 		// KeyStep Pro MIDI initialization
-		~keyStepProMapping.init(~trackManager);
+		"".postln;
+		">>> About to call ~keyStepProMapping.init(~trackManager)...".postln;
+		try {
+			~keyStepProMapping.init(~trackManager);
+		} { |error|
+			"❌ ERROR during KeyStep Pro init:".postln;
+			error.errorString.postln;
+		};
 		0.1.wait;
+		">>> KeyStep Pro init completed. Enabled: %".format(~keyStepProMapping.enabled).postln;
+		"".postln;
 
 		// Backward compatibility: expose track 1 as ~grainSynth
 		~grainSynth = ~trackManager.getTracks[0].grainSynth;
