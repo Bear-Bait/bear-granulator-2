@@ -217,6 +217,12 @@ fork {
 		0.2.wait;
 		"  ✓ Pattern browser GUI loaded".postln;
 
+		// KeyStep Pro MIDI mapping with smart mapper
+		(~config.corePath +/+ "keystep-pro-mapping.scd").load;
+		0.2.wait;
+		"  ✓ KeyStep Pro MIDI mapping loaded".postln;
+
+
 		0.5.wait;
 
 		// ============================================
@@ -280,6 +286,10 @@ fork {
 		// Phase 14: Initialize preset system
 		~presets = ~s4PresetSystem.value(~trackManager);
 		~presets.init;
+		0.1.wait;
+
+		// KeyStep Pro MIDI initialization
+		~keyStepProMapping.init(~trackManager);
 		0.1.wait;
 
 		// Backward compatibility: expose track 1 as ~grainSynth
@@ -377,11 +387,25 @@ fork {
 		"  • Example: ~trackManager.setQuadPosition(0, -0.5, -0.5)".postln;
 		"  • See examples/quad-spatial-examples.scd for automation".postln;
 		"".postln;
+		"KeyStep Pro MIDI Control:".postln;
+		"  • Knob 1 (CC 74) → Position".postln;
+		"  • Knob 2 (CC 75) → Pitch (-24 to +24)".postln;
+		"  • Knob 3 (CC 76) → Grain Size (exponential)".postln;
+		"  • Knob 4 (CC 77) → Overlap/Density".postln;
+		"  • Knob 5 (CC 78) → Amplitude".postln;
+		"  • Mod Strip (CC 1) → Position Jitter".postln;
+		"  • Keyboard (Notes 48-83) → Polyphonic pitch control".postln;
+		"  • Note 84 (High C) → PANIC/RESET all tracks".postln;
+		"  • Smart remap: ~mapKnob.(74, \\spectralMix, 0, 1);".postln;
+		"  • See KEYSTEP-PRO-QUICKSTART.md for details".postln;
+		"".postln;
 		"Global Variables:".postln;
 		"  ~trackManager - 4-track management system (Phase 4)".postln;
 		"  ~masterBus - Master mix bus with 48-band filter (Phase 4)".postln;
 		"  ~viewfinder - Waveform viewfinder module (Phase 7)".postln;
 		"  ~quadPanner - Quad spatial panner (Phase 12)".postln;
+		"  ~keyStepProMapping - KeyStep Pro MIDI controller".postln;
+		"  ~mapKnob - Smart MIDI mapper function".postln;
 		"  ~grainSynth - Track 1 synth (backward compatibility)".postln;
 		"  ~recorder - Track 1 recorder (backward compatibility)".postln;
 		"  ~gui - GUI controller".postln;
@@ -398,6 +422,7 @@ fork {
 			if(~gui.notNil, { ~gui.close; });
 			if(~masterBus.notNil, { ~masterBus.free; });
 			if(~trackManager.notNil, { ~trackManager.free; });
+			if(~keyStepProMapping.notNil, { ~keyStepProMapping.free; });
 			"Cleanup complete.".postln;
 		};
 

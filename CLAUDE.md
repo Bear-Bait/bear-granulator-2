@@ -64,6 +64,29 @@ s.avgCPU;        // Check CPU usage
 "examples/preset-examples.scd".loadRelative;
 ```
 
+### KeyStep Pro MIDI Control
+```supercollider
+// MIDI is auto-initialized when main.scd loads
+
+// Smart remapping (on-the-fly, no audio interruption)
+~mapKnob.(74, \spectralMix, 0, 1);        // Knob 1 → Spectral Mix
+~mapKnob.(76, \filterFreq, 0, 1, \exp);  // Knob 3 → Filter (exponential)
+~mapKnob.(77, \reverbMix, 0, 1, \lin, 1); // Knob 4 → Track 2 Reverb
+
+// Load performance patch
+"examples/keystep-performance-patches.scd".loadRelative;
+
+// Test MIDI connection
+"tests/keystep-pro-test.scd".loadRelative;
+
+// Restore default mappings
+~keyStepProMapping.loadDefaultMappings;
+
+// Panic/Reset: Press Note 84 on keyboard
+// Or manually: ~trackManager.resetParams(trackNum);
+```
+
+
 ## Architecture Overview
 
 ### Signal Flow
@@ -123,11 +146,16 @@ Input/File → Buffer → [Grain Engine OR Spectral Engine OR Direct Playback]
 - 13 modulation targets including quadX/quadY for spatial automation
 - Visual feedback in viewfinder (green pulses for notes, cyan overlays for CC)
 
-**MIDI Integration** (`core/midi-mapping.scd`)
-- KeyStep Pro support (Phase 12)
-- 5 encoder CC mappings (customizable)
-- Polyphonic note triggering (4 MIDI channels → 4 tracks)
-- Velocity → grain density, Note number → playback rate
+**MIDI Integration** (`core/keystep-pro-mapping.scd`)
+- **KeyStep Pro smart mapper** - One-line remapping: `~mapKnob.(cc, param, min, max, warp)`
+- **6 default mappings** - 5 knobs + mod strip → Track 1 parameters
+- **Polyphonic keyboard** - Notes 48-83 control pitch, root at C3 (Note 60)
+- **Panic/Reset** - Note 84 resets all tracks to factory defaults
+- **Visual feedback** - Cyan overlays for CC, green pulses for notes
+- **10 performance patches** - Pre-configured mappings for different styles
+- **Multi-track support** - Control any track from any knob
+- **Exponential/Linear warping** - Musical scaling for time/frequency parameters
+- See: `KEYSTEP-PRO-QUICKSTART.md`, `KEYSTEP-QUICK-REF.md`, `examples/keystep-performance-patches.scd`
 
 ### GUI Components
 
