@@ -324,11 +324,7 @@ Phase 7 Features:
 								sampleDuration = sampleDuration.clip(0.005, maxGrainSize);
 
 								trackManager.setParam(trackNum, \grainSize, sampleDuration);
-
-								"Track %: Auto-set grain size to % seconds (sample duration)".format(
-									trackNum + 1,
-									sampleDuration.round(0.001)
-								).postln;
+								// Silent: grain size auto-set to sample duration
 							}.defer(0.1);  // Defer slightly to ensure everything is ready
 
 														"✓ Loaded: % (% seconds, % frames)".format(

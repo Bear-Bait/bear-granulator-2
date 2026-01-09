@@ -1,0 +1,172 @@
+/*
+═══════════════════════════════════════════════════════════════════
+BEAT LIBRARY - Core System
+═══════════════════════════════════════════════════════════════════
+
+Rhythmic generators for slicing samples and creating grooves.
+Designed to drive 'posSeq' (Position Sequence).
+
+Categories:
+- House (4/4 foundations, off-beat hats)
+- Techno (Rumble, industrial offsets)
+- Breaks (Syncopated, funk-based slicing)
+- Glitch (Stochastic, micro-edits)
+*/
+
+~beatLibrary = (
+	patterns: Dictionary.new,
+
+	// Initialize library
+	init: { arg self;
+		"Initializing beat library...".postln;
+
+		// ═════════════════════════════════════════════════════
+		// HOUSE CATEGORY (Four-on-the-Floor Slicing)
+		// ═════════════════════════════════════════════════════
+
+		// 1. BASIC 4/4 (The Foundation)
+		// Accents the 1, 5, 9, 13 (quarter notes in 16-step grid)
+		self.register(
+			name: \houseBasic,
+			category: \house,
+			type: \position,
+			generator: {
+				var pattern = Array.fill(64, 0);
+				// Assuming buffer represents 1 bar
+				// Jumps to 0.0, 0.25, 0.5, 0.75 on the kicks
+				64.do({ |i|
+					if(i % 16 == 0, {
+						pattern[i] = (i / 64); // On grid
+					}, {
+						pattern[i] = (i / 64) + 0.05; // Slightly offset for groove
+					});
+				});
+				pattern;
+			},
+			description: "Basic 4/4 - Locks playhead to quarter notes, creating a steady pulse."
+		);
+
+		// 2. OFF-BEAT PUMP (Sidechain Sim)
+		// Emphasizes the '&' of the beat
+		self.register(
+			name: \housePump,
+			category: \house,
+			type: \position,
+			generator: {
+				var pattern = Array.fill(64, 0);
+				64.do({ |i|
+					// If on the off-beat (8th note), jump forward
+					if((i % 16) >= 8, {
+						pattern[i] = 0.5; // Jump to middle of buffer
+					}, {
+						pattern[i] = 0.0; // Stay at start
+					});
+				});
+				pattern;
+			},
+			description: "Off-Beat Pump - Jumps position on off-beats, simulating sidechain suction."
+		);
+
+		// ═════════════════════════════════════════════════════
+		// TECHNO CATEGORY
+		// ═════════════════════════════════════════════════════
+
+		// 3. INDUSTRIAL RUMBLE
+		// Rapid oscillation between two close points
+		self.register(
+			name: \technoRumble,
+			category: \techno,
+			type: \position,
+			generator: {
+				var pattern = Array.fill(64, 0);
+				64.do({ |i|
+					if(i % 4 == 0, {
+						pattern[i] = 0.1; // Kick
+					}, {
+						// Rumble texture: rapid small variations
+						pattern[i] = 0.15 + 0.02.rand;
+					});
+				});
+				pattern;
+			},
+			description: "Rumble - Steady anchor points with noisy, textured fills."
+		);
+
+		// ═════════════════════════════════════════════════════
+		// BREAKS CATEGORY
+		// ═════════════════════════════════════════════════════
+
+		// 4. AMEN SLICE (The Classic)
+		// Syncopated jumps imitating the Amen Break structure
+		self.register(
+			name: \amenSlice,
+			category: \breaks,
+			type: \position,
+			generator: {
+				// Standard Amen phrasing: Kick - Kick - Snare - - - Kick Snare
+				var phrase = [0, 0, 0.5, 0.5, 0.7, 0.2, 0.5, 0.9];
+				var pattern = Array.newClear(64);
+				64.do({ |i|
+					var step = (i / 8).floor;
+					pattern[i] = phrase[step % 8];
+				});
+				pattern;
+			},
+			description: "Amen Slice - Syncopated jumps mimicking classic jungle breakbeats."
+		);
+
+		// ═════════════════════════════════════════════════════
+		// GLITCH CATEGORY
+		// ═════════════════════════════════════════════════════
+
+		// 5. STOCHASTIC REPEAT
+		// 10% chance to repeat a segment, 90% linear
+		self.register(
+			name: \glitchStutter,
+			category: \glitch,
+			type: \position,
+			generator: {
+				var pattern = Array.fill(64, 0);
+				var freezeVal = 0.0;
+				64.do({ |i|
+					if(0.1.coin, { freezeVal = i/64 }); // 10% chance to catch new stutter point
+					pattern[i] = freezeVal;
+				});
+				pattern;
+			},
+			description: "Stochastic Stutter - Randomly freezes position for brief moments."
+		);
+
+		"Beat library initialized: % presets".format(self.patterns.size).postln;
+		self;
+	},
+
+	// Register a preset
+	register: { arg self, name, category, type, generator, description;
+		self.patterns[name] = (
+			name: name,
+			category: category,
+			type: type,
+			generator: generator,
+			description: description
+		);
+	},
+
+	// Generate beat array
+	generate: { arg self, name;
+		var pat = self.patterns[name];
+		if(pat.notNil, { pat.generator.value }, { Array.fill(64, 0) });
+	},
+
+    // Get all category names
+	getCategories: { arg self;
+		[\house, \techno, \breaks, \glitch];
+	},
+    
+    // Get presets by category
+    getByCategory: { arg self, category;
+		self.patterns.values.select({ |p| p.category == category });
+	},
+);
+
+~beatLibrary = ~beatLibrary.init;

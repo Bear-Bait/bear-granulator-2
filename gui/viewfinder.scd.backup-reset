@@ -1108,35 +1108,35 @@ Usage:
 				Button(win, Rect(transportX, transportY, 145, 25))
 					.states_([["⟲ RESET PARAMS", Color.white, Color.red(0.5)]])
 					.font_(Font("DejaVu Sans Mono", 9, true))
-				.action_({
-					var freshTrack;
+					.action_({
+						var freshTrack;
 
-					// 1. Reset the Backend (Audio & Data)
-					localTrackManager.resetParams(trackNum);
+						"=== RESET BUTTON CLICKED ===".postln;
+						"localTrackManager: %".format(localTrackManager).postln;
+						"trackNum: %".format(trackNum).postln;
 
-					// 2. Fetch the clean track reference
-					freshTrack = localTrackManager.getTrack(trackNum);
+						// 1. Reset internal engine params
+						"Calling resetParams...".postln;
+						localTrackManager.resetParams(trackNum);
+						"Done calling resetParams".postln;
 
-					// 3. SYNC GUI: Force all sliders to match the new defaults
-					uiWidgets.keysValuesDo({ |param, widgetPair|
-						var defaultVal = freshTrack.params[param];
+						// 2. Get fresh track reference (params just updated)
+						"Getting fresh track...".postln;
+						freshTrack = localTrackManager.getTrack(trackNum);
+						"Fresh track: %".format(freshTrack.notNil).postln;
 
-						if(defaultVal.notNil, {
-							// Update Slider (if exists)
-							if(widgetPair.slider.notNil, {
-								// Use .value_ to update visual only (avoiding double DSP trigger)
-								widgetPair.slider.value_(widgetPair.spec.unmap(defaultVal));
-							});
-							// Update NumberBox (if exists)
-							if(widgetPair.numBox.notNil, {
-								widgetPair.numBox.value_(defaultVal);
+						// 3. Update GUI sliders to match defaults
+						"Updating % GUI widgets...".format(uiWidgets.size).postln;
+						uiWidgets.keysValuesDo({ |param, widgetPair|
+							var defaultVal = freshTrack.params[param];
+							"  % -> %".format(param, defaultVal).postln;
+							if(defaultVal.notNil, {
+								widgetPair.numBox.valueAction_(defaultVal);
 							});
 						});
+
+						"✓ Track % params and GUI reset".format(trackNum + 1).postln;
 					});
-
-					"✓ Track %: GUI and Audio reset complete".format(trackNum + 1).postln;
-				});
-
 
 				transportY = transportY + 30;
 
@@ -1192,13 +1192,6 @@ Usage:
 					trackManager.setParam(trackNum, \pitch, nb.value);
 					trackManager.setParam(trackNum, \spectralPitch, nb.value);
 				});
-
-			// REGISTER MASTER PITCH FOR RESET
-			uiWidgets[\pitch] = (
-				slider: pitchSlider,
-				numBox: pitchNumBox,
-				spec: ControlSpec(-24, 24, \lin)
-			);
 			}.value;
 
 			// Pitch Quantize toggle (Phase 15)

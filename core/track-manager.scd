@@ -100,8 +100,7 @@ Public API:
 			defaultParams = (
 				// Grain parameters
 				grainMode: 0,  // Phase 6: Default to TAPE mode (v2.1: renamed from mode)
-				engineMode: 0,  // Phase 15: 0=GRANULAR, 1=DIRECT playback, 2=MIX
-				engineMorph: 0,  // Phase 16: Smooth crossfade between engines (0-2)
+				engineMix: 0.0,  // HYBRID ENGINE: 0.0=Granular, 1.0=Direct, 0.5=Equal mix
 				scale: [0, 2, 4, 5, 7, 9, 11],  // Phase 16: Major scale (MIDI note offsets)
 				quantizePitch: 0,  // Phase 16: Enable pitch quantization (0=off, 1=on)
 				grainSize: 0.1,
@@ -312,20 +311,33 @@ Public API:
 			// Update stored parameter
 			track.params[param] = value;
 
-			// Phase 15: Simple engine mode toggle (DIRECT vs GRANULAR)
-			if(param == \engineMode, {
+			// HYBRID ENGINE: Continuous crossfade between Granular and Direct
+			// NOTE: Knob only adjusts amplitude, does NOT start/stop engines
+			// Engines are controlled ONLY by PLAY/STOP buttons in viewfinder
+			if(param == \engineMix, {
+				var granAmp, directAmp, baseAmp;  // All vars at top
+
 				case
-					{ value == 0 } {  // GRANULAR mode
-						track.grainSynth.run(true);
-						track.directPlaybackSynth.run(false);
-						"Track %: ✓ GRANULAR mode".format(trackNum + 1).postln;
+					{ value <= 0.01 } {  // Pure GRANULAR (0.0)
+						granAmp = 1.0;
+						directAmp = 0.0;
 					}
-					{ value == 1 } {  // DIRECT mode
-						track.grainSynth.run(false);
-						track.directPlaybackSynth.run(true);
-						"Track %: ✓ DIRECT mode".format(trackNum + 1).postln;
+					{ value >= 0.99 } {  // Pure DIRECT (1.0)
+						granAmp = 0.0;
+						directAmp = 1.0;
+					}
+					{ true } {  // MIX MODE (0.01-0.99) - Equal-power crossfade
+						// Equal-power crossfade law (constant energy)
+						granAmp = (1 - value).sqrt;  // Full at 0.0, silent at 1.0
+						directAmp = value.sqrt;      // Silent at 0.0, full at 1.0
 					};
-				^this;  // Don't send to synths, we used .run()
+
+				// Apply amplitude scaling to both engines (silently - no console spam)
+				baseAmp = track.params[\amp] ? 0.5;
+				track.grainSynth.set(\amp, baseAmp * granAmp);
+				track.directPlaybackSynth.set(\amp, baseAmp * directAmp);
+
+				^this;  // Done, don't send to synths again
 			});
 
 
@@ -714,6 +726,80 @@ Public API:
 			track.modTargets[modNum] = nil;
 
 			"Track %: Modulator % freed".format(trackNum + 1, modNum + 1).postln;
+		},
+
+		// CORE LOGIC: RECYCLE TRACK (Reset to Init State)
+		// Makes the track feel "new" by killing audio glitches immediately,
+		// then restoring factory defaults. This is the "Source of Truth" for
+		// default parameter values - update here when changing defaults.
+		resetParams: { arg self, trackNum;
+			var track = tracks[trackNum];
+
+			if(track.grainSynth.isNil, {
+				"Track manager: Track % not initialized".format(trackNum + 1).postln;
+				^nil;
+			});
+
+			// 1. HARD RESET AUDIO (Kill all active effects immediately)
+			// This makes the track sound "New" again by directly setting the synth.
+			if(track.grainSynth.notNil) {
+				track.grainSynth.set(
+					\pitch, 0, \pitchShift, 0,
+					\timeStretch, 1.0, \scanSpeed, 0,
+					\feedback, 0.0, \posJitter, 0.1, \pitchJitter, 0.0,
+					\grainSize, 0.1 // Default starting size
+				);
+			};
+
+			// 2. RESTORE FACTORY DEFAULTS
+			// We overwrite the current params with the original "Init" values.
+			// Using setParam ensures GUI (Viewfinder) updates automatically.
+			[
+				[\amp, 0.5], [\pan, 0],
+				[\grainSize, 0.1], [\density, 30], [\overlap, 1], [\useOverlap, 1],
+				[\pitch, 0], [\pitchShift, 0], [\timeStretch, 1.0],
+				[\scanSpeed, 0], [\position, 0.0],
+				[\posJitter, 0.1], [\pitchJitter, 0.0],
+				[\posSeq, Array.fill(64, 0)], [\pitchSeq, Array.fill(64, 0)],
+				[\grainMode, 0], [\engineMix, 0.0], // Back to Granular Tape Mode
+				[\filterOn, 0], [\colorOn, 0], [\spaceOn, 0], // All FX Off
+				[\spectralMix, 0.0], [\spectralPosition, 0.5], [\spectralRate, 1.0],
+				[\spectralWindowSize, 0.2], [\spectralOverlaps, 4],
+				[\spectralPitch, 0], [\spectralFreeze, 0], [\spectralSmear, 0],
+				[\loopStart, 0.0], [\loopEnd, 1.0],
+				[\envType, 1], [\stereoSpread, 0.5],
+				[\scale, [0, 2, 4, 5, 7, 9, 11]], [\quantizePitch, 0]
+			].do({ |pair|
+				// Use setParam so the GUI (Viewfinder) updates automatically
+				self.setParam(trackNum, pair[0], pair[1]);
+			});
+
+			"✓ Track % Recycled (Reset to New)".format(trackNum + 1).postln;
+		},
+
+		// HYBRID ENGINE: Clear track (wipe buffer, reset params, stop synths)
+		clearTrack: { arg self, trackNum;
+			var track = tracks[trackNum];
+
+			if(track.grainSynth.isNil, {
+				"Track manager: Track % not initialized".format(trackNum + 1).postln;
+				^nil;
+			});
+
+			// Stop all synths
+			track.grainSynth.run(false);
+			track.directPlaybackSynth.run(false);
+			track.spectralSynth.run(false);
+
+			// Zero the buffer (silent)
+			if(track.recorder.buffer.notNil, {
+				track.recorder.buffer.zero;
+			});
+
+			// Reset all params to defaults
+			this.resetParams(trackNum);
+
+			"✓ Track % cleared (buffer wiped, params reset, synths stopped)".format(trackNum + 1).postln;
 		},
 
 		// Phase 15: Switch between stereo and quad master buses
