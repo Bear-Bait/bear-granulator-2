@@ -107,6 +107,7 @@ Public API:
 				density: 30,      // Legacy parameter
 				overlap: 1,       // Phase 6b: Default overlap count (1 = full sample playback)
 				useOverlap: 1,    // Phase 6b: Use overlap mode by default
+				prob: 1.0,        // v2.2: Probability mask (1.0 = 100% grain density)
 				position: 0.0,    // Default to start of buffer
 				scanSpeed: 0,     // Phase 7c: Continuous scanning (0=static)
 				timeStretch: 1.0, // Phase 15: Master time stretch (1.0 = normal)

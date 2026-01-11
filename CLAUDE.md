@@ -10,7 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Platform**: macOS (primary), with planned Linux/Raspberry Pi ports
 **Audio Interface**: MOTU UltraLite Mk5 (8 inputs, 4 outputs for quad spatial audio)
 
-**Current Version:** v2.1 (deployed 2026-01-08)
+**Current Version:** v2.2 (deployed 2026-01-09)
+- Probability masking (Bernoulli gate for rhythmic fracturing)
 - Click-free effect switching (SelectX + lag)
 - Decoupled time/pitch (scanRate vs grainRate)
 - 64-step sequencer arrays (KeyStep Pro/Digitone standard)

@@ -1,12 +1,13 @@
 # S-4 RIVAL: Complete Feature List
 
-**Current Version:** v2.1 (deployed 2026-01-08)
+**Current Version:** v2.2 (deployed 2026-01-09)
 
 ## 🎵 CORE AUDIO ENGINES
 
-### Granular Engine (GrainBuf) - v2.1 Enhanced
+### Granular Engine (GrainBuf) - v2.2 Enhanced
 - **Grain Size:** 0.001s - 60s (exponential scaling)
 - **Overlap:** 1-128 grains (massive density for M4)
+- **Probability:** ✨ v2.2 - 0.0-1.0 (Bernoulli gate for rhythmic fracturing)
 - **Position:** 0-1 (playback position in buffer)
 - **Scan Speed:** -4 to +4 (continuous scanning, bidirectional)
 - **Time Stretch:** ✨ v2.1 - 0.25x-4x (independent tempo scaling, pitch preserved)

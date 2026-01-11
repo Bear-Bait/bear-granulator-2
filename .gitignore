@@ -38,7 +38,7 @@ archive/
 
 # .claude directory (AI assistant)
 .claude/
-
+CLAUDE.md
 # Test files
 tests/
 

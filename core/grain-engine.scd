@@ -1,19 +1,17 @@
 /*
-S-4 Rival: Core Granular Engine v2.1
+S-4 Rival: Core Granular Engine v2.2
 Phase 1 - Main SynthDef with GrainBuf
 Phase 2 - Integrated 48-band Morphing Resonator
 Phase 6 - Material Modes (TAPE/POLY/LIVE)
 Phase 6b - Overlap Control (musical grain density)
 Phase 15 - Time Stretch (temporal scaling without pitch shift)
 v2.1 - Decoupled Time/Pitch, 64-Step Sequencer, Click-Free Switching
+v2.2 - Probability Masking (Bernoulli Gate)
 
-KEY CHANGES IN v2.1:
-- Renamed 'mode' → 'grainMode' to avoid collision with engineMode
-- SelectX.ar with .lag(0.05) for click-free effect switching
-- Decoupled scanRate (time) vs grainRate (pitch)
-- 64-step posSeq/pitchSeq arrays for KeyStep Pro/Digitone
-- Demand UGens for musical jitter (replaces LFNoise)
-- Smooth phasor export for GUI playhead tracking
+KEY CHANGES IN v2.2:
+- Added 'prob' argument (0.0 - 1.0)
+- Implemented Bernoulli Gate on main triggers and stereo triggers
+- Allows rhythmic fracturing/thinning of the grain stream
 
 Features:
 - Up to 256 grains (dynamic based on overlap setting)
@@ -31,11 +29,12 @@ Features:
 
 Args:
   bufnum: Buffer number for grain source
-  grainMode: Material mode (0=TAPE loop, 1=POLY sample, 2=LIVE input) - RENAMED from 'mode'
+  grainMode: Material mode (0=TAPE loop, 1=POLY sample, 2=LIVE input)
   grainSize: Grain duration in seconds (0.001-60+, unlimited)
   overlap: Number of simultaneous grains (1-128) - RECOMMENDED
   density: Grains per second (1-200) - LEGACY, use overlap instead
   useOverlap: 1=use overlap mode (default), 0=use density mode
+  prob: Grain probability/density mask (0.0=silence, 1.0=always trigger) - NEW v2.2
   position: Playback position in buffer (0-1)
   scanSpeed: Continuous scanning speed (0=static, ±4=fast)
   timeStretch: Master time stretch (0.25-4x, scales grain rate & size, NOT pitch)
@@ -71,6 +70,7 @@ SynthDef(\s4GrainEngine, {
 	    grainSize = 0.1,
 	    overlap = 4,
 	    useOverlap = 1,
+	    prob = 1.0,        // v2.2: Probability Mask (1.0 = 100% active)
 	    position = 0.5,
 	    scanSpeed = 1,     // v2.1: Normal playback speed default
 
@@ -83,7 +83,7 @@ SynthDef(\s4GrainEngine, {
 	    posJitter = 0.0,   // Amplitude of the Position Sequence
 	    pitchJitter = 0.0, // Amplitude of the Pitch Sequence
 
-	    // 64-step arrays (KeyStep/Digitone standard)
+	    // 64-step arrays (KeyStep Pro/Digitone standard)
 	    posSeq = #[
 	        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -158,6 +158,7 @@ SynthDef(\s4GrainEngine, {
 	var grainDur, actualDensity, trigL, trigR, phasor, scanPos;
 	var scanRate, grainRate;
 	var posPattern, pitchPattern, musicalPosJitter, musicalPitchJitter;
+	var rawTrig, rawTrigL, rawTrigR; // v2.2: Vars for probability masking
 
 	bufFrames = BufFrames.kr(bufnum);
 
@@ -171,7 +172,11 @@ SynthDef(\s4GrainEngine, {
 		density * timeStretch,
 		(overlap / grainDur).max(0.1)
 	]);
-	trig = Impulse.ar(actualDensity);
+
+	// v2.2: Apply Bernoulli Gate to Main Trigger (Controls Demand Sequencer)
+	rawTrig = Impulse.ar(actualDensity);
+	// TRand generates a value 0.0-1.0 per tick. If < prob, output is 1 (Active).
+	trig = rawTrig * (TRand.ar(0.0, 1.0, rawTrig) < prob);
 
 	// 3. MUSICAL JITTER (Demand UGens) - v2.1
 	// Position Sequence
@@ -184,8 +189,12 @@ SynthDef(\s4GrainEngine, {
 	musicalPitchJitter = (musicalPitchJitter * (pitchJitter > 0)).midiratio;
 
 	// 4. STEREO TRIGGERS
-	trigL = Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg*5, stereoSpread*5));
-	trigR = Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg*5, stereoSpread*5));
+	// v2.2: Apply Bernoulli Gate to Stereo Triggers independently
+	rawTrigL = Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg*5, stereoSpread*5));
+	rawTrigR = Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg*5, stereoSpread*5));
+
+	trigL = rawTrigL * (TRand.ar(0.0, 1.0, rawTrigL) < prob);
+	trigR = rawTrigR * (TRand.ar(0.0, 1.0, rawTrigR) < prob);
 
 	// 5. PHASOR (TAPE HEAD) - v2.1
 	phasor = Phasor.ar(0, scanRate, loopStart*bufFrames, loopEnd*bufFrames, loopStart*bufFrames) / bufFrames;
@@ -202,6 +211,7 @@ SynthDef(\s4GrainEngine, {
 		scanPos + musicalPosJitter, // POLY
 		(1.0 - scanPos + musicalPosJitter).wrap(0, 1) // LIVE
 	]);
+
 	pitchRatio = grainRate * musicalPitchJitter;
 
 	// 7. GRAIN GENERATION

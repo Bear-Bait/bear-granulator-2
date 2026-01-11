@@ -1,4 +1,4 @@
-# Add This rythm update to the engine
+# Add This rhythm update to the engine
 
 
 User: Update grain-engine.scd to implement Probability Masking (Bernoulli Gate). This allows us to rhythmically fracture the grain stream.

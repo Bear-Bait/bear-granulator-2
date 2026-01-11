@@ -1,21 +1,6 @@
 # S-4 RIVAL: Granular Synthesis Workstation
 
-```
-      Hey Jim, come take a ride on the grape leaf raft!
-
-                    ___
-                  _/   \_
-                 |  o_o  |
-                 |   ^   |
-                  \_____/
-                    | |
-               _____|_|_____
-              /             \
-         ~~~~|  GRAPE LEAF   |~~~~
-          ~~~|     RAFT      |~~~
-           ~~\_______________/~~
-             ~~~~~~~~~~~~~~~
-```
+![Bearulator GUI](material/bearulator-gooey.png)
 
 This is a 4-track granular synthesis sampler!
 
@@ -519,5 +504,5 @@ Questions? Check `generic-commands.scd` or holler at Forrest.
 <!-- gptel-model: claude-haiku-4-5-20251001 -->
 <!-- gptel--backend-name: "Claude-Haiku-4.5" -->
 <!-- gptel-max-tokens: 6000 -->
-<!-- gptel--bounds: ((response (1140 2102) (2110 7628))) -->
+<!-- gptel--bounds: nil -->
 <!-- End: -->

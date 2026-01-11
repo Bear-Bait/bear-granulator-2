@@ -1232,6 +1232,8 @@ Usage:
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Overlap", ControlSpec(1, 64, \lin), \overlap, track.params[\overlap] ? 1);  // Fixed: capped at 64 to prevent crash
 			yPos = yPos + 22;
+			makeSlider.value(win, 10, yPos, "Probability", ControlSpec(0, 1, \lin), \prob, track.params[\prob] ? 1.0);  // v2.2: Probability mask
+			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Amplitude", ControlSpec(0, 1, \lin), \amp, track.params[\amp] ? 0.5);
 			yPos = yPos + 22;
 			makeSlider.value(win, 10, yPos, "Stereo Spread", ControlSpec(0, 1, \lin), \stereoSpread, track.params[\stereoSpread] ? 0.5);

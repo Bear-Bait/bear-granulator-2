@@ -22,7 +22,7 @@ QUICK START:
 3. Use the GUI to control grain parameters
 4. Click "Start Recording" to record live input
 5. Adjust grain controls to sculpt sound
-====================================
+==================================
 */
 
 (
