@@ -156,7 +156,7 @@ The GUI will open automatically!
 1. Click **TRACK 1** tab
 2. Click **Load Audio File**
 3. Navigate to `samples/stock/` and load one of these:
-   - **a11wlk01.wav** - "Columbia, this is Houston" (Apollo 11 mission audio) 🚀
+   - **a11wlk01.wav** - "Columbia, this is Houston" (Apollo 11 mission audio)
    - **a11wlk01-44_1.aiff** - Same audio, different format
    - **SinedPink.aiff** - Synthetic test tone
 4. Click **PLAY** to hear grains
@@ -236,7 +236,7 @@ s.unmute;        // Unmute
 
 ---
 
-## 🎨 MATERIAL MODES (Phase 6)
+## MATERIAL MODES (Phase 6)
 
 Each track has 3 material modes:
 
