@@ -1,19 +1,19 @@
-# S-4 RIVAL: Granular Synthesis Workstation
+# BEARULATOR: Granular Synthesis Workstation
 
 ![Bearulator GUI](material/bearulator-gooey.png)
 
 This is a 4-track granular synthesis sampler!
 
-## 🎯 Active TODOs
+## Active TODOs
 
-### Completed ✅
+### Completed 
 - [x] Remove loop buttons from viewfinder (Reset Loop, Select All)
 - [x] Add Play/Stop transport buttons to viewfinder
 - [x] Add spectral amplitude slider to viewfinder
 - [x] Fix volume issues (grain boost at 2.0x, soft limiter using tanh)
 - [x] Move all spectral engine sliders to viewfinder (Mix, Amp, Window Size, Overlaps, Rate, Pitch, Smear, Freeze)
 
-### Phase 12 Completed ✅
+### Phase 12 Completed
 - [x] MIDI integration (KeyStep Pro with 5 encoders + polyphonic notes)
 - [x] Recording viewfinder (live audio capture with region selection)
 - [x] Quad speaker output (4-channel spatial audio)
@@ -24,27 +24,27 @@ This is a 4-track granular synthesis sampler!
 
 ---
 
-## 🚀 THE M4 ULTIMATE SPEC (Phase 9+)
+## THE M4 ULTIMATE SPEC (Phase 9+)
 
 ### 🌌 Visual Flash (Doom Material Enhanced)
-- [x] **FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11 ✅)**
-- [x] **Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11 ✅)**
+- [x] **FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11)**
+- [x] **Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11 )**
 - [ ] **Neon Glow Rendering:** Hardware-accelerated "glow" effects for the playhead and loop regions
 
 ### 🔊 Overlooked Audio Components
-- [x] **Dual-Topology Analog-Modeled Filter (Per Track):** **(Phase 10 ✅)**
+- [x] **Dual-Topology Analog-Modeled Filter (Per Track):** **(Phase 10)**
   - ZDF (Zero-Delay Feedback) Ladder Filter - Liquid resonance with self-oscillation
   - State Variable Filter (SVF) - LP/HP/BP morph capability
   - Pre-Filter Drive Stage - Nonlinear saturation (.tanh) for filter "grit"
   - Bass Loss Compensation - Maintains low-end at high resonance
 - [ ] **Audio-Rate Modulation:** Upgrade from 750Hz control-rate to 48kHz audio-rate
 - [ ] **Transient Bypass Logic:** Keeps drum transients sharp during heavy spectral stretching
-- [x] **Phase-Aligned Granulation:** Prevents phase-cancellation in low-frequency textures **(Phase 9 ✅)**
-- [x] **Master Bus "Glue" Compressor:** Final stage compressor to bond the 4 tracks together **(Phase 9 ✅)**
+- [x] **Phase-Aligned Granulation:** Prevents phase-cancellation in low-frequency textures **(Phase 9)**
+- [x] **Master Bus "Glue" Compressor:** Final stage compressor to bond the 4 tracks together **(Phase 9)**
 
 ---
 
-## 💻 **HARDWARE PLATFORM**
+## **HARDWARE PLATFORM**
 
 **Target:** Mac Mini M4
 **RAM:** 24 GB
@@ -55,7 +55,7 @@ This is a 4-track granular synthesis sampler!
 - Headless Linux build (server deployment)
 - Raspberry Pi stripped version (portable/embedded)
 
-**Development Status:** ⚠️ Active development - Documentation evolving rapidly
+**Development Status:**Active development - Documentation evolving rapidly
 
 **📖 For complete feature list, see [FEATURES.md](FEATURES.md)**
 
@@ -150,7 +150,7 @@ The GUI will open automatically!
 
 ---
 
-## 🎵 BASIC WORKFLOW
+## BASIC WORKFLOW
 
 ### 1. Load Audio into Track 1
 1. Click **TRACK 1** tab
@@ -280,7 +280,7 @@ Each track has 3 material modes:
 
 ---
 
-## 📁 PROJECT STRUCTURE
+## PROJECT STRUCTURE
 
 ```
 granular/
@@ -305,11 +305,11 @@ granular/
 
 ---
 
-## 🎧 STOCK SAMPLES
+## STOCK SAMPLES
 
 The `samples/stock/` folder includes some great starter material:
 
-### Apollo 11 Mission Audio 🚀
+### Apollo 11 Mission Audio
 - **a11wlk01-44_1k.aiff** - "Columbia, this is Houston..."
 - Classic mission control transmission
 - Perfect for granular processing - rich textures with voice, static, and space
@@ -340,7 +340,7 @@ The `samples/stock/` folder includes some great starter material:
 
 ---
 
-## 🌊 ADVANCED FEATURES
+## ADVANCED FEATURES
 
 ### Modulation System (Phase 5)
 - Click **MOD** button in any track
@@ -373,7 +373,7 @@ The `samples/stock/` folder includes some great starter material:
 // 6. Press "Send to Track"
 ```
 
-### MIDI Control (Phase 12) 🎹
+### MIDI Control (Phase 12)
 **KeyStep Pro Integration:**
 - 5 encoder mappings (customizable CC assignments)
 - Polyphonic note triggering (4 MIDI channels → 4 tracks)
@@ -484,25 +484,4 @@ Remember: There's no "right" way to use this. Granular synthesis is all about ex
 - Use 1 overlap for clean playback
 - Record your output and feed it back in!
 
-Questions? Check `generic-commands.scd` or holler at Forrest.
-
-
-```
-      _____
-     /     \
-    | ^   ^ |
-    |   o   |   
-     \_____/
-       | |
-    ___| |___
-   /         \
-  |     x     |
-   \_________/
-```
-
-<!-- Local Variables: -->
-<!-- gptel-model: claude-haiku-4-5-20251001 -->
-<!-- gptel--backend-name: "Claude-Haiku-4.5" -->
-<!-- gptel-max-tokens: 6000 -->
-<!-- gptel--bounds: nil -->
-<!-- End: -->
+Questions? Check `generic-commands.scd.`
