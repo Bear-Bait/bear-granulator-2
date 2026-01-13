@@ -26,12 +26,12 @@ This is a 4-track granular synthesis sampler!
 
 ## THE M4 ULTIMATE SPEC (Phase 9+)
 
-### 🌌 Visual Flash (Doom Material Enhanced)
+### Visual Flash (Doom Material Enhanced)
 - [x] **FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11)**
 - [x] **Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11 )**
 - [ ] **Neon Glow Rendering:** Hardware-accelerated "glow" effects for the playhead and loop regions
 
-### 🔊 Overlooked Audio Components
+### Overlooked Audio Components
 - [x] **Dual-Topology Analog-Modeled Filter (Per Track):** **(Phase 10)**
   - ZDF (Zero-Delay Feedback) Ladder Filter - Liquid resonance with self-oscillation
   - State Variable Filter (SVF) - LP/HP/BP morph capability
@@ -132,7 +132,7 @@ The GUI will open automatically!
 
 ---
 
-## 🎛️ WHAT YOU'RE LOOKING AT
+## WHAT YOU'RE LOOKING AT
 
 ### 4 Track Tabs
 - **TRACK 1-4**: Full granular synthesis controls per track
