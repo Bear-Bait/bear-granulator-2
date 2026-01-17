@@ -837,43 +837,32 @@ Usage:
 				.align_(\left);
 
 			// Control buttons (bottom right)
-			// Phase 15: GRAIN ENGINE toggle
+			// Phase 16: GRAIN ENGINE toggle (Two Captains Fix)
 			grainEngineButton = Button(win, Rect(winWidth - 340, 290, 100, 30))
 				.states_([
 					["GRAIN: OFF", Color.white, Color.gray(0.4)],
 					["GRAIN: ON", Color.black, colors.green]
 				])
 				.font_(Font("Monaco", 10, true))
-				.value_(0)  // Start OFF
+				.value_(track.params[\grainOn] ? 1)  // Sync with param
 				.action_({ arg btn;
-					if(btn.value == 1, {
-						track.grainSynth.run(true);
-						trackManager.setParam(trackNum, \amp, 0.5);
-						"Track %: Grain engine RUNNING".format(trackNum + 1).postln;
-					}, {
-						track.grainSynth.run(false);
-						"Track %: Grain engine STOPPED".format(trackNum + 1).postln;
-					});
+					// The Fix: Set parameter instead of touching synth directly
+					trackManager.setParam(trackNum, \grainOn, btn.value);
+					"Track %: Grain engine %".format(trackNum + 1, if(btn.value==1, "ENABLED", "DISABLED")).postln;
 				});
 
-			// Phase 15: SPECTRAL ENGINE toggle
+			// Phase 16: SPECTRAL ENGINE toggle (Two Captains Fix)
 			spectralEngineButton = Button(win, Rect(winWidth - 230, 290, 100, 30))
 				.states_([
 					["SPECTRAL: OFF", Color.white, Color.gray(0.4)],
 					["SPECTRAL: ON", Color.black, colors.yellow]
 				])
 				.font_(Font("Monaco", 10, true))
-				.value_(0)  // Start OFF
+				.value_(track.params[\spectralOn] ? 1)  // Sync with param
 				.action_({ arg btn;
-					if(btn.value == 1, {
-						track.spectralSynth.run(true);
-						trackManager.setParam(trackNum, \spectralMix, 0.5);
-						trackManager.setParam(trackNum, \spectralAmp, 0.5);
-						"Track %: Spectral engine RUNNING".format(trackNum + 1).postln;
-					}, {
-						track.spectralSynth.run(false);
-						"Track %: Spectral engine STOPPED".format(trackNum + 1).postln;
-					});
+					// The Fix: Set parameter
+					trackManager.setParam(trackNum, \spectralOn, btn.value);
+					"Track %: Spectral engine %".format(trackNum + 1, if(btn.value==1, "ENABLED", "DISABLED")).postln;
 				});
 
 			// Refresh button

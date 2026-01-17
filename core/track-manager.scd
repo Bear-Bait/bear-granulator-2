@@ -102,6 +102,9 @@ Public API:
 				// Grain parameters
 				grainMode: 0,  // Phase 6: Default to TAPE mode (v2.1: renamed from mode)
 				engineMix: 0.0,  // HYBRID ENGINE: 0.0=Granular, 1.0=Direct, 0.5=Equal mix
+				grainOn: 1,       // Phase 16: Explicit toggle for Grain Engine (1=enabled)
+				spectralOn: 1,    // Phase 16: Explicit toggle for Spectral Engine (1=enabled)
+				directOn: 1,      // Phase 16: Explicit toggle for Direct Engine (1=enabled)
 				scale: [0, 2, 4, 5, 7, 9, 11],  // Phase 16: Major scale (MIDI note offsets)
 				quantizePitch: 0,  // Phase 16: Enable pitch quantization (0=off, 1=on)
 				grainSize: 0.1,
@@ -315,40 +318,51 @@ Public API:
 			track.params[param] = value;
 
 			// HYBRID ENGINE: Smart Sleep - Crossfade AND pause unused engines to save CPU
-			// Phase 16: Ghost Engine Fix - .run(false) on unused engines
+			// Phase 16: "Two Captains" Fix - Unified engine control with grainOn/directOn flags
 			if(param == \engineMix, {
 				var granAmp, directAmp, baseAmp;  // All vars at top
+				var grainEnabled = track.params[\grainOn] ? 1;
+				var directEnabled = track.params[\directOn] ? 1;
 
-				case
-					{ value <= 0.01 } {  // Pure GRANULAR (0.0)
-						granAmp = 1.0;
-						directAmp = 0.0;
-						// SMART SLEEP: Pause Direct engine to save CPU
-						if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(false) });
-						if(track.grainSynth.notNil, { track.grainSynth.run(true) });
-					}
-					{ value >= 0.99 } {  // Pure DIRECT (1.0)
-						granAmp = 0.0;
-						directAmp = 1.0;
-						// SMART SLEEP: Pause Grain engine to save CPU
-						if(track.grainSynth.notNil, { track.grainSynth.run(false) });
-						if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(true) });
-					}
-					{ true } {  // MIX MODE (0.01-0.99) - Equal-power crossfade
-						// Equal-power crossfade law (constant energy)
-						granAmp = (1 - value).sqrt;  // Full at 0.0, silent at 1.0
-						directAmp = value.sqrt;      // Silent at 0.0, full at 1.0
-						// SMART SLEEP: Wake up BOTH engines for hybrid mode
-						if(track.grainSynth.notNil, { track.grainSynth.run(true) });
-						if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(true) });
-					};
+				// 1. Calculate Amplitudes (Equal Power)
+				// Fix Ghosting: Force silence if component is negligible (< 0.001)
+				granAmp = if(value > 0.999, { 0.0 }, { (1 - value).sqrt });
+				directAmp = if(value < 0.001, { 0.0 }, { value.sqrt });
 
-				// Apply amplitude scaling to both engines (silently - no console spam)
+				// 2. Apply "Smart Sleep" Logic
+				// Only run if: (Volume is audible) AND (User hasn't muted it)
+				if(track.grainSynth.notNil, {
+					var shouldRun = (value < 0.999) and: { grainEnabled == 1 };
+					track.grainSynth.run(shouldRun);
+				});
+
+				if(track.directPlaybackSynth.notNil, {
+					var shouldRun = (value > 0.001) and: { directEnabled == 1 };
+					track.directPlaybackSynth.run(shouldRun);
+				});
+
+				// 3. Update Volumes
 				baseAmp = track.params[\amp] ? 0.5;
-				track.grainSynth.set(\amp, baseAmp * granAmp);
-				track.directPlaybackSynth.set(\amp, baseAmp * directAmp);
+				if(track.grainSynth.notNil, { track.grainSynth.set(\amp, baseAmp * granAmp) });
+				if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.set(\amp, baseAmp * directAmp) });
 
 				^this;  // Done, don't send to synths again
+			});
+
+			// Phase 16: Handle explicit ON/OFF toggles (grainOn, directOn)
+			// This allows the GUI buttons to trigger the logic above
+			if((param == \grainOn) or: { param == \directOn }, {
+				// Re-trigger the mix logic to apply the new Mute state
+				this.setParam(trackNum, \engineMix, track.params[\engineMix]);
+				^this;
+			});
+
+			// Phase 16: Handle Spectral ON/OFF
+			if(param == \spectralOn, {
+				if(track.spectralSynth.notNil, {
+					track.spectralSynth.run(value == 1);
+				});
+				^this;
 			});
 
 
