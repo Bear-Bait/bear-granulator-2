@@ -1295,6 +1295,54 @@ Usage:
 					trackManager.setParam(trackNum, \spectralFreeze, btn.value);
 				});
 
+			// === WOW & FLUTTER CONTROLS (Phase 16) ===
+			yPos = yPos + 50;
+			StaticText(win, Rect(450, yPos, 200, 20))
+				.string_("WOW & FLUTTER")
+				.font_(Font("DejaVu Sans Mono", 10, true))
+				.stringColor_(colors.cyan)
+				.toolTip_("Vintage tape deck degradation (Boards of Canada vibes)");
+			yPos = yPos + 25;
+
+			// Wow Rate (0.1-2 Hz)
+			StaticText(win, Rect(450, yPos, 120, 20))
+				.string_("Wow Rate")
+				.font_(Font("DejaVu Sans Mono", 9))
+				.stringColor_(Color.gray(0.8));
+			NumberBox(win, Rect(580, yPos, 60, 20))
+				.value_(track.params[\wowRate] ? 0.5)
+				.decimals_(2)
+				.font_(Font("DejaVu Sans Mono", 9))
+				.action_({ arg nb;
+					trackManager.setParam(trackNum, \wowRate, nb.value.clip(0.1, 2.0));
+				})
+				.toolTip_("Slow pitch drift frequency (0.1-2 Hz)");
+			yPos = yPos + 22;
+
+			// Wow Depth (0.0-1.0)
+			makeSlider.value(win, 450, yPos, "Wow Depth", ControlSpec(0, 1, \lin), \wowDepth, track.params[\wowDepth] ? 0.0);
+			uiWidgets[\wowDepth] = makeSlider.value(win, 450, yPos, "Wow Depth", ControlSpec(0, 1, \lin), \wowDepth, track.params[\wowDepth] ? 0.0);
+			yPos = yPos + 22;
+
+			// Flutter Rate (5-15 Hz)
+			StaticText(win, Rect(450, yPos, 120, 20))
+				.string_("Flutter Rate")
+				.font_(Font("DejaVu Sans Mono", 9))
+				.stringColor_(Color.gray(0.8));
+			NumberBox(win, Rect(580, yPos, 60, 20))
+				.value_(track.params[\flutterRate] ? 10.0)
+				.decimals_(2)
+				.font_(Font("DejaVu Sans Mono", 9))
+				.action_({ arg nb;
+					trackManager.setParam(trackNum, \flutterRate, nb.value.clip(5, 15));
+				})
+				.toolTip_("Fast pitch warble frequency (5-15 Hz)");
+			yPos = yPos + 22;
+
+			// Flutter Depth (0.0-1.0)
+			makeSlider.value(win, 450, yPos, "Flutter Depth", ControlSpec(0, 1, \lin), \flutterDepth, track.params[\flutterDepth] ? 0.0);
+			uiWidgets[\flutterDepth] = makeSlider.value(win, 450, yPos, "Flutter Depth", ControlSpec(0, 1, \lin), \flutterDepth, track.params[\flutterDepth] ? 0.0);
+
 			// Store references
 			windows[trackNum] = win;
 			soundFileViews[trackNum] = sfv;

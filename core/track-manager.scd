@@ -183,7 +183,13 @@ Public API:
 				spectralPitch: 0,      // Pitch shift (-24 to +24, semitone steps)
 				spectralFreeze: 0,     // Freeze toggle (1=freeze)
 				spectralSmear: 0,      // Spectral smear (0-1)
-				spectralAmp: 0.5       // Spectral output volume (0-1)
+				spectralAmp: 0.5,      // Spectral output volume (0-1)
+
+				// Phase 16: Wow & Flutter (Tape Degradation)
+				wowRate: 0.5,          // Wow LFO frequency (0.1-2 Hz)
+				wowDepth: 0.0,         // Wow intensity (0.0-1.0)
+				flutterRate: 10.0,     // Flutter LFO frequency (5-15 Hz)
+				flutterDepth: 0.0      // Flutter intensity (0.0-1.0)
 			);
 
 			track.params = defaultParams.copy;

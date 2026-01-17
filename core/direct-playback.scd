@@ -24,11 +24,16 @@ SynthDef(\bearulatorDirectPlayback, {
 	    amp = 0.5,          // Output amplitude
 	    pan = 0.0,          // Stereo pan (-1 to 1)
 	    pitch = 0,          // Pitch shift in semitones (added to rate)
-	    timeStretch = 1.0;  // Time stretch (speed without pitch change, 0.5-2.0)
+	    timeStretch = 1.0,  // Time stretch (speed without pitch change, 0.5-2.0)
+	    wowRate = 0.5,      // Phase 16: Wow LFO frequency (0.1-2 Hz)
+	    wowDepth = 0.0,     // Phase 16: Wow intensity (0.0-1.0, 0=off)
+	    flutterRate = 10.0, // Phase 16: Flutter LFO frequency (5-15 Hz)
+	    flutterDepth = 0.0; // Phase 16: Flutter intensity (0.0-1.0, 0=off)
 
 	var sig, bufFrames, loopStartFrame, loopEndFrame, bufChannels;
 	var playbackRate, phase, pitchShiftRatio, needsPitchShift;
 	var smoothRate, smoothLoopStart, smoothLoopEnd, smoothAmp, smoothPan, smoothTimeStretch;
+	var wowMod, flutterMod, tapeDegradation;  // Phase 16: Tape degradation modulators
 
 	// Get buffer info
 	bufFrames = BufFrames.kr(bufnum);
@@ -44,9 +49,16 @@ SynthDef(\bearulatorDirectPlayback, {
 	smoothPan = pan.lag(0.05);  // Smooth pan changes
 	smoothTimeStretch = timeStretch.lag(0.1);  // Smooth time stretch changes
 
-	// Calculate playback rate (combine rate param + pitch shift + time stretch)
+	// Phase 16: WOW & FLUTTER - Vintage tape deck degradation
+	// Wow = slow pitch drift (Boards of Canada / William Basinski vibes)
+	// Flutter = fast pitch warble (broken cassette transport)
+	wowMod = LFNoise1.kr(wowRate).range(1 - (wowDepth * 0.05), 1 + (wowDepth * 0.05));
+	flutterMod = LFNoise2.kr(flutterRate).range(1 - (flutterDepth * 0.02), 1 + (flutterDepth * 0.02));
+	tapeDegradation = wowMod * flutterMod;  // Combined tape effect
+
+	// Calculate playback rate (combine rate param + pitch shift + time stretch + tape degradation)
 	// timeStretch affects speed, then PitchShift compensates to maintain pitch
-	playbackRate = smoothRate * (2 ** (pitch.lag(0.05) / 12)) * smoothTimeStretch;
+	playbackRate = smoothRate * (2 ** (pitch.lag(0.05) / 12)) * smoothTimeStretch * tapeDegradation;
 	pitchShiftRatio = 1.0 / smoothTimeStretch;  // Compensate for time stretch
 
 	// Only enable PitchShift when timeStretch != 1.0 (M4 CPU optimization)
