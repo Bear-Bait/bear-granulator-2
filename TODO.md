@@ -4,140 +4,113 @@
 
 ---
 
-## 🎯 **Current Phase: 15.5 (Stabilization + Bugfixes Complete)**
+## 🎯 **Current Phase: 16 (Two Captains Fix + Wow & Flutter)**
 
-**Status:** ✅ TIER 1 & TIER 2 Complete + Critical Bugfixes
-**Date:** January 5, 2026
+**Status:** 🚧 In Progress
+**Date:** January 17, 2026
 
 ---
 
-## ✅ **COMPLETED: Phase 15.5 Engine Stabilization (Jan 5, 2026)**
+## ✅ **COMPLETED TODAY: Phase 16 (Jan 17, 2026)**
 
-All critical engine stability improvements and MIDI features are now **PRODUCTION READY**.
+### Two Captains Fix ✅
 
-### TIER 1: Critical Engine Stability ✅
+**Problem:** GUI toggle buttons fought with `engineMix` Smart Sleep logic for engine control.
 
-1. **✅ Stereo-Aware Direct Playback**
-   - Auto-detects mono/stereo buffers via `BufChannels.kr`
-   - Proper Pan2/Balance2 routing
-   - Eliminates "hollowness" with stereo samples
-   - File: `core/direct-playback.scd`
+**Solution:** Unified parameter-based engine control system.
 
-2. **✅ Conditional PitchShift (M4 CPU Optimization)**
-   - Only runs when `timeStretch != 1.0`
-   - Saves ~15-20% CPU when inactive
-   - Uses `Select.ar` for glitch-free bypass
-   - File: `core/direct-playback.scd`
-
-3. **✅ Simple Engine Toggle (REVERTED from crossfading)**
-   - Simple DIRECT vs GRANULAR toggle (MIX mode removed)
-   - Uses `.run(true/false)` for clean switching
+1. **✅ Added Engine Enable Parameters**
+   - `grainOn`, `spectralOn`, `directOn` (single source of truth)
    - File: `core/track-manager.scd`
 
-4. **✅ Cascaded Saturation with Anti-Aliasing**
-   - 4-stage cascaded saturation with aggressive filtering
-   - Multi-stage soft clipping + DC removal
-   - Approximates oversampling without sc3-plugins dependency
-   - File: `core/effects-color.scd`
+2. **✅ Rewrote Smart Sleep Logic**
+   - Checks enable flags before waking engines
+   - Fixed ghosting bug (threshold 1% → 0.1%, explicit 0.0 amp)
+   - File: `core/track-manager.scd`
 
-### TIER 2: Musical Scaling & Performance ✅
+3. **✅ Updated Viewfinder Buttons**
+   - Buttons now set parameters (not manual `.run()`)
+   - Sync with backend state correctly
+   - File: `gui/viewfinder.scd`
 
-5. **✅ Logarithmic Velocity Mapping (KeyStep Pro)**
-   - Exponential curve: `vel.linexp(1, 127, 0.01, 1.0)`
-   - Sounds "analog" and responsive (not "static")
-   - Ready-to-enable saturation/resonator velocity mapping
-   - File: `core/midi-mapping.scd`
+4. **✅ Test Suite Created**
+   - 7 comprehensive tests for unified control
+   - File: `tests/two-captains-fix-test.scd` (worktree)
 
-6. **✅ MIDI Clock Sync for Tempo-Synced LFOs**
-   - Receives MIDI clock (24 PPQN)
-   - Calculates BPM with smoothing
-   - Added `tempoSync`, `tempo`, `syncMode` params to modulators
-   - Sync modes: 1/4, 1/8, 1/16, 1/8t, 1/16t notes
-   - Updates all 16 modulators (4 tracks × 4 mods) automatically
-   - Files: `core/modulator.scd`, `core/midi-mapping.scd`
-
-7. **❌ Resonator Eco Mode (REMOVED)**
-   - Attempted dynamic band count (128 vs 32 bands)
-   - Runtime error: Array.fill size must be literal integer
-   - Reverted to fixed 128-band resonator
-   - File: `core/mix-bus.scd`
-
-### Critical Bugfixes (Jan 5, 2026) ✅
-
-8. **✅ Audio Burst on Sample Load (FIXED)**
-   - Root cause: Synths reading from buffer during free()
-   - Fix: Stop all synths BEFORE freeing old buffer
-   - File: `gui/four-track-view.scd`
-   - Commit: d2020c2
-
-9. **✅ Grain Engine Stereo Balance (FIXED)**
-   - Root cause: Balance2.ar misuse (amp as 4th parameter)
-   - Fix: Apply amplitude first, then Balance2 for pan only
-   - Stereo field now perfectly balanced
-   - File: `core/grain-engine.scd`
-   - Commit: c258bc1
-
-10. **✅ GUI Controls Added**
-    - Tempo Sync toggle + Mode selector in modulation window
-    - Removed engineMix slider (MIX mode removed)
-    - File: `gui/modulation-window.scd`
+**Commit:** 32048d1 - Pushed to GitHub ✅
 
 ---
 
-## 📊 **Performance Impact**
+## ✅ **COMPLETED: Wow & Flutter Tape Degradation**
 
-**CPU Savings:**
-- Conditional PitchShift: ~15-20% when timeStretch=1.0
-- Resonator Eco Mode: ~75% resonator CPU in eco mode
-- Combined: Massive headroom for M4 processor
+**Status:** Complete ✅
+**Commit:** ea32c8e - Pushed to GitHub ✅
 
-**Sound Quality Improvements:**
-- Oversampled saturation: Professional analog character
-- Stereo handling: Full fidelity with stereo samples
-- Engine crossfading: Smooth, glitch-free transitions
-- Velocity mapping: Musical, expressive performance
+1. **✅ Update SynthDef (core/direct-playback.scd)**
+   - Added 4 parameters: `wowRate`, `wowDepth`, `flutterRate`, `flutterDepth`
+   - Wow = LFNoise1.kr (slow drift, 0.1-2 Hz, ±5% depth)
+   - Flutter = LFNoise2.kr (fast warble, 5-15 Hz, ±2% depth)
+   - Combined modulation of PlayBuf rate
 
----
+2. **✅ Update Track Manager (core/track-manager.scd)**
+   - Added 4 new params to defaultParams
+   - Default: wowRate=0.5, wowDepth=0.0, flutterRate=10.0, flutterDepth=0.0
 
-## 🎯 **How to Use New Features**
+3. **✅ Add GUI Controls (gui/viewfinder.scd)**
+   - "WOW & FLUTTER" section in viewfinder (CYAN label)
+   - 2 rate NumberBoxes + 2 depth Sliders
+   - Positioned after Spectral Engine controls
 
-### Engine Crossfading
-```supercollider
-~trackManager.setParam(0, \engineMode, 2);  // MIX mode
-~trackManager.setParam(0, \engineMix, 0.5);  // Equal mix
-// Morph from grain to direct smoothly!
-```
+4. **✅ Test Script Created**
+   - File: `tests/wow-flutter-test.scd` (worktree)
+   - 6 comprehensive tests
 
-### Tempo-Synced LFOs
-```supercollider
-// Enable tempo sync on modulator
-track.modulators[0].set(\tempoSync, 1);  // Turn on sync
-track.modulators[0].set(\syncMode, 1);   // 1/8 note
-// LFO now follows MIDI clock!
-```
-
-### Eco Mode (for MIX mode)
-```supercollider
-~masterBus.set(\ecoMode, 1);  // 32-band mode
-// Save 75% resonator CPU!
-```
+**Features:**
+- Vintage cassette deck emulation (Boards of Canada vibes)
+- Disintegration loop aesthetic (William Basinski)
+- Minimal CPU impact (2 LFO generators)
 
 ---
 
-## ✅ **Completed Phases**
+## ✅ **COMPLETED: KeyStep Pro Multi-Track Routing**
 
-- [x] **Phase 1-9:** Core engine, GUI, effects, filters
-- [x] **Phase 10:** Dual-topology filters (ZDF Ladder + SVF)
-- [x] **Phase 11:** Visual feedback (FFT spectrogram, grain pulse)
-- [x] **Phase 12:** MIDI, recording viewfinder, quad output
-- [x] **Phase 13:** Audio-rate modulation, spatial automation
-- [x] **Phase 14:** Preset system, complete tutorial
-- [x] **Phase 15:** Time Stretch, Direct Mode, Presets, MIX Mode (7 features)
-- [x] **Phase 15.5:** Engine Stabilization + MIDI Enhancements (7 features)
+**Status:** Complete ✅
+**Commit:** 47fca56 - Pushed to GitHub ✅
+
+1. **✅ Update MIDI Mapping (core/keystep-pro-mapping.scd)**
+   - Added `midiEnabledTracks` boolean array [true, false, false, false]
+   - Modified CC/note handlers to broadcast to all enabled tracks
+   - Added `enableTrackMIDI(trackNum, enabled)` function
+
+2. **✅ Add GUI Buttons (gui/four-track-view.scd)**
+   - 4 toggle buttons in Master tab under "KEYSTEP PRO ROUTING"
+   - Labels: "T1 MIDI ON/OFF", "T2 MIDI ON/OFF", etc.
+   - Green when enabled, gray when disabled
+
+3. **✅ Test Script Created**
+   - File: `tests/keystep-multitrack-test.scd` (worktree)
+   - 7 comprehensive tests
+
+**Features:**
+- Control multiple tracks simultaneously with one KeyStep
+- Default: Track 1 only (backward compatible)
+- Use cases: all 4 tracks, selective routing (1+3, 2+4, etc.)
 
 ---
 
-## 📋 **Backlog (Phase 16+)**
+## 📋 **Backlog (Phase 17+)**
+
+### Spectral Photobooth (~4-6 hours)
+- RecordBuf capture of spectral engine output
+- Snapshot button in viewfinder
+- Target track selector
+- Instant loading of frozen spectral frame
+
+### Shared Clock + Phase Lock (~6-8 hours)
+- Global TempoClock for all tracks
+- Tempo parameter + subdivision selector
+- Phase-locked playback system
+- Trigger system (track → track triggering)
 
 ### Future Features:
 - [ ] Preset management GUI (visual browser)
@@ -155,11 +128,25 @@ track.modulators[0].set(\syncMode, 1);   // 1/8 note
 
 ---
 
+## ✅ **Completed Phases**
+
+- [x] **Phase 1-9:** Core engine, GUI, effects, filters
+- [x] **Phase 10:** Dual-topology filters (ZDF Ladder + SVF)
+- [x] **Phase 11:** Visual feedback (FFT spectrogram, grain pulse)
+- [x] **Phase 12:** MIDI, recording viewfinder, quad output
+- [x] **Phase 13:** Audio-rate modulation, spatial automation
+- [x] **Phase 14:** Preset system, complete tutorial
+- [x] **Phase 15:** Time Stretch, Direct Mode, Presets, MIX Mode
+- [x] **Phase 15.5:** Engine Stabilization + MIDI Enhancements
+- [x] **Phase 16 (Partial):** Two Captains Fix (engine toggle conflict)
+
+---
+
 ## 🐛 **Known Issues**
 
-- "Too many grains!" warnings when density/overlap is very high (reduce settings)
-- Phase 15.5 features need extended real-world testing
-- Tempo sync GUI controls added but need user testing
+- Waveform display uses temp files for recorded buffers
+- Modulation window is a separate popup (not integrated)
+- "Too many grains!" warnings when density/overlap very high
 
 ---
 
@@ -167,14 +154,21 @@ track.modulators[0].set(\syncMode, 1);   // 1/8 note
 
 **Overall Completion:**
 - **Phase 1-15.5:** 100% ✅
-- **System Status:** Production Ready
+- **Phase 16:** 100% ✅ (Two Captains, Wow & Flutter, KeyStep routing)
 
-**Next Steps:**
-- User testing and feedback
-- Performance optimization if needed
-- Additional features as requested
+**Current Session Goals:**
+- ✅ Two Captains Fix
+- ✅ Wow & Flutter Tape Degradation
+- ✅ KeyStep Pro Multi-Track Routing
+
+**Session Summary:**
+- 3 major features implemented
+- 5 files modified (core/track-manager.scd, core/direct-playback.scd, core/keystep-pro-mapping.scd, gui/viewfinder.scd, gui/four-track-view.scd)
+- 3 commits pushed to GitHub
+- 3 test scripts created (worktree)
+- Total time: ~3 hours
 
 ---
 
-**Last Updated:** January 5, 2026 (Phase 15.5 Complete)
-**Version:** Stabilization Release - Production Ready
+**Last Updated:** January 17, 2026 (Phase 16 COMPLETE ✅)
+**Version:** v2.3 (Two Captains Fix + Wow & Flutter + Multi-Track MIDI)
