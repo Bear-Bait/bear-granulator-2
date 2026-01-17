@@ -672,6 +672,38 @@ Phase 7 Features:
 				"All tracks STOPPED".postln;
 			});
 
+		yPos = yPos + 50;
+
+		// === PHASE 16: KEYSTEP PRO MULTI-TRACK ROUTING ===
+		StaticText(parent, Rect(10, yPos, 400, 25))
+			.string_("KEYSTEP PRO ROUTING")
+			.font_(Font("DejaVu Sans Mono", 12, true))
+			.stringColor_(colors.cyan)
+			.toolTip_("Enable KeyStep control for multiple tracks simultaneously");
+
+		yPos = yPos + 30;
+
+		// 4 track enable buttons
+		4.do({ arg i;
+			var button = Button(parent, Rect(10 + (i * 105), yPos, 100, 30))
+				.states_([
+					["T% MIDI OFF".format(i + 1), colors.fg, Color.gray(0.3)],
+					["T% MIDI ON".format(i + 1), colors.black, colors.green]
+				])
+				.font_(Font("DejaVu Sans Mono", 9, true))
+				.value_(if(i == 0, 1, 0))  // Track 1 enabled by default
+				.action_({ arg btn;
+					if(~keyStepProMapping.notNil, {
+						~keyStepProMapping.enableTrackMIDI(i, btn.value == 1);
+					}, {
+						"KeyStep Pro mapping not initialized".warn;
+					});
+				})
+				.toolTip_("Enable KeyStep CC/note messages for Track %".format(i + 1));
+		});
+
+		yPos = yPos + 40;
+
 		// === PHASE 15: PRESET SYSTEM ===
 		// Save/Load/Browse buttons for presets
 

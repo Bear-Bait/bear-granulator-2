@@ -26,8 +26,21 @@ Features:
 	enabled: false,
 	trackManager: nil,
 
+	// Phase 16: Multi-track routing (which tracks receive MIDI)
+	midiEnabledTracks: [true, false, false, false],  // Default: Track 1 only
+
+	// Phase 16: Enable/disable MIDI routing for a specific track
+	enableTrackMIDI: { arg self, trackNum, enabled = true;
+		self.midiEnabledTracks[trackNum] = enabled;
+		"KeyStep Pro: Track % MIDI %".format(
+			trackNum + 1,
+			if(enabled, "ENABLED", "DISABLED")
+		).postln;
+	},
+
 	// --- 🎛️ SMART MAPPER TOOL ---
 	// Arguments: CC Number, Parameter Name, Min, Max, Warp (\lin or \exp), Track Number
+	// Phase 16: Now broadcasts to all enabled tracks (not just trackNum)
 	mapKnob: { arg self, cc, param, min=0.0, max=1.0, warp=\lin, trackNum=0;
 		var key = ("ksp_cc_" ++ cc).asSymbol;
 
@@ -47,19 +60,23 @@ Features:
 				norm = val.linlin(0, 127, min, max);
 			});
 
-			// 2. Update Engine
-			self.trackManager.setParam(trackNum, param, norm);
+			// 2. Phase 16: Broadcast to ALL enabled tracks (not just trackNum)
+			4.do({ arg i;
+				if(self.midiEnabledTracks[i], {
+					self.trackManager.setParam(i, param, norm);
 
-			// 3. Special Case: Sync Spectral Pitch if mapping Pitch
-			if(param == \pitch, {
-				self.trackManager.setParam(trackNum, \spectralPitch, norm);
-			});
+					// Special Case: Sync Spectral Pitch if mapping Pitch
+					if(param == \pitch, {
+						self.trackManager.setParam(i, \spectralPitch, norm);
+					});
 
-			// 4. Update Visuals (Cyan Overlay)
-			if(~viewfinder.notNil, {
-				{
-					~viewfinder.showCCFeedback(trackNum, param.asString, norm);
-				}.defer;
+					// Update Visuals (Cyan Overlay)
+					if(~viewfinder.notNil, {
+						{
+							~viewfinder.showCCFeedback(i, param.asString, norm);
+						}.defer;
+					});
+				});
 			});
 
 		}, cc, srcID: nil, argTemplate: nil, dispatcher: nil);
@@ -149,8 +166,8 @@ Features:
 	},
 
 	// Set up polyphonic keyboard handlers
+	// Phase 16: Now broadcasts to all enabled tracks
 	setupKeyboardHandlers: { arg self;
-		var trackNum = 0;  // Keyboard controls Track 1
 		var noteOnHandler, noteOffHandler;
 
 		// Note On: Set pitch based on key
@@ -168,26 +185,26 @@ Features:
 			// Logarithmic velocity mapping (1-127 → 0.01-1.0)
 			velocity = vel.linexp(1, 127, 0.01, 1.0);
 
-			// Set pitch on track
-			self.trackManager.setParam(trackNum, \pitch, pitchOffset);
-			self.trackManager.setParam(trackNum, \spectralPitch, pitchOffset);
+			// Phase 16: Broadcast to all enabled tracks
+			4.do({ arg i;
+				if(self.midiEnabledTracks[i], {
+					// Set pitch on track
+					self.trackManager.setParam(i, \pitch, pitchOffset);
+					self.trackManager.setParam(i, \spectralPitch, pitchOffset);
 
-			// Optional: Boost grain density on attack (velocity-sensitive)
-			// Uncomment to enable:
-			// var baseOverlap = self.trackManager.getTrack(trackNum).params[\overlap] ? 4;
-			// var attackOverlap = (baseOverlap * (1 + velocity)).min(16);
-			// self.trackManager.setParam(trackNum, \overlap, attackOverlap);
-
-			// Visual feedback
-			if(~viewfinder.notNil, {
-				{
-					~viewfinder.showNotePulse(trackNum, velocity);
-				}.defer;
+					// Visual feedback
+					if(~viewfinder.notNil, {
+						{
+							~viewfinder.showNotePulse(i, velocity);
+						}.defer;
+					});
+				});
 			});
 
-			// Debug
-			"♪ Note ON: % (MIDI %) → Pitch: % semitones".format(
-				num.midicps.round(0.01), num, pitchOffset
+			// Debug (show only once, not per track)
+			"♪ Note ON: % (MIDI %) → Pitch: % semitones (% tracks)".format(
+				num.midicps.round(0.01), num, pitchOffset,
+				self.midiEnabledTracks.count({ |x| x == true })
 			).postln;
 		});
 
