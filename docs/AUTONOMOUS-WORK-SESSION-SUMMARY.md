@@ -147,7 +147,7 @@
 ### 2. Visual Spatial Modulation
 ```supercollider
 // 1. Set up spatial modulation (LFO → Quad X)
-~s4ModulationWindow.value(~trackManager, s, 0).create;
+~bearulatorModulationWindow.value(~trackManager, s, 0).create;
 // Create LFO, route to "Quad X"
 
 // 2. Open quad panner
@@ -303,7 +303,7 @@ s.avgCPU;  // Should be reasonable (see guide)
 - Experimental per-grain quad engine
 - Professional-grade audio-rate modulation
 
-**The S-4 RIVAL is now:**
+**The BEARULATOR is now:**
 - Fully integrated (quad loads automatically)
 - Visually enhanced (real-time trails)
 - Optimized (detailed performance guide)
@@ -317,4 +317,4 @@ s.avgCPU;  // Should be reasonable (see guide)
 **Time:** ~4 hours of focused implementation
 **Result:** Production-ready quad system with visual feedback and documentation
 
-Sleep well, and enjoy the enhanced S-4 RIVAL when you wake up! ✨🔊🌌
+Sleep well, and enjoy the enhanced BEARULATOR when you wake up! ✨🔊🌌

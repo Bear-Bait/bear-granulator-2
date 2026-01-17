@@ -1,5 +1,5 @@
 // SAMPLE RHYTHMS - Trigger actual audio files instead of granular modulation
-// Created for S-4 RIVAL Bearulator
+// Created for BEARULATOR Bearulator
 // Uses Dirt-Samples and Tone.js instruments
 
 // ============================================================================

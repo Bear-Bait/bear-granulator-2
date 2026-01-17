@@ -1,6 +1,6 @@
 /*
 ====================================
-S-4 RIVAL: GRANULAR SCULPTING SAMPLER
+BEARULATOR: GRANULAR SCULPTING SAMPLER
 ====================================
 
 Main boot script
@@ -59,7 +59,7 @@ var basePath = thisProcess.nowExecutingPath.dirname;
 );
 
 "============================================".postln;
-"S-4 RIVAL - GRANULAR SCULPTING SAMPLER".postln;
+"BEARULATOR - GRANULAR SCULPTING SAMPLER".postln;
 "Phase 4: 4-Track Architecture".postln;
 "============================================".postln;
 "".postln;
@@ -233,13 +233,13 @@ fork {
 		"Initializing 4-track system...".postln;
 
 		// Initialize track manager
-		~trackManager = ~s4TrackManager.value(s);
+		~trackManager = ~bearulatorTrackManager.value(s);
 		~trackManager.init;
 		0.2.wait;
 		"  ✓ Track manager initialized".postln;
 
 		// Initialize preset manager (Phase 15)
-		~presetManager = ~s4PresetManager.value(~trackManager);
+		~presetManager = ~bearulatorPresetManager.value(~trackManager);
 		0.1.wait;
 		"  ✓ Preset manager initialized".postln;
 
@@ -251,7 +251,7 @@ fork {
 		"  ✓ 4 tracks created".postln;
 
 		// Create master bus synth (MUST use addToTail)
-		~masterBus = Synth(\s4MasterBus, [
+		~masterBus = Synth(\bearulatorMasterBus, [
 			\track1Bus, ~trackManager.getTracks[0].audioBus.index,
 			\track2Bus, ~trackManager.getTracks[1].audioBus.index,
 			\track3Bus, ~trackManager.getTracks[2].audioBus.index,
@@ -266,25 +266,25 @@ fork {
 		~trackManager.setMasterBus(~masterBus);
 
 		// Create 4-track GUI
-		~gui = ~s4FourTrackGUI.value(~trackManager, ~masterBus, s);
+		~gui = ~bearulatorFourTrackGUI.value(~trackManager, ~masterBus, s);
 		{ ~gui.create; }.defer;
 		0.2.wait;
 		"  ✓ Four-track GUI created".postln;
 
 		// Initialize viewfinder (Phase 7)
-		~viewfinder = ~s4Viewfinder.value(s, ~trackManager);
+		~viewfinder = ~bearulatorViewfinder.value(s, ~trackManager);
 		"  ✓ Viewfinder initialized".postln;
 
 		// Phase 15: Initialize spectrum analyzer (FabFilter-style)
-		~spectrumAnalyzer = ~s4SpectrumAnalyzer.value(s, ~masterBus, ~trackManager);
+		~spectrumAnalyzer = ~bearulatorSpectrumAnalyzer.value(s, ~masterBus, ~trackManager);
 		"  ✓ Spectrum analyzer initialized (click SPECTRUM button in Master tab)".postln;
 
 		// Phase 12: Initialize quad spatial panner
-		~quadPanner = ~s4QuadPanner.value(~trackManager);
+		~quadPanner = ~bearulatorQuadPanner.value(~trackManager);
 		"  ✓ Quad panner initialized (click QUAD PANNER button to open)".postln;
 
 		// Phase 14: Initialize preset system
-		~presets = ~s4PresetSystem.value(~trackManager);
+		~presets = ~bearulatorPresetSystem.value(~trackManager);
 		~presets.init;
 		0.1.wait;
 

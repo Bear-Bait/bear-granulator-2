@@ -1,5 +1,5 @@
 /*
-S-4 RIVAL: Preset Examples & Sound Design Templates
+BEARULATOR: Preset Examples & Sound Design Templates
 Phase 14 - Production-Ready Starting Points
 
 10 Curated Presets:
@@ -22,7 +22,7 @@ Usage:
 (
 "".postln;
 "════════════════════════════════════════════════".postln;
-"  S-4 RIVAL: Creating Example Presets".postln;
+"  BEARULATOR: Creating Example Presets".postln;
 "  Phase 14 - Sound Design Templates".postln;
 "════════════════════════════════════════════════".postln;
 "".postln;

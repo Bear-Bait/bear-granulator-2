@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Modulation Window
+BEARULATOR: Modulation Window
 Phase 5 - Per-Track Modulation Control
 
 Opens a dedicated window for modulation control of a single track
@@ -8,7 +8,7 @@ Opens a dedicated window for modulation control of a single track
 - Real-time visualization (future)
 */
 
-~s4ModulationWindow = { arg trackManager, server, trackNum;
+~bearulatorModulationWindow = { arg trackManager, server, trackNum;
 	var window, makeModulatorSection;
 
 	// === HELPER: Create modulator controls ===
@@ -19,7 +19,7 @@ Opens a dedicated window for modulation control of a single track
 		var enableButton, statusText;
 
 		// Section box
-		CompositeView(parent, Rect(x, y, 340, 220))
+		CompositeView(parent, Rect(x, y, 340, 260))
 			.background_(Color.gray(0.2));
 
 		// Section label
@@ -60,8 +60,27 @@ Opens a dedicated window for modulation control of a single track
 			.value_(0)
 			.font_(Font("Monaco", 9));
 
+		yPos = yPos + 25;
+
+		// Phase 16: MOSAIC MODE - Source track selector for Envelope Follower
+		StaticText(parent, Rect(x + 10, yPos, 55, 20))
+			.string_("Listen:")
+			.font_(Font("Monaco", 9))
+			.stringColor_(Color.new255(0, 170, 170)); // Cyan for special feature
+
+		PopUpMenu(parent, Rect(x + 70, yPos, 95, 20))
+			.items_(["Track 1", "Track 2", "Track 3", "Track 4"])
+			.value_(trackNum)  // Default to self
+			.font_(Font("Monaco", 9))
+			.action_({ arg menu;
+				trackManager.setModSourceTrack(trackNum, modNum, menu.value);
+			})
+			.toolTip_("Which track's audio to follow (Mosaic Mode)");
+
+		yPos = yPos + 25;
+
 		// Shape/Waveform selector
-		StaticText(parent, Rect(x + 185, yPos, 45, 20))
+		StaticText(parent, Rect(x + 10, yPos, 45, 20))
 			.string_("Shape:")
 			.font_(Font("Monaco", 9));
 		shapeMenu = PopUpMenu(parent, Rect(x + 235, yPos, 95, 20))
@@ -324,7 +343,7 @@ Opens a dedicated window for modulation control of a single track
 	// === PUBLIC API ===
 	(
 		create: {
-			window = Window("Track " ++ (trackNum + 1) ++ " Modulation", Rect(100, 100, 700, 480))
+			window = Window("Track " ++ (trackNum + 1) ++ " Modulation", Rect(100, 100, 700, 580))
 				.background_(Color.gray(0.1))
 				.onClose_({ "Modulation window closed".postln; });
 
@@ -338,8 +357,8 @@ Opens a dedicated window for modulation control of a single track
 			// Create 4 modulator sections (2×2 grid)
 			makeModulatorSection.value(window, 10, 50, 0);
 			makeModulatorSection.value(window, 360, 50, 1);
-			makeModulatorSection.value(window, 10, 280, 2);
-			makeModulatorSection.value(window, 360, 280, 3);
+			makeModulatorSection.value(window, 10, 320, 2);
+			makeModulatorSection.value(window, 360, 320, 3);
 
 			window.front;
 		},

@@ -1,6 +1,6 @@
 /*
 ═══════════════════════════════════════════════════════════════════
-S-4 RIVAL GRANULAR WORKSTATION - START HERE
+BEARULATOR GRANULAR WORKSTATION - START HERE
 ═══════════════════════════════════════════════════════════════════
 
 QUICK START:
@@ -19,7 +19,7 @@ separately AFTER the system is loaded.
 (
 "".postln;
 "═══════════════════════════════════════════════════════".postln;
-"  S-4 RIVAL v0.3.001 - Granular Synthesis Workstation".postln;
+"  BEARULATOR v0.3.001 - Granular Synthesis Workstation".postln;
 "═══════════════════════════════════════════════════════".postln;
 "".postln;
 

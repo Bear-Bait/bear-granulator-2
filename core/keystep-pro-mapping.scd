@@ -1,10 +1,11 @@
 /*
-S-4 Rival: KeyStep Pro MIDI Mapping
+BEARULATOR: KeyStep Pro MIDI Mapping
 Smart Mapper System
 
 Hardware: Arturia KeyStep Pro
 - 5 rotary knobs (CC 74, 75, 76, 77, 78)
 - Mod strip (CC 1)
+- Pitch bend (±2 semitones)
 - 37-key keyboard (polyphonic pitch control)
 - Panic/Reset: Note 84 (High C)
 
@@ -13,6 +14,7 @@ Features:
 - One-line remapping without math
 - Automatic visual feedback in viewfinder
 - Polyphonic keyboard control with root at C3 (Note 60)
+- Pitch bend wheel support (±2 semitones default)
 - Global parameter reset on Note 84
 */
 
@@ -20,6 +22,7 @@ Features:
 	// MIDI handlers storage
 	ccHandlers: IdentityDictionary.new,
 	noteHandlers: List.new,
+	bendHandler: nil,
 	enabled: false,
 	trackManager: nil,
 
@@ -92,6 +95,9 @@ Features:
 		// Set up panic/reset handler
 		self.setupPanicHandler;
 
+		// Set up pitch bend handler
+		self.setupPitchBend;
+
 		self.enabled = true;
 
 		"".postln;
@@ -104,6 +110,7 @@ Features:
 		"  Knob 4 (CC 77) → Overlap/Density".postln;
 		"  Knob 5 (CC 78) → Amplitude".postln;
 		"  Mod Strip (CC 1) → Position Jitter".postln;
+		"  Pitch Bend → Pitch (±2 semitones)".postln;
 		"".postln;
 		"Keyboard:".postln;
 		"  Notes 48-83 → Polyphonic pitch control".postln;
@@ -219,6 +226,35 @@ Features:
 		"Panic/Reset handler initialized (Note 84)".postln;
 	},
 
+	// Set up pitch bend handler
+	setupPitchBend: { arg self;
+		var trackNum = 0;  // Pitch bend controls Track 1
+		var bendRange = 2; // ±2 semitones (standard pitch wheel range)
+
+		self.bendHandler = MIDIdef.bend(\ksp_pitchbend, { arg val, chan, src;
+			var norm, semitones;
+
+			// val is 0-16383, center is 8192
+			// Map to -bendRange to +bendRange semitones
+			semitones = val.linlin(0, 16383, bendRange.neg, bendRange);
+
+			// Get current pitch parameter and add bend offset
+			// Note: This is additive to the current pitch setting
+			self.trackManager.setParam(trackNum, \pitch, semitones);
+			self.trackManager.setParam(trackNum, \spectralPitch, semitones);
+
+			// Visual feedback
+			if(~viewfinder.notNil, {
+				{
+					~viewfinder.showCCFeedback(trackNum, "PitchBend", semitones);
+				}.defer;
+			});
+
+		}, chan: nil, srcID: nil);
+
+		"Pitch Bend handler initialized (±% semitones)".format(bendRange).postln;
+	},
+
 	// Cleanup: Free all MIDI handlers
 	free: { arg self;
 		if(self.enabled, {
@@ -233,6 +269,12 @@ Features:
 			// Free note handlers
 			self.noteHandlers.do(_.free);
 			self.noteHandlers.clear;
+
+			// Free pitch bend handler
+			if(self.bendHandler.notNil, {
+				self.bendHandler.free;
+				self.bendHandler = nil;
+			});
 
 			self.enabled = false;
 

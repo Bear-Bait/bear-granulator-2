@@ -1,5 +1,5 @@
 /*
-S-4 RIVAL: RECORDING VIEWFINDER (Phase 12)
+BEARULATOR: RECORDING VIEWFINDER (Phase 12)
 ===========================================
 
 Live audio recording window with real-time waveform visualization.
@@ -56,7 +56,7 @@ Usage:
 			recordBuffer = Buffer.alloc(server, server.sampleRate * 10, 1);
 
 			// Create window
-			window = Window("S-4 RIVAL: Recording Viewfinder", Rect(200, 200, winWidth, winHeight))
+			window = Window("BEARULATOR: Recording Viewfinder", Rect(200, 200, winWidth, winHeight))
 				.background_(colors.bg)
 				.front;
 

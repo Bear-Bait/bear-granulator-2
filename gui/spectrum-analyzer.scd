@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Spectrum Analyzer (FabFilter-Style)
+BEARULATOR: Spectrum Analyzer (FabFilter-Style)
 Phase 15 - Professional spectral visualization
 
 Features:
@@ -10,11 +10,11 @@ Features:
 - FabFilter Pro-Q aesthetic
 
 Usage:
-~spectrumAnalyzer = ~s4SpectrumAnalyzer.value(server, masterBus, trackManager);
+~spectrumAnalyzer = ~bearulatorSpectrumAnalyzer.value(server, masterBus, trackManager);
 ~spectrumAnalyzer.createWindow();
 */
 
-~s4SpectrumAnalyzer = { arg server, masterBus, trackManager;
+~bearulatorSpectrumAnalyzer = { arg server, masterBus, trackManager;
 	var window, userView, fftBuf, fftSynth, updateTask;
 	var fftData, responseCurve;
 	var width = 800, height = 400;

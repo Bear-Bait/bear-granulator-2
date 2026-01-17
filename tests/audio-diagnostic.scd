@@ -1,5 +1,5 @@
 /*
-AUDIO DIAGNOSTIC - S-4 Rival
+AUDIO DIAGNOSTIC - BEARULATOR
 ============================
 Run this FIRST to verify audio routing before using main.scd
 

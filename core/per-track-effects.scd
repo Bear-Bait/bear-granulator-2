@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Per-Track Effects Chain
+BEARULATOR: Per-Track Effects Chain
 Phase 16 - Unified effects chain for all engines
 
 Sits AFTER grain/direct engines in the signal chain.
@@ -13,7 +13,7 @@ grainBus → [effects chain] → trackBus → master
 directBus → ↑
 */
 
-SynthDef(\s4PerTrackEffects, {
+SynthDef(\bearulatorPerTrackEffects, {
 	arg grainIn = 10,        // Input bus from grain engine
 	    directIn = 12,       // Input bus from direct engine
 	    out = 0,             // Output bus (track audio bus)

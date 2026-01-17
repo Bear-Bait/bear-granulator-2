@@ -29,7 +29,7 @@ fork {
 	"[TEST 1] Grain size = 2.7s, Density = 20 (CURRENT SETTINGS - SHOULD FAIL)".postln;
 	"Expected: Feedback/artifacts from too many overlapping grains".postln;
 
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\mode, 0,  // TAPE mode
 		\grainSize, 2.7,  // Match your buffer length
@@ -47,7 +47,7 @@ fork {
 	"[TEST 2] Grain size = 2.7s, Density = 1 (LOW DENSITY - SHOULD WORK)".postln;
 	"Expected: Clean playback of full audio file".postln;
 
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\mode, 0,
 		\grainSize, 2.7,
@@ -71,7 +71,7 @@ fork {
 
 	("Safe density for %.2fs grains = %.2f grains/sec".format(safeGrainSize, safeDensity)).postln;
 
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\mode, 0,
 		\grainSize, safeGrainSize,

@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Direct Playback Engine
+BEARULATOR: Direct Playback Engine
 Phase 15 - Non-granular sample playback
 
 Simple PlayBuf-based engine for direct sample playback without granulation.
@@ -13,7 +13,7 @@ Features:
 - Compatible with existing modulation system
 */
 
-SynthDef(\s4DirectPlayback, {
+SynthDef(\bearulatorDirectPlayback, {
 	arg bufnum = 0,
 	    out = 0,
 	    rate = 1.0,         // Playback rate (1.0 = normal, 2.0 = double speed/+12st, 0.5 = half/-12st)

@@ -1,4 +1,4 @@
-# S-4 Rival: SuperCollider Granular Sculpting Sampler
+# BEARULATOR: SuperCollider Granular Sculpting Sampler
 
 **Version:** 0.4.001 (Phase 4 Complete)
 **Date:** 2025-12-31

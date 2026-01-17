@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Four-Track GUI
+BEARULATOR: Four-Track GUI
 Phase 7 - Interactive Waveform Viewfinder
 
 5 tabs:
@@ -23,7 +23,7 @@ Phase 7 Features:
 - Non-blocking overlay system for smooth interaction
 */
 
-~s4FourTrackGUI = {
+~bearulatorFourTrackGUI = {
 	arg trackManager, masterBus, server;
 	var window, updateTasks, levelMeters, levelResponders;
 	var cpuMeterAvg, cpuMeterPeak, cpuTextAvg, cpuTextPeak, cpuUpdateTask;
@@ -200,7 +200,7 @@ Phase 7 Features:
 		Button(parent, Rect(610, 10, 60, 40))
 			.states_([["MOD", colors.black, colors.cyan]])
 			.action_({
-				~s4ModulationWindow.value(trackManager, server, trackNum).create;
+				~bearulatorModulationWindow.value(trackManager, server, trackNum).create;
 			});
 
 		// Viewfinder button (Phase 7)
@@ -736,7 +736,7 @@ Phase 7 Features:
 			var tabButtons, tabViews, currentTab = 0;
 			var buttonY = 10, buttonH = 30, contentY = 50;
 
-			window = Window("S-4 Rival v0.7 (Phase 7) - Interactive Waveform", Rect(50, 50, 1450, 800))
+			window = Window("BEARULATOR v0.7 (Phase 7) - Interactive Waveform", Rect(50, 50, 1450, 800))
 				.onClose_({
 					updateTasks.do({ arg task;
 						if(task.notNil, { task.stop; });

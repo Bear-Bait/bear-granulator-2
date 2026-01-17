@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Space Effects Section
+BEARULATOR: Space Effects Section
 Phase 3 - Reverb, Delay, Shimmer
 
 Features:
@@ -14,7 +14,7 @@ All functions return audio signals for direct integration.
 */
 
 (
-~s4SpaceEffects = {
+~bearulatorSpaceEffects = {
 
 	/*
 	Function: reverb
@@ -144,7 +144,7 @@ All functions return audio signals for direct integration.
 };
 
 // Initialize
-~spaceEffects = ~s4SpaceEffects.value;
+~spaceEffects = ~bearulatorSpaceEffects.value;
 )
 
 /*

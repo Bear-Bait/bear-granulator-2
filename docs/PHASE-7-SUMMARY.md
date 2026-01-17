@@ -265,7 +265,7 @@ Phase 6b (Overlap Control) also completed:
 - Fixed "Too many grains" error
 - Volume boost: 50x gain + hard clip limiter
 
-This brings S-4 Rival to feature parity with professional granular
+This brings BEARULATOR to feature parity with professional granular
 samplers like Torso S-4 and Monome Norns Crone engine.
 ```
 
@@ -414,7 +414,7 @@ samplers like Torso S-4 and Monome Norns Crone engine.
 ## Credits & Inspiration
 
 **Inspired by:**
-- Torso Electronics S-4 Rival (loop start/end encoders)
+- Torso Electronics BEARULATOR (loop start/end encoders)
 - Monome Norns "Crone" engine (window size/position)
 - Ableton Live (waveform selection for clip looping)
 - Native Instruments Kontakt (sample start/end editing)

@@ -1,7 +1,7 @@
-# S-4 RIVAL: Performance Optimization Guide
+# BEARULATOR: Performance Optimization Guide
 **Phase 13 - Audio-Rate Modulation & Quad Spatial Audio**
 
-This guide helps you get the best performance from the S-4 RIVAL granular workstation, especially when using Phase 13's advanced features.
+This guide helps you get the best performance from the BEARULATOR granular workstation, especially when using Phase 13's advanced features.
 
 ---
 
@@ -310,6 +310,6 @@ s.peakCPU;  // Peak CPU
 
 ---
 
-**Remember:** The S-4 RIVAL is a professional-grade granular workstation. With Phase 13's audio-rate modulation and spatial features, you have incredible sonic power. Use these optimization strategies to get the best performance while maintaining exceptional sound quality!
+**Remember:** The BEARULATOR is a professional-grade granular workstation. With Phase 13's audio-rate modulation and spatial features, you have incredible sonic power. Use these optimization strategies to get the best performance while maintaining exceptional sound quality!
 
 **Last Updated:** January 3, 2026 (Phase 13)

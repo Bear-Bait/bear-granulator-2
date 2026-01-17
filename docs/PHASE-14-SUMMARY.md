@@ -11,7 +11,7 @@
 **File:** `core/preset-system.scd`
 
 **Features:**
-- ✅ Save complete S-4 RIVAL state (all 4 tracks, 80+ params per track)
+- ✅ Save complete BEARULATOR state (all 4 tracks, 80+ params per track)
 - ✅ Load presets instantly (<200ms restoration)
 - ✅ Human-readable `.scd` file format
 - ✅ Auto-creates `presets/` directory
@@ -319,7 +319,7 @@ Failed: 0
 - ✅ Complete test coverage
 - ✅ Comprehensive documentation
 
-**The S-4 RIVAL is now:**
+**The BEARULATOR is now:**
 - Fully featured for production use
 - Ready for live performance
 - Easy to save/recall complex states
@@ -357,4 +357,4 @@ s.boot;
 **Time:** ~3 hours of focused development
 **Result:** Production-ready preset system + complete tutorial
 
-Enjoy the enhanced S-4 RIVAL! 🌌🔊✨
+Enjoy the enhanced BEARULATOR! 🌌🔊✨

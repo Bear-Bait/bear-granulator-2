@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Phase 2 Testing
+BEARULATOR: Phase 2 Testing
 Filterbank Test Suite
 
 Run these tests to verify Phase 2 implementation:
@@ -89,7 +89,7 @@ fork {
 	("  CPU before filter: " ++ cpuBefore.round(0.1) ++ "%").postln;
 
 	// Create grain synth with filter OFF
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuffer,
 		\grainSize, 0.1,
 		\density, 30,

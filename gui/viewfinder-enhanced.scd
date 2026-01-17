@@ -1,5 +1,5 @@
 /*
-S-4 RIVAL: ENHANCED GRANULAR VIEWFINDER
+BEARULATOR: ENHANCED GRANULAR VIEWFINDER
 ========================================
 
 Advanced waveform visualization with grain-level feedback:
@@ -12,12 +12,12 @@ Advanced waveform visualization with grain-level feedback:
 Inspired by Pure Data, Max/MSP, and NIME 2025 per-grain UI research
 
 Usage:
-  ~viewfinderEnhanced = ~s4ViewfinderEnhanced.value(server, trackManager);
+  ~viewfinderEnhanced = ~bearulatorViewfinderEnhanced.value(server, trackManager);
   ~viewfinderEnhanced.createWindow(trackNum);
   ~viewfinderEnhanced.free;
 */
 
-~s4ViewfinderEnhanced = { arg server, trackManager;
+~bearulatorViewfinderEnhanced = { arg server, trackManager;
 	var windows, soundFileViews, overlayViews, updateRoutines, publicAPI;
 	var grainOverlays, playheadOverlays, boundaryOverlays;
 
@@ -578,7 +578,7 @@ Usage:
 USAGE EXAMPLES:
 
 // Create enhanced viewfinder module (do this in main.scd)
-~viewfinderEnhanced = ~s4ViewfinderEnhanced.value(s, ~trackManager);
+~viewfinderEnhanced = ~bearulatorViewfinderEnhanced.value(s, ~trackManager);
 
 // Open enhanced viewfinder for Track 1
 ~viewfinderEnhanced.createWindow(0);

@@ -6,7 +6,7 @@ s.boot;
 ```
 Wait for server to finish booting.
 
-## Step 2: Load S-4 Rival
+## Step 2: Load BEARULATOR
 ```supercollider
 (thisProcess.nowExecutingPath.dirname +/+ "START-HERE.scd").load;
 ```

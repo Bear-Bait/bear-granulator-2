@@ -16,13 +16,13 @@ No scrollview, minimal elements
 			arg self;
 
 			// Simple fixed-size window
-			window = Window("S-4 Rival v0.3 - Minimal", Rect(100, 100, 400, 300))
+			window = Window("BEARULATOR v0.3 - Minimal", Rect(100, 100, 400, 300))
 				.front
 				.onClose_({ "GUI closed.".postln; });
 
 			// Title
 			StaticText(window, Rect(10, 10, 380, 30))
-				.string_("S-4 RIVAL - MINIMAL CONTROLS")
+				.string_("BEARULATOR - MINIMAL CONTROLS")
 				.align_(\center)
 				.font_(Font("Monaco", 14, true));
 

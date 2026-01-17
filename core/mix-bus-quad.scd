@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Quad Master Mix Bus
+BEARULATOR: Quad Master Mix Bus
 Phase 12 - Quad Speaker Output
 Phase 15 - 128-Band Resonator Upgrade
 
@@ -30,7 +30,7 @@ CRITICAL: This synth MUST be created with addAction: \addToTail
 to ensure it runs AFTER the track synths in the audio graph.
 */
 
-SynthDef(\s4MasterBusQuad, {
+SynthDef(\bearulatorMasterBusQuad, {
 	arg track1Bus = 10,
 	    track2Bus = 12,
 	    track3Bus = 14,
@@ -293,7 +293,7 @@ Usage example:
 ~trackBuses = 4.collect({ Bus.audio(s, 2) });
 
 // Create quad master bus synth (MUST use addToTail)
-~masterBusQuad = Synth(\s4MasterBusQuad, [
+~masterBusQuad = Synth(\bearulatorMasterBusQuad, [
     \track1Bus, ~trackBuses[0],
     \track2Bus, ~trackBuses[1],
     \track3Bus, ~trackBuses[2],

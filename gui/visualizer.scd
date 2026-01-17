@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Waveform Visualizer (Phase 8 - Early Implementation)
+BEARULATOR: Waveform Visualizer (Phase 8 - Early Implementation)
 ================================================================
 
 Minimal waveform display for immediate visual feedback during Phase 4 testing.

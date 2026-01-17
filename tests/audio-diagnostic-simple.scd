@@ -1,7 +1,7 @@
 s.options.numInputBusChannels = 8;
 s.options.memSize = 8192 * 256;
 /*
-SIMPLE AUDIO DIAGNOSTIC - S-4 Rival
+SIMPLE AUDIO DIAGNOSTIC - BEARULATOR
 ====================================
 Run these code blocks ONE AT A TIME to test audio step-by-step.
 

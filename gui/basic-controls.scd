@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Basic GUI Controls
+BEARULATOR: Basic GUI Controls
 Phase 1 - Simple control interface for grain engine
 Phase 2 - Filter controls added
 
@@ -80,7 +80,7 @@ Features:
 			arg self;
 
 			// Create main window (600px height to fit most screens)
-			window = Window("S-4 Rival v0.3.001", Rect(100, 100, 520, 600))
+			window = Window("BEARULATOR v0.3.001", Rect(100, 100, 520, 600))
 				.front
 				.onClose_({
 					"GUI closed.".postln;
@@ -103,7 +103,7 @@ Features:
 
 			// Title
 			StaticText(controlLayout, 460@30)
-				.string_("S-4 RIVAL v0.3.001 - PHASE 3")
+				.string_("BEARULATOR v0.3.001 - PHASE 3")
 				.align_(\center)
 				.font_(Font("Monaco", 14, true));
 

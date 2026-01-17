@@ -1,4 +1,4 @@
-# S-4 Rival Quick Reference Card
+# BEARULATOR Quick Reference Card
 ## Phase 1 + Phase 2: Granular Engine + Morphing Resonator
 
 ## 🚀 Start System

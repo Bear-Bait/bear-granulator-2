@@ -5,7 +5,7 @@ Example MIDI mapping configurations for different performance styles
 Load any patch by running its code block.
 Remap on-the-fly during performance without stopping audio!
 
-Author: S-4 Rival Team
+Author: BEARULATOR Team
 */
 
 // ═══════════════════════════════════════════════════════════════════════════

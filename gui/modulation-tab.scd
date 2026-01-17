@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Modulation Tab GUI
+BEARULATOR: Modulation Tab GUI
 Phase 5 - Modulation Control Interface
 
 Per-track modulation control:

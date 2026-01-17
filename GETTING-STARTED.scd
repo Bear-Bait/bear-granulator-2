@@ -1,6 +1,6 @@
 /*
 ═══════════════════════════════════════════════════════════════
-  S-4 RIVAL: GETTING STARTED GUIDE
+  BEARULATOR: GETTING STARTED GUIDE
   Complete walkthrough for absolute beginners
 ═══════════════════════════════════════════════════════════════
 
@@ -37,7 +37,7 @@ s.boot;
 
 
 // ═══════════════════════════════════════════════════════════════
-// STEP 2: LOAD THE S-4 RIVAL
+// STEP 2: LOAD THE BEARULATOR
 // ═══════════════════════════════════════════════════════════════
 
 // This loads all the code and opens the GUI window.
@@ -46,7 +46,7 @@ s.boot;
 (
 "".postln;
 "════════════════════════════════════════════".postln;
-"  STEP 2: Loading S-4 RIVAL...".postln;
+"  STEP 2: Loading BEARULATOR...".postln;
 "════════════════════════════════════════════".postln;
 "".postln;
 "This will take about 5 seconds...".postln;
@@ -56,7 +56,7 @@ s.boot;
 // WAIT! You should see:
 // 1. A bunch of "✓" messages in the Post window
 // 2. A big GUI window should appear
-// 3. Final message: "S-4 RIVAL ready!"
+// 3. Final message: "BEARULATOR ready!"
 
 // Once you see "ready", continue to Step 3.
 
@@ -318,7 +318,7 @@ Try moving the sliders while sound is playing!
 /*
 Congratulations! You've learned:
 ✅ How to boot the server
-✅ How to load the S-4 RIVAL
+✅ How to load the BEARULATOR
 ✅ How to load a sample
 ✅ How to create granular textures
 ✅ How to add effects

@@ -54,7 +54,7 @@
 
 **Context:**
 - Modulation window opened via MOD button (gui/four-track-view.scd:201-205)
-- Uses `~s4ModulationWindow.value(trackManager, server, trackNum).create`
+- Uses `~bearulatorModulationWindow.value(trackManager, server, trackNum).create`
 - Should provide access to all grain parameters for LFO/envelope modulation
 
 **Affected files:**
@@ -1101,7 +1101,7 @@ Button(parent, Rect(610, 10, 60, 40))
             modulationWindows[trackNum].window.front;
         }, {
             // Window doesn't exist - create new one
-            modulationWindows[trackNum] = ~s4ModulationWindow.value(
+            modulationWindows[trackNum] = ~bearulatorModulationWindow.value(
                 trackManager, server, trackNum
             ).create;
         });

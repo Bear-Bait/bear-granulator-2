@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Quad Granular Engine (Phase 13)
+BEARULATOR: Quad Granular Engine (Phase 13)
 Per-Grain Spatial Positioning for Quad Speaker Systems
 
 This is an experimental version of the grain engine that positions
@@ -13,10 +13,10 @@ Features:
 - 256 total grains (64 per speaker)
 
 Usage:
-Replace \s4grain with \s4grainQuad in track creation
+Replace \s4grain with \bearulatorGrainQuad in track creation
 */
 
-SynthDef(\s4grainQuad, {
+SynthDef(\bearulatorGrainQuad, {
 	arg out = 0,
 	    bufnum,
 	    // Grain parameters
@@ -165,7 +165,7 @@ USAGE EXAMPLES:
 (
 ~testBuf = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav");
 
-~quadGrain = Synth(\s4grainQuad, [
+~quadGrain = Synth(\bearulatorGrainQuad, [
 	\bufnum, ~testBuf,
 	\grainSize, 0.1,
 	\overlap, 8,

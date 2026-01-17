@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Core Granular Engine v2.2
+BEARULATOR: Core Granular Engine v2.2
 Phase 1 - Main SynthDef with GrainBuf
 Phase 2 - Integrated 48-band Morphing Resonator
 Phase 6 - Material Modes (TAPE/POLY/LIVE)
@@ -64,7 +64,7 @@ Args:
   out: Output bus
 */
 
-SynthDef(\s4GrainEngine, {
+SynthDef(\bearulatorGrainEngine, {
 	arg bufnum = 0,
 	    grainMode = 0,     // v2.1: RENAMED from 'mode' to avoid collision
 	    grainSize = 0.1,

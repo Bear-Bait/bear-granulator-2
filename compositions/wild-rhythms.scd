@@ -1,5 +1,5 @@
 // WILD RHYTHMS - 5 Styles Across 4 Tracks
-// Created for S-4 RIVAL Bearulator
+// Created for BEARULATOR Bearulator
 // Usage: Select a section and run it (Cmd+Enter)
 
 // ============================================================================

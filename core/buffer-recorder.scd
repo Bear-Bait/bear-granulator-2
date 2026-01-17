@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Buffer Recording System
+BEARULATOR: Buffer Recording System
 Phase 1 - 4-second rolling buffer management
 
 Features:
@@ -16,7 +16,7 @@ Usage:
 */
 
 (
-~s4BufferRecorder = {
+~bearulatorBufferRecorder = {
 	arg server;
 	var bufferSize, recordBus, recordSynth;
 	var publicAPI;
@@ -132,7 +132,7 @@ Usage:
 				// Write buffer to temp file so viewfinder can display it
 				fork {
 					server.sync;
-					self.tempFilePath = PathName.tmp +/+ "s4_recording_" ++ Date.getDate.stamp ++ ".wav";
+					self.tempFilePath = PathName.tmp +/+ "bearulator_recording_" ++ Date.getDate.stamp ++ ".wav";
 					self.buffer.write(self.tempFilePath, "WAV", "int16");
 					server.sync;
 					"✓ Recording stopped. Temp file: %".format(self.tempFilePath).postln;
@@ -228,7 +228,7 @@ Usage:
 Usage example:
 (
 // Create buffer recorder
-~recorder = ~s4BufferRecorder.value(s);
+~recorder = ~bearulatorBufferRecorder.value(s);
 ~recorder.init;
 
 // Start recording from input 0
@@ -244,7 +244,7 @@ fork {
 
 // Use recorded buffer with grain engine
 (
-~grainSynth = Synth(\s4GrainEngine, [
+~grainSynth = Synth(\bearulatorGrainEngine, [
 	\bufnum, ~recorder.getBufferNum,
 	\grainSize, 0.1,
 	\density, 30,

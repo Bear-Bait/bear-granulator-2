@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Phase 1 Testing
+BEARULATOR: Phase 1 Testing
 Grain Engine Test Suite
 
 Run these tests to verify Phase 1 implementation
@@ -48,7 +48,7 @@ fork {
 	0.5.wait;
 
 	// Create grain synth
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuffer,
 		\grainSize, 0.1,
 		\density, 20,
@@ -84,7 +84,7 @@ fork {
 	("  CPU before: " ++ cpuBefore.round(0.1) ++ "%").postln;
 
 	// Create synth with max grains stress test
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuffer,
 		\grainSize, 0.05,
 		\density, 100, // high density

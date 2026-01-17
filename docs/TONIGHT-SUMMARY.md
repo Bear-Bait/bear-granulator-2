@@ -157,7 +157,7 @@ A **professional-grade dynamic windowing granular sampler** with:
 ✅ Comprehensive documentation
 
 Feature parity with:
-- Torso Electronics S-4 Rival
+- Torso Electronics BEARULATOR
 - Monome Norns "Crone" engine
 - Professional DAW clip editing
 

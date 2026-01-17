@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Wide GUI Layout
+BEARULATOR: Wide GUI Layout
 All Phase 1, 2, 3 features in a wide horizontal layout
 No ScrollView - just a wide window with columns
 */
@@ -54,7 +54,7 @@ No ScrollView - just a wide window with columns
 			var yPos;
 
 			// Wide window: 1450px wide x 750px tall (extra space for waveform)
-			window = Window("S-4 Rival v0.3.001 - Full Control", Rect(50, 50, 1450, 750))
+			window = Window("BEARULATOR v0.3.001 - Full Control", Rect(50, 50, 1450, 750))
 				.front
 				.onClose_({
 					if(updateTask.notNil, { updateTask.stop; });

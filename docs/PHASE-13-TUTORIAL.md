@@ -1,6 +1,6 @@
 # 🌌 Phase 13 Tutorial: Audio-Rate Modulation + Spatial Automation
 
-**S-4 RIVAL: Complete Guide to Advanced Modulation & Quad Spatial Control**
+**BEARULATOR: Complete Guide to Advanced Modulation & Quad Spatial Control**
 
 ---
 
@@ -92,7 +92,7 @@ Out.ar(bus, sig) // Audio bus output
 
 **Setup:**
 1. Load a sample into Track 1
-2. Open modulation window: `~s4ModulationWindow.value(~trackManager, s, 0).create;`
+2. Open modulation window: `~bearulatorModulationWindow.value(~trackManager, s, 0).create;`
 3. Create LFO modulator:
    - **Modulator:** 1 (Mod 1)
    - **Type:** 0 (LFO)
@@ -606,10 +606,10 @@ s.boot;
 ### Modulation Window Commands
 ```supercollider
 // Open modulation window for Track 1
-~s4ModulationWindow.value(~trackManager, s, 0).create;
+~bearulatorModulationWindow.value(~trackManager, s, 0).create;
 
 // Open for Track 2
-~s4ModulationWindow.value(~trackManager, s, 1).create;
+~bearulatorModulationWindow.value(~trackManager, s, 1).create;
 ```
 
 ### Quad Panner Commands

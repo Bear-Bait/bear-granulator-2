@@ -7,7 +7,7 @@ Quick test to verify the overlap mode compiles and boots correctly
 "=== TESTING BOOT WITH OVERLAP MODE ===".postln;
 
 // Just verify the SynthDef compiles
-if(SynthDescLib.global.at(\s4GrainEngine).notNil, {
+if(SynthDescLib.global.at(\bearulatorGrainEngine).notNil, {
 	"✓ s4GrainEngine SynthDef exists".postln;
 }, {
 	"✗ s4GrainEngine SynthDef NOT FOUND".postln;
@@ -23,7 +23,7 @@ if(SynthDescLib.global.at(\s4GrainEngine).notNil, {
 	0.5.wait;
 
 	"Creating test synth with overlap=1...".postln;
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\grainSize, 2.0,
 		\overlap, 1,

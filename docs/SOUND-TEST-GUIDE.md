@@ -1,4 +1,4 @@
-# S-4 Rival: Sound Test Guide
+# BEARULATOR: Sound Test Guide
 
 ## Getting Sound Working - Step by Step
 

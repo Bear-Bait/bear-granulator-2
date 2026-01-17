@@ -1,22 +1,22 @@
 /*
-S-4 RIVAL: WAVEFORM VIEWFINDER (Phase 7)
+BEARULATOR: WAVEFORM VIEWFINDER (Phase 7)
 ==========================================
 
 Real-time non-destructive loop window selection using SoundFileView.
 Maps visual selection to grain engine loopStart/loopEnd parameters.
 
 Inspired by:
-- Torso Electronics S-4 Rival
+- Torso Electronics BEARULATOR
 - Monome Norns "Crone" engine
 
 Usage:
-  ~viewfinder = ~s4Viewfinder.value(server, trackManager);
+  ~viewfinder = ~bearulatorViewfinder.value(server, trackManager);
   ~viewfinder.createWindow(trackNum);
   ~viewfinder.updateWaveform(trackNum);
   ~viewfinder.free;
 */
 
-~s4Viewfinder = { arg server, trackManager;
+~bearulatorViewfinder = { arg server, trackManager;
 	var windows, soundFileViews, publicAPI;
 
 	// Store windows and views for each track
@@ -1282,13 +1282,16 @@ Usage:
 			yPos = yPos + 22;
 			makeSlider.value(win, 450, yPos, "Spectral Amp", ControlSpec(0, 1, \lin), \spectralAmp, track.params[\spectralAmp] ? 0.5);
 			yPos = yPos + 22;
-			makeSlider.value(win, 450, yPos, "Window Size", ControlSpec(0.05, 1.0, \exp), \spectralWindowSize, track.params[\spectralWindowSize] ? 0.2);
+			// UI TUNING: Clamped range (0.02-0.4) prevents clicks and rhythm wash
+			makeSlider.value(win, 450, yPos, "Window Size", ControlSpec(0.02, 0.4, \exp, 0, 0.1), \spectralWindowSize, track.params[\spectralWindowSize] ? 0.1);
 			yPos = yPos + 22;
-			makeSlider.value(win, 450, yPos, "Overlaps", ControlSpec(1, 8, \lin, 1), \spectralOverlaps, track.params[\spectralOverlaps] ? 4);
+			// UI TUNING: Integer steps (1,2,4,8) make texture changes distinct
+			makeSlider.value(win, 450, yPos, "Overlaps", ControlSpec(1, 8, \lin, 1, 4), \spectralOverlaps, track.params[\spectralOverlaps] ? 4);
 			yPos = yPos + 22;
 			makeSlider.value(win, 450, yPos, "Rate", ControlSpec(-2, 2, \lin), \spectralRate, track.params[\spectralRate] ? 1.0);
 			yPos = yPos + 22;
-			makeSlider.value(win, 450, yPos, "Spectral Pitch", ControlSpec(-24, 24, \lin), \spectralPitch, track.params[\spectralPitch] ? 0);
+			// UI TUNING: Semitone snapping ensures musical intervals
+			makeSlider.value(win, 450, yPos, "Spectral Pitch", ControlSpec(-24, 24, \lin, 1, 0), \spectralPitch, track.params[\spectralPitch] ? 0);
 			yPos = yPos + 22;
 			makeSlider.value(win, 450, yPos, "Smear", ControlSpec(0, 1, \lin), \spectralSmear, track.params[\spectralSmear] ? 0);
 			yPos = yPos + 22;
@@ -1406,7 +1409,7 @@ Usage:
 USAGE EXAMPLES:
 
 // Create viewfinder module (do this in main.scd)
-~viewfinder = ~s4Viewfinder.value(s, ~trackManager);
+~viewfinder = ~bearulatorViewfinder.value(s, ~trackManager);
 
 // Open viewfinder for Track 1
 ~viewfinder.createWindow(0);

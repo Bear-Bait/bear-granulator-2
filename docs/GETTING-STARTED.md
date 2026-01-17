@@ -1,4 +1,4 @@
-# S-4 Rival v0.3.001 - Getting Started
+# BEARULATOR v0.3.001 - Getting Started
 
 ## Welcome!
 

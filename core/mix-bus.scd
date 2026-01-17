@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Master Mix Bus
+BEARULATOR: Master Mix Bus
 Phase 4 - 4-Track Architecture
 
 Sums 4 independent track buses and applies:
@@ -18,7 +18,7 @@ CRITICAL: This synth MUST be created with addAction: \addToTail
 to ensure it runs AFTER the track synths in the audio graph.
 */
 
-SynthDef(\s4MasterBus, {
+SynthDef(\bearulatorMasterBus, {
 	arg track1Bus = 10,
 	    track2Bus = 12,
 	    track3Bus = 14,
@@ -196,7 +196,7 @@ Usage example:
 ~trackBuses = 4.collect({ Bus.audio(s, 2) });
 
 // Create master bus synth (MUST use addToTail)
-~masterBus = Synth(\s4MasterBus, [
+~masterBus = Synth(\bearulatorMasterBus, [
     \track1Bus, ~trackBuses[0],
     \track2Bus, ~trackBuses[1],
     \track3Bus, ~trackBuses[2],

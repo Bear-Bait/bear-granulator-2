@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Track Manager
+BEARULATOR: Track Manager
 Phase 4 - 4-Track Architecture
 
 Manages 4 independent granular synthesis tracks.
@@ -20,7 +20,7 @@ Public API:
 - free: Cleanup all tracks
 */
 
-~s4TrackManager = { arg server;
+~bearulatorTrackManager = { arg server;
 	var tracks, masterBus;
 	var publicAPI;
 
@@ -46,6 +46,7 @@ Public API:
 			modMappers: 4.collect({ nil }),           // Mapper synths
 			modTargets: 4.collect({ nil }),           // Target parameters
 			modRanges: 4.collect({ (min: 0, max: 1) }), // Min/max ranges
+			modSourceTracks: 4.collect({ i }),        // Phase 16: Source track for envelope follower (default = self)
 			// Phase 6: Material modes
 			mode: 0  // 0=TAPE, 1=POLY, 2=LIVE
 		);
@@ -81,7 +82,7 @@ Public API:
 			track.phaseBus = Bus.control(server, 1);
 
 			// Create buffer recorder instance
-			track.recorder = ~s4BufferRecorder.value(server);
+			track.recorder = ~bearulatorBufferRecorder.value(server);
 			track.recorder.init;
 
 			// Set up callback to update filePath when recording stops
@@ -174,18 +175,19 @@ Public API:
 				spectralMix: 0.0,      // Wet/dry (0=off, 1=full spectral)
 				spectralPosition: 0.5, // Independent position control
 				spectralRate: 1.0,     // Playback rate (0=freeze, 1=normal)
-				spectralWindowSize: 0.2, // Window size (0.05-1.0, larger=more smear)
-				spectralOverlaps: 4,   // Overlap factor (1-8, M4 can handle 8)
-				spectralPitch: 0,      // Pitch shift (-24 to +24)
+				spectralWindowSize: 0.1, // Window size (0.02-0.4, sweet spot for clarity)
+				spectralOverlaps: 4,   // Overlap factor (1,2,4,8 - integer steps)
+				spectralPitch: 0,      // Pitch shift (-24 to +24, semitone steps)
 				spectralFreeze: 0,     // Freeze toggle (1=freeze)
-				spectralSmear: 0       // Spectral smear (0-1)
+				spectralSmear: 0,      // Spectral smear (0-1)
+				spectralAmp: 0.5       // Spectral output volume (0-1)
 			);
 
 			track.params = defaultParams.copy;
 
 			// Create grain synth with parameters (STOPPED by default)
 			// Phase 13: Place in instrumentGroup (runs AFTER modGroup)
-			track.grainSynth = Synth(\s4GrainEngine, [
+			track.grainSynth = Synth(\bearulatorGrainEngine, [
 				\out, track.audioBus.index,
 				\bufnum, track.recorder.getBufferNum
 			] ++ track.params.asPairs, track.instrumentGroup);
@@ -195,7 +197,7 @@ Public API:
 			track.grainSynth.set(\amp, track.params[\amp]);
 
 			// Phase 8: Create spectral synth (Warp1) - runs in parallel
-			track.spectralSynth = Synth(\s4SpectralEngine, [
+			track.spectralSynth = Synth(\bearulatorSpectralEngine, [
 				\out, track.audioBus.index,
 				\bufnum, track.recorder.getBufferNum,
 				\spectralMix, track.params[\spectralMix],
@@ -214,7 +216,7 @@ Public API:
 			track.spectralSynth.run(false);
 
 			// Phase 15: Create direct playback synth (PlayBuf) - alternative to granular
-			track.directPlaybackSynth = Synth(\s4DirectPlayback, [
+			track.directPlaybackSynth = Synth(\bearulatorDirectPlayback, [
 				\out, track.audioBus.index,
 				\bufnum, track.recorder.getBufferNum,
 				\rate, 1.0,
@@ -312,9 +314,8 @@ Public API:
 			// Update stored parameter
 			track.params[param] = value;
 
-			// HYBRID ENGINE: Continuous crossfade between Granular and Direct
-			// NOTE: Knob only adjusts amplitude, does NOT start/stop engines
-			// Engines are controlled ONLY by PLAY/STOP buttons in viewfinder
+			// HYBRID ENGINE: Smart Sleep - Crossfade AND pause unused engines to save CPU
+			// Phase 16: Ghost Engine Fix - .run(false) on unused engines
 			if(param == \engineMix, {
 				var granAmp, directAmp, baseAmp;  // All vars at top
 
@@ -322,15 +323,24 @@ Public API:
 					{ value <= 0.01 } {  // Pure GRANULAR (0.0)
 						granAmp = 1.0;
 						directAmp = 0.0;
+						// SMART SLEEP: Pause Direct engine to save CPU
+						if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(false) });
+						if(track.grainSynth.notNil, { track.grainSynth.run(true) });
 					}
 					{ value >= 0.99 } {  // Pure DIRECT (1.0)
 						granAmp = 0.0;
 						directAmp = 1.0;
+						// SMART SLEEP: Pause Grain engine to save CPU
+						if(track.grainSynth.notNil, { track.grainSynth.run(false) });
+						if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(true) });
 					}
 					{ true } {  // MIX MODE (0.01-0.99) - Equal-power crossfade
 						// Equal-power crossfade law (constant energy)
 						granAmp = (1 - value).sqrt;  // Full at 0.0, silent at 1.0
 						directAmp = value.sqrt;      // Silent at 0.0, full at 1.0
+						// SMART SLEEP: Wake up BOTH engines for hybrid mode
+						if(track.grainSynth.notNil, { track.grainSynth.run(true) });
+						if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(true) });
 					};
 
 				// Apply amplitude scaling to both engines (silently - no console spam)
@@ -521,7 +531,8 @@ Public API:
 
 		// Create a modulator for a track
 		createModulator: { arg self, trackNum, modNum, type = 0, rate = 1.0, depth = 1.0, shape = 0;
-			var track = tracks[trackNum];
+			var track, sourceTrack, audioInBus;
+			track = tracks[trackNum];
 
 			if(trackNum < 0 or: { trackNum > 3 }, {
 				"Track manager: Invalid track number %".format(trackNum).postln;
@@ -545,13 +556,17 @@ Public API:
 			});
 
 			// Create modulator synth in modGroup (Phase 13: execution order)
-			track.modulators[modNum] = ~s4Modulator.value(server).create(
+			// Phase 16: MOSAIC MODE - Get source track for envelope follower
+			sourceTrack = tracks[track.modSourceTracks[modNum]];
+			audioInBus = if(sourceTrack.notNil, { sourceTrack.audioBus.index }, { track.audioBus.index });
+
+			track.modulators[modNum] = ~bearulatorModulator.value(server).create(
 				type,
 				track.modBusses[modNum].index,
 				rate,
 				depth,
 				shape,
-				track.audioBus.index,  // For envelope follower
+				audioInBus,  // Phase 16: Can be from ANY track (cross-modulation)
 				track.modGroup  // Phase 13: Place in modGroup
 			);
 
@@ -630,7 +645,7 @@ Public API:
 				).postln;
 			}, {
 				// Normal synth parameter mapping
-				track.modMappers[modNum] = ~s4Modulator.value(server).createMapper(
+				track.modMappers[modNum] = ~bearulatorModulator.value(server).createMapper(
 					track.modBusses[modNum].index,
 					track.modulators[modNum],  // Pass modulator synth for order-of-execution
 					track.grainSynth,
@@ -676,7 +691,7 @@ Public API:
 			paramName = targetParam.asString.replace("master", "").asSymbol;
 
 			// Create mapper that routes to master bus
-			track.modMappers[modNum] = ~s4Modulator.value(server).createMapper(
+			track.modMappers[modNum] = ~bearulatorModulator.value(server).createMapper(
 				track.modBusses[modNum].index,
 				track.modulators[modNum],
 				masterBus,  // Target is master bus instead of track synth
@@ -693,6 +708,37 @@ Public API:
 				minVal,
 				maxVal
 			).postln;
+		},
+
+		// Phase 16: MOSAIC MODE - Set source track for envelope follower
+		setModSourceTrack: { arg self, trackNum, modNum, sourceTrackNum;
+			var track = tracks[trackNum];
+
+			if(trackNum < 0 or: { trackNum > 3 }, {
+				"Track manager: Invalid track number %".format(trackNum).postln;
+				^nil;
+			});
+
+			if(sourceTrackNum < 0 or: { sourceTrackNum > 3 }, {
+				"Track manager: Invalid source track number %".format(sourceTrackNum).postln;
+				^nil;
+			});
+
+			// Store the source track number
+			track.modSourceTracks[modNum] = sourceTrackNum;
+
+			// If modulator already exists, recreate it with new source
+			if(track.modulators[modNum].notNil, {
+				var type, rate, depth, shape;
+				// Get current settings (we'll need to query the synth or store them)
+				// For now, just recreate with defaults
+				"Track %: Mod % now listening to Track %".format(
+					trackNum + 1,
+					modNum + 1,
+					sourceTrackNum + 1
+				).postln;
+				"  → Recreate modulator to apply change".postln;
+			});
 		},
 
 		// Update modulator parameter
@@ -742,11 +788,15 @@ Public API:
 			});
 
 			// 1. HARD RESET AUDIO (Kill all active effects immediately)
-			// This makes the track sound "New" again by directly setting the synth.
+			// Phase 16: Reset Glitch Fix - Kill delay/reverb feedback to prevent ghost tails
 			if(track.grainSynth.notNil) {
 				track.grainSynth.set(
 					\pitch, 0, \pitchShift, 0,
 					\timeStretch, 1.0, \scanSpeed, 0,
+					// KILL SWITCHES (The Fix):
+					\delayFeedback, 0.0,   // Kill delay line immediately
+					\reverbFreeze, 0,      // Unfreeze reverb
+					\shimmerFeedback, 0.0, // Kill shimmer feedback
 					\feedback, 0.0, \posJitter, 0.1, \pitchJitter, 0.0,
 					\grainSize, 0.1 // Default starting size
 				);
@@ -765,7 +815,7 @@ Public API:
 				[\grainMode, 0], [\engineMix, 0.0], // Back to Granular Tape Mode
 				[\filterOn, 0], [\colorOn, 0], [\spaceOn, 0], // All FX Off
 				[\spectralMix, 0.0], [\spectralPosition, 0.5], [\spectralRate, 1.0],
-				[\spectralWindowSize, 0.2], [\spectralOverlaps, 4],
+				[\spectralWindowSize, 0.1], [\spectralOverlaps, 4],  // UI-tuned defaults
 				[\spectralPitch, 0], [\spectralFreeze, 0], [\spectralSmear, 0],
 				[\loopStart, 0.0], [\loopEnd, 1.0],
 				[\envType, 1], [\stereoSpread, 0.5],
@@ -849,7 +899,7 @@ Public API:
 				// Create new master bus based on mode
 				if(mode == 0, {
 					// STEREO MODE
-					masterBus = Synth(\s4MasterBus, [
+					masterBus = Synth(\bearulatorMasterBus, [
 						\track1Bus, tracks[0].audioBus.index,
 						\track2Bus, tracks[1].audioBus.index,
 						\track3Bus, tracks[2].audioBus.index,
@@ -860,7 +910,7 @@ Public API:
 					"✓ Switched to STEREO mode (2-channel output)".postln;
 				}, {
 					// QUAD MODE
-					masterBus = Synth(\s4MasterBusQuad, [
+					masterBus = Synth(\bearulatorMasterBusQuad, [
 						\track1Bus, tracks[0].audioBus.index,
 						\track2Bus, tracks[1].audioBus.index,
 						\track3Bus, tracks[2].audioBus.index,
@@ -905,6 +955,66 @@ Public API:
 			};
 		},
 
+		// Load sample from file path (convenience function for examples/tests)
+		loadSample: { arg self, trackNum, filePath;
+			var track, absolutePath;
+			track = tracks[trackNum];
+
+			if(track.grainSynth.isNil, {
+				"Track manager: Track % not initialized".format(trackNum + 1).postln;
+				^nil;
+			});
+
+			// Convert relative path to absolute
+			absolutePath = if(filePath.beginsWith("/"), {
+				filePath;  // Already absolute
+			}, {
+				// Relative to granular/ directory
+				PathName(thisProcess.nowExecutingPath).pathOnly.dirname +/+ filePath;
+			});
+
+			// Check file exists
+			if(File.exists(absolutePath).not, {
+				"Track manager: File not found: %".format(absolutePath).error;
+				^nil;
+			});
+
+			fork {
+				// Stop synths to prevent clicks
+				if(track.grainSynth.notNil, { track.grainSynth.run(false) });
+				if(track.spectralSynth.notNil, { track.spectralSynth.run(false) });
+				if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.run(false) });
+
+				// Free old buffer
+				track.recorder.buffer.free;
+
+				// Load new buffer
+				track.recorder.buffer = Buffer.readChannel(server, absolutePath, channels: [0]);
+				track.filePath = absolutePath;
+
+				// Wait for buffer to load
+				server.sync;
+
+				// Update synth buffer numbers
+				if(track.grainSynth.notNil, {
+					track.grainSynth.set(\bufnum, track.recorder.buffer.bufnum);
+					track.grainSynth.run(true);
+				});
+
+				if(track.spectralSynth.notNil, {
+					track.spectralSynth.set(\bufnum, track.recorder.buffer.bufnum);
+					track.spectralSynth.run(true);
+				});
+
+				if(track.directPlaybackSynth.notNil, {
+					track.directPlaybackSynth.set(\bufnum, track.recorder.buffer.bufnum);
+					track.directPlaybackSynth.run(true);
+				});
+
+				"✓ Track %: Loaded %".format(trackNum + 1, PathName(absolutePath).fileName).postln;
+			};
+		},
+
 		// Free all tracks
 		free: {
 			tracks.do({ |track, i|
@@ -921,7 +1031,7 @@ Public API:
 Usage example:
 
 // Create track manager
-~trackManager = ~s4TrackManager.value(s);
+~trackManager = ~bearulatorTrackManager.value(s);
 ~trackManager.init;
 
 // Create 4 tracks

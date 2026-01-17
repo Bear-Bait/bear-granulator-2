@@ -1,4 +1,4 @@
-# S-4 Rival: Phase 8 Implementation Summary
+# BEARULATOR: Phase 8 Implementation Summary
 
 ## What's Been Implemented
 

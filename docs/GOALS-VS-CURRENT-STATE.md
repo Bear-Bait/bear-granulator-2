@@ -314,7 +314,7 @@ Start with **128-Band Resonator**
 - **Partially Complete:** 1 (17%)
 - **Not Started:** 3 (50%)
 
-**Overall S-4 RIVAL Completion:**
+**Overall BEARULATOR Completion:**
 - **Phases 1-14:** 100% complete ✅
 - **Phase 15 (M4 Extreme):** 33% complete (2/6 features)
 

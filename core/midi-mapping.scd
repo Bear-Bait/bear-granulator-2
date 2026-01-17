@@ -1,5 +1,5 @@
 /*
-S-4 Rival: MIDI Mapping System
+BEARULATOR: MIDI Mapping System
 Phase 12 - KeyStep Pro Integration
 
 Features:
@@ -20,7 +20,7 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
                                       → Visual Feedback
 */
 
-~s4MIDIMapping = (
+~bearulatorMIDIMapping = (
 	// MIDI handlers (will be freed on cleanup)
 	ccHandlers: nil,
 	noteHandlers: nil,
@@ -52,7 +52,7 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 	init: { arg self, trackManager;
 		var server = Server.default;
 
-		"S-4 RIVAL: Initializing MIDI...".postln;
+		"BEARULATOR: Initializing MIDI...".postln;
 
 		// Initialize MIDI client
 		MIDIClient.init;
@@ -394,14 +394,14 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 Usage example:
 
 // Initialize MIDI system
-~s4MIDIMapping.init(~trackManager);
+~bearulatorMIDIMapping.init(~trackManager);
 
 // Custom CC mapping (optional)
-~s4MIDIMapping.mapCC(74, \filterRes, 0);  // Remap CC 74 to resonance on Track 1
+~bearulatorMIDIMapping.mapCC(74, \filterRes, 0);  // Remap CC 74 to resonance on Track 1
 
 // Cleanup
-~s4MIDIMapping.free;
+~bearulatorMIDIMapping.free;
 
 // Re-initialize
-~s4MIDIMapping.init(~trackManager);
+~bearulatorMIDIMapping.init(~trackManager);
 */

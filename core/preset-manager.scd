@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Preset Manager
+BEARULATOR: Preset Manager
 Phase 15 - Save/Load parameter state
 
 Manages preset saving and loading for all track parameters including:
@@ -13,7 +13,7 @@ Manages preset saving and loading for all track parameters including:
 Preset Format: JSON-style text files in presets/ directory
 */
 
-~s4PresetManager = { arg trackManager, presetFolder;
+~bearulatorPresetManager = { arg trackManager, presetFolder;
 	var presetPath, publicAPI;
 
 	// Set preset directory (create if doesn't exist)
@@ -62,7 +62,7 @@ Preset Format: JSON-style text files in presets/ directory
 			});
 
 			// Write header
-			file.write("// S-4 Rival Preset\n");
+			file.write("// BEARULATOR Preset\n");
 			file.write("// Track: %\n".format(trackNum + 1));
 			file.write("// Name: %\n".format(presetName));
 			file.write("// Date: %\n".format(Date.getDate.asString));

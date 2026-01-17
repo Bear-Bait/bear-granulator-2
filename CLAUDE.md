@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**S-4 RIVAL** (nicknamed "Bearulator") is a professional 4-track granular synthesis workstation built in SuperCollider, designed to rival the Torso S-4 hardware sampler. It's optimized for Mac Mini M4 (24GB RAM) with ~25% CPU usage at full capacity, leaving substantial headroom for expansion.
+**BEARULATOR** (nicknamed "Bearulator") is a professional 4-track granular synthesis workstation built in SuperCollider, designed to rival the Torso S-4 hardware sampler. It's optimized for Mac Mini M4 (24GB RAM) with ~25% CPU usage at full capacity, leaving substantial headroom for expansion.
 
 **Language**: SuperCollider (.scd files)
 **Platform**: macOS (primary), with planned Linux/Raspberry Pi ports

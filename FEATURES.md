@@ -1,4 +1,4 @@
-# S-4 RIVAL: Complete Feature List
+# BEARULATOR: Complete Feature List
 
 **Current Version:** v2.2 (deployed 2026-01-09)
 
@@ -460,7 +460,7 @@ RR = sqrt((1 + X) * (1 + Y) * 0.5) * signal
 **Usage:**
 ```supercollider
 // Open modulation window
-~s4ModulationWindow.value(~trackManager, s, 0).create;
+~bearulatorModulationWindow.value(~trackManager, s, 0).create;
 
 // Create LFO modulator
 // Mod 1, Type 0 (LFO), Rate 0.5 Hz, Depth 1.0, Shape 0 (Sine)
@@ -540,7 +540,7 @@ RR = sqrt((1 + X) * (1 + Y) * 0.5) * signal
 ## 💾 PHASE 14: PRESET SYSTEM
 
 ### Complete State Save/Load
-**Production-ready preset management for the entire S-4 RIVAL system:**
+**Production-ready preset management for the entire BEARULATOR system:**
 
 **What Gets Saved:**
 - All 4 track parameters (80+ parameters per track)

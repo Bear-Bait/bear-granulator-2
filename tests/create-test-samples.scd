@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Test Sample Generator
+BEARULATOR: Test Sample Generator
 
 Run this to create test audio samples in the buffer
 Useful when you don't have audio input available

@@ -1,6 +1,6 @@
 # Viewfinder Quick Start Guide
 
-**5-Minute Tutorial** for the S-4 Rival Waveform Viewfinder
+**5-Minute Tutorial** for the BEARULATOR Waveform Viewfinder
 
 ---
 
@@ -310,7 +310,7 @@ Once you're comfortable with the viewfinder:
 
 ## Summary
 
-The viewfinder turns the S-4 Rival into a **dynamic windowing sampler** where you can:
+The viewfinder turns the BEARULATOR into a **dynamic windowing sampler** where you can:
 
 ✅ **Visually select** which part of your audio to granulate
 ✅ **Instantly hear** the results (real-time updates)

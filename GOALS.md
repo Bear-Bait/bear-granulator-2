@@ -1,4 +1,4 @@
-# S-4 RIVAL: Granular Synthesis Workstation
+# BEARULATOR: Granular Synthesis Workstation
 
 ```
       Hey Jim, come take a ride on the grape leaf raft!
@@ -23,12 +23,12 @@ This moving quickly so the instructions might be wrong! I will ask the AI to rew
 
 I'm running on mac mini with 24 GB of ran. Full blast, 25% cpu. Will be taking advatage of that head room. I think it could run better on headless linux and eventually I will make a stripped version for rasipi.
 
-Given the exceptional single-core performance and memory bandwidth of the **Mac Mini M4**, the previous constraints—designed for standard hardware—are no longer applicable. We are shifting the "S-4 RIVAL" from a "mobile-optimized" architecture to a 
+Given the exceptional single-core performance and memory bandwidth of the **Mac Mini M4**, the previous constraints—designed for standard hardware—are no longer applicable. We are shifting the "BEARULATOR" from a "mobile-optimized" architecture to a 
 
 
 Rewrite the above
 
-# S-4 RIVAL: Granular Synthesis Workstation
+# BEARULATOR: Granular Synthesis Workstation
 
 ```
       Hey Jim, come take a ride on the grape leaf raft!
@@ -65,7 +65,7 @@ A 4-track granular synthesis sampler built for high-performance hardware.
 ## Status
 
 
-# S-4 RIVAL: Feature Roadmap (M4 Optimized)
+# BEARULATOR: Feature Roadmap (M4 Optimized)
 
 ## 1. Audio-Rate LFO Modulation
 **Priority:** HIGH | **Status:** Recommended for M4
@@ -137,7 +137,7 @@ This plan prioritizes **Signal Purity**, **Sample-Accurate Modulation**, and **S
 
 ---
 
-# S-4 RIVAL: M4 Extreme Performance Plan (Phase 5+)
+# BEARULATOR: M4 Extreme Performance Plan (Phase 5+)
 
 ## 1. Global Audio-Rate (`.ar`) Signal Path
 

@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Filter Shapes
+BEARULATOR: Filter Shapes
 Phase 2 - LP/BP/HP Morphing Logic
 
 This module provides filter morphing functionality.
@@ -14,7 +14,7 @@ Implementation uses crossfading between filter types.
 */
 
 (
-~s4FilterShapes = {
+~bearulatorFilterShapes = {
 
 	/*
 	Function: morphingFilter
@@ -115,7 +115,7 @@ Implementation uses crossfading between filter types.
 };
 
 // Initialize
-~filterShapes = ~s4FilterShapes.value;
+~filterShapes = ~bearulatorFilterShapes.value;
 )
 
 /*

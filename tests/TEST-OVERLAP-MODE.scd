@@ -47,7 +47,7 @@ fork {
 	"Expected: Clean playback of full \"columbia this houston over\"".postln;
 	"".postln;
 
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\mode, 0,          // TAPE mode
 		\grainSize, 2.7,   // Longer than buffer
@@ -70,7 +70,7 @@ fork {
 	"Expected: Slightly denser, smoother transitions".postln;
 	"".postln;
 
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\mode, 0,
 		\grainSize, 2.7,
@@ -93,7 +93,7 @@ fork {
 	"Expected: Thicker texture, more \"granular\" sound".postln;
 	"".postln;
 
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\mode, 0,
 		\grainSize, 2.7,
@@ -116,7 +116,7 @@ fork {
 	"Expected: Classic granular texture".postln;
 	"".postln;
 
-	testSynth = Synth(\s4GrainEngine, [
+	testSynth = Synth(\bearulatorGrainEngine, [
 		\bufnum, testBuf,
 		\mode, 0,
 		\grainSize, 0.05,  // 50ms grains

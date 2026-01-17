@@ -1,5 +1,5 @@
 /*
-S-4 RIVAL: Quad Spatial Audio Examples
+BEARULATOR: Quad Spatial Audio Examples
 Phase 12 - Spatial Movement & Automation
 
 These examples show how to use the quad speaker system

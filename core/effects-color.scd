@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Color Effects Section
+BEARULATOR: Color Effects Section
 Phase 3 - Distortion, Compression, Bit Crusher, Noise
 
 Features:
@@ -15,7 +15,7 @@ All functions return audio signals for direct integration.
 */
 
 (
-~s4ColorEffects = {
+~bearulatorColorEffects = {
 
 	/*
 	Function: analogSaturation (Phase 15.5: TRUE 4x OVERSAMPLED SATURATION - M4 Edition)
@@ -180,7 +180,7 @@ All functions return audio signals for direct integration.
 };
 
 // Initialize
-~colorEffects = ~s4ColorEffects.value;
+~colorEffects = ~bearulatorColorEffects.value;
 )
 
 /*

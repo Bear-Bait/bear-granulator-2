@@ -1,6 +1,6 @@
 /*
 SIMPLE MODULATOR API TEST
-Tests if ~s4Modulator works at all
+Tests if ~bearulatorModulator works at all
 */
 
 (
@@ -10,7 +10,7 @@ fork {
 	"=== TESTING MODULATOR API ===".postln;
 
 	// Get the API
-	api = ~s4Modulator.value(s);
+	api = ~bearulatorModulator.value(s);
 	"API object: %".format(api).postln;
 
 	0.2.wait;

@@ -1,5 +1,5 @@
 /*
-S-4 RIVAL: Preset System (Simple & Native)
+BEARULATOR: Preset System (Simple & Native)
 Phase 14 - Complete State Save/Load
 
 Format: .scd files (SuperCollider dictionaries)
@@ -18,7 +18,7 @@ Usage:
   ~presets.list;
 */
 
-~s4PresetSystem = { arg trackManager;
+~bearulatorPresetSystem = { arg trackManager;
 	var presetDir, publicAPI;
 
 	// Preset directory (relative to project root)
@@ -56,7 +56,7 @@ Usage:
 			file = File(filePath, "w");
 
 			if(file.isOpen, {
-				file.write("// S-4 RIVAL Preset: %\n".format(name));
+				file.write("// BEARULATOR Preset: %\n".format(name));
 				file.write("// Saved: %\n".format(timestamp));
 				file.write("// Phase 14 - Audio-Rate Modulation + Spatial Automation\n\n");
 				file.write(state.cs);  // .cs = compile string (pretty print)
@@ -158,7 +158,8 @@ Usage:
 				trackManager.setSolo(i, trackState[\solo]);
 
 				// Set material mode
-				trackManager.setParam(i, \mode, trackState[\mode]);
+				// Use setMode to ensure both internal state and synth parameter (\grainMode) are updated
+				trackManager.setMode(i, trackState[\mode]);
 
 				// Set spatial position
 				trackManager.setQuadPosition(i, trackState[\quadX], trackState[\quadY]);

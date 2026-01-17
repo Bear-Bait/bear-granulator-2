@@ -1,8 +1,8 @@
-# S-4 Rival - Phase 1 Quick Start Guide
+# BEARULATOR - Phase 1 Quick Start Guide
 
 ## What's Included in Phase 1
 
-Phase 1 delivers the **Core Granular Engine** - the foundation of the S-4 Rival system.
+Phase 1 delivers the **Core Granular Engine** - the foundation of the BEARULATOR system.
 
 ### Features
 - ✅ 128 grain granular synthesis engine
@@ -51,7 +51,7 @@ The system will:
 You should see output like:
 ```
 ============================================
-S-4 RIVAL - GRANULAR SCULPTING SAMPLER
+BEARULATOR - GRANULAR SCULPTING SAMPLER
 Phase 1: Core Granular Engine
 ============================================
 

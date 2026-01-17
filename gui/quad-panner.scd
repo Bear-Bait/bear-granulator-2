@@ -1,5 +1,5 @@
 /*
-S-4 RIVAL: Quad Spatial Panner GUI
+BEARULATOR: Quad Spatial Panner GUI
 Phase 12 - Visual Quad Positioning
 
 Interactive 2D panner for quad speaker setups.
@@ -19,7 +19,7 @@ Features:
 - Doom Material themed
 */
 
-~s4QuadPanner = { arg trackManager;
+~bearulatorQuadPanner = { arg trackManager;
 	var window, canvas;
 	var canvasWidth = 400, canvasHeight = 400;
 	var margin = 40;
@@ -68,7 +68,7 @@ Features:
 			if(window.notNil, { window.close });
 
 			// Create window (Phase 13: increased height for second row of buttons)
-			window = Window("S-4 RIVAL: Quad Spatial Panner", Rect(100, 100, canvasWidth, canvasHeight + 125))
+			window = Window("BEARULATOR: Quad Spatial Panner", Rect(100, 100, canvasWidth, canvasHeight + 125))
 				.background_(colors.bg)
 				.front;
 
@@ -425,7 +425,7 @@ Features:
 USAGE EXAMPLES:
 
 // Create quad panner (requires trackManager)
-~quadPanner = ~s4QuadPanner.value(~trackManager);
+~quadPanner = ~bearulatorQuadPanner.value(~trackManager);
 ~quadPanner.createWindow();
 
 // Cleanup

@@ -1,5 +1,5 @@
 /*
-S-4 Rival: 48-Band Morphing Resonator
+BEARULATOR: 48-Band Morphing Resonator
 Phase 2 - Tuned Filterbank
 
 Features:
@@ -18,7 +18,7 @@ This creates a spectral resonator similar to:
 */
 
 (
-~s4Filterbank = {
+~bearulatorFilterbank = {
 
 	/*
 	Function: createFilterbank
@@ -177,7 +177,7 @@ This creates a spectral resonator similar to:
 };
 
 // Initialize
-~filterbank = ~s4Filterbank.value;
+~filterbank = ~bearulatorFilterbank.value;
 )
 
 /*

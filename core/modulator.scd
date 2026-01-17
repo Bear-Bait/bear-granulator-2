@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Modulation System
+BEARULATOR: Modulation System
 Phase 5 - 4 Modulators Per Track
 
 Features:
@@ -19,11 +19,11 @@ Modulator Types:
 Each modulator outputs to a control bus (0-1 range)
 */
 
-~s4Modulator = { arg server;
+~bearulatorModulator = { arg server;
 	var publicAPI;
 
 	// Define the SynthDef once at initialization
-	SynthDef(\s4Modulator, {
+	SynthDef(\bearulatorModulator, {
 		arg modType = 0, out = 0, freq = 1.0, amp = 1.0, waveform = 0,
 		    attack = 0.01, decay = 0.1, sustain = 0.7, release = 0.3,
 		    audioIn = 0, smoothTime = 0.1, gate = 1,
@@ -93,7 +93,7 @@ Each modulator outputs to a control bus (0-1 range)
 	}).add;
 
 	// Define the mapper SynthDef
-	SynthDef(\s4Mapper, {
+	SynthDef(\bearulatorMapper, {
 		arg inBus = 0, out = 0, minVal = 0, maxVal = 1;
 		var rawMod = In.ar(inBus, 1);
 		var range = maxVal - minVal;
@@ -116,7 +116,7 @@ Each modulator outputs to a control bus (0-1 range)
 		create: { arg self, type = 0, outBus, rate = 1.0, depth = 1.0, shape = 0, inputBus = nil, group = nil;
 			var synth;
 
-			synth = Synth(\s4Modulator, [
+			synth = Synth(\bearulatorModulator, [
 				\modType, type,
 				\out, outBus,
 				\freq, rate,
@@ -141,7 +141,7 @@ Each modulator outputs to a control bus (0-1 range)
 			scaledBus = Bus.audio(server, 1);
 
 			// Create mapper synth - place in modGroup, AFTER modulator synth
-			mapperSynth = Synth(\s4Mapper, [
+			mapperSynth = Synth(\bearulatorMapper, [
 				\inBus, modBus,
 				\out, scaledBus.index,
 				\minVal, minVal,

@@ -13,7 +13,7 @@ Phase 7 implements a **real-time non-destructive loop window selection** system 
 ### Inspiration
 
 This feature is inspired by:
-- **Torso Electronics S-4 Rival** - Encoder-based loop start/end control
+- **Torso Electronics BEARULATOR** - Encoder-based loop start/end control
 - **Monome Norns "Crone" engine** - Window size + position parameters
 
 ### Key Features
@@ -304,7 +304,7 @@ loopEnd = loopEnd.clip(0.0, 1.0);
 
 ## API Reference
 
-### ~s4Viewfinder Methods
+### ~bearulatorViewfinder Methods
 
 ```supercollider
 // Create viewfinder for specific track
@@ -523,14 +523,14 @@ sfv.mouseUpAction = { arg view;
 
 ## Summary
 
-Phase 7 brings **professional-grade loop windowing** to the S-4 Rival granular sampler. By combining visual waveform editing with real-time audio parameter mapping, you can:
+Phase 7 brings **professional-grade loop windowing** to the BEARULATOR granular sampler. By combining visual waveform editing with real-time audio parameter mapping, you can:
 
 ✅ **Visually select** which part of your audio to granulate
 ✅ **Instantly audition** different loop regions
 ✅ **Precisely control** grain source material
 ✅ **Integrate seamlessly** with Material Modes (TAPE/POLY/LIVE)
 
-This feature elevates the S-4 Rival from a basic granular synth to a **dynamic windowing sampler** comparable to commercial hardware units.
+This feature elevates the BEARULATOR from a basic granular synth to a **dynamic windowing sampler** comparable to commercial hardware units.
 
 **Next:** Phase 8 will add preset management, visual grain position indicators, and advanced modulation routing.
 

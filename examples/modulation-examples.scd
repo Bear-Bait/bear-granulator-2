@@ -1,5 +1,5 @@
 /*
-S-4 RIVAL - MODULATION SYSTEM EXAMPLES
+BEARULATOR - MODULATION SYSTEM EXAMPLES
 Phase 5 - Practical Modulation Demonstrations
 
 Prerequisites:

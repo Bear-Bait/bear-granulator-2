@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Four-Track GUI
+BEARULATOR: Four-Track GUI
 Phase 7 - Interactive Waveform Viewfinder
 
 5 tabs:
@@ -23,7 +23,7 @@ Phase 7 Features:
 - Non-blocking overlay system for smooth interaction
 */
 
-~s4FourTrackGUI = {
+~bearulatorFourTrackGUI = {
 	arg trackManager, masterBus, server;
 	var window, updateTasks, levelMeters, levelResponders;
 	var cpuMeterAvg, cpuMeterPeak, cpuTextAvg, cpuTextPeak, cpuUpdateTask;
@@ -201,7 +201,7 @@ Phase 7 Features:
 		Button(parent, Rect(610, 10, 60, 40))
 			.states_([["MOD", colors.black, colors.cyan]])
 			.action_({
-				~s4ModulationWindow.value(trackManager, server, trackNum).create;
+				~bearulatorModulationWindow.value(trackManager, server, trackNum).create;
 			});
 
 		// Viewfinder button (Phase 7)
@@ -815,6 +815,75 @@ Phase 7 Features:
 			});
 
 		yPos = yPos + 35;
+
+		// === KEYSTEP PRO CONNECT/DISCONNECT BUTTON ===
+		Button(parent, Rect(10, yPos, 180, 30))
+			.states_([
+				["KeyStep: DISCONNECTED", Color.white, Color.gray(0.4)],
+				["KeyStep: CONNECTED", Color.white, Color.new255(0, 170, 170)] // Cyan
+			])
+			.value_(if(~keyStepProMapping.notNil, { ~keyStepProMapping.enabled.asInteger }, { 0 }))
+			.action_({ |btn|
+				if(btn.value == 1, {
+					// === CONNECT ===
+					"Attempting to connect KeyStep Pro...".postln;
+
+					// 1. Refresh MIDI Devices (Handles hot-plugging)
+					MIDIClient.init;
+					MIDIIn.connectAll;
+
+					// 2. Initialize the Mapping
+					try {
+						~keyStepProMapping.init(~trackManager);
+						"✓ KeyStep Pro Linked Successfully".postln;
+					} { |err|
+						"❌ Error connecting KeyStep:".postln;
+						err.postln;
+						btn.value = 0; // Revert button if failed
+					};
+				}, {
+					// === DISCONNECT ===
+					"Disconnecting KeyStep Pro...".postln;
+					~keyStepProMapping.free;
+					"✓ KeyStep Pro Freed".postln;
+				});
+			})
+			.font_(Font("Helvetica", 12, true));
+
+		yPos = yPos + 40;
+
+		// === PHASE 16: DISINTEGRATE MACRO ===
+		StaticText(parent, Rect(10, yPos, 400, 25))
+			.string_("DISINTEGRATE")
+			.font_(Font("DejaVu Sans Mono", 12, true))
+			.stringColor_(Color.red(0.8));
+
+		yPos = yPos + 30;
+
+		StaticText(parent, Rect(10, yPos, 120, 18))
+			.string_("Entropy →")
+			.font_(Font("DejaVu Sans Mono", 10));
+
+		Slider(parent, Rect(140, yPos, 500, 25))
+			.value_(0.0)
+			.action_({ arg sl;
+				var val = sl.value;  // 0.0 to 1.0
+				// EXTREME destruction: 8 parameters simultaneously across all tracks
+				4.do({ arg i;  // Apply to all tracks
+					trackManager.setParam(i, \posJitter, val.linlin(0, 1, 0.1, 5.0));        // Extreme chaos
+					trackManager.setParam(i, \crushBits, val.linexp(0.01, 1, 16, 1));        // 1-bit destruction
+					trackManager.setParam(i, \reverbMix, val.linlin(0, 1, 0.0, 1.0));        // Full wet reverb
+					trackManager.setParam(i, \scanSpeed, val.linlin(0, 1, 0, -2.0));         // Fast reverse
+					trackManager.setParam(i, \crushMix, val);                                 // Full bitcrusher
+					trackManager.setParam(i, \pitchJitter, val.linlin(0, 1, 0, 12.0));       // Octave jitter
+					trackManager.setParam(i, \filterRes, val.linlin(0, 1, 0.1, 0.99));       // Resonance scream
+					trackManager.setParam(i, \distortionAmount, val.linlin(0, 1, 0, 1.0));   // Distortion
+				});
+			})
+			.toolTip_("TOTAL DESTRUCTION: Position chaos, 1-bit audio, reverb wash, reverse, pitch chaos, resonance, distortion");
+
+		yPos = yPos + 40;
+
 		makeMasterSlider.value(parent, 10, yPos, "Frequency", ControlSpec(20, 2000, \exp), \filterFreq, 200);
 		yPos = yPos + 22;
 		makeMasterSlider.value(parent, 10, yPos, "Morph (LP→BP→HP)", ControlSpec(0, 1, \lin), \filterMorph, 0.5);
@@ -978,7 +1047,7 @@ Phase 7 Features:
 			var tabButtons, tabViews, currentTab = 0;
 			var buttonY = 10, buttonH = 30, contentY = 50;
 
-			window = Window("S-4 Rival v0.7 (Phase 7) - Interactive Waveform", Rect(50, 50, 1450, 800))
+			window = Window("BEARULATOR v0.7 (Phase 7) - Interactive Waveform", Rect(50, 50, 1450, 800))
 				.onClose_({
 					updateTasks.do({ arg task;
 						if(task.notNil, { task.stop; });

@@ -1,5 +1,5 @@
 /*
-S-4 Rival: Warp1 Spectral Engine
+BEARULATOR: Warp1 Spectral Engine
 Phase 8 - M4 Extreme Performance
 
 HIGH-RESOLUTION SPECTRAL TIME-STRETCHING ENGINE
@@ -32,7 +32,7 @@ Args:
   out: Output bus
 */
 
-SynthDef(\s4SpectralEngine, {
+SynthDef(\bearulatorSpectralEngine, {
 	arg bufnum = 0,
 	    spectralMix = 0.0,      // Wet/dry (0=off, 1=full)
 	    position = 0.5,         // Position in buffer (0-1)
@@ -107,7 +107,7 @@ SynthDef(\s4SpectralEngine, {
 USAGE EXAMPLES:
 
 // Create spectral engine on Track 1 bus
-~spectralEngine = Synth(\s4SpectralEngine, [
+~spectralEngine = Synth(\bearulatorSpectralEngine, [
     \bufnum, ~myBuffer,
     \spectralMix, 0.5,        // 50% spectral, 50% grain (when summed)
     \position, 0.5,
