@@ -620,24 +620,27 @@ Phase 7 Features:
 	// CREATE MASTER TAB
 	// ========================================
 	makeMasterTab = { arg parent;
-		var yPos = 10;
+		var leftColX = 10, rightColX = 460;  // Two-column layout
+		var leftY = 10, rightY = 10;
 
-		StaticText(parent, Rect(10, yPos, 400, 30))
+		StaticText(parent, Rect(10, leftY, 400, 30))
 			.string_("MASTER CONTROLS")
 			.font_(Font("DejaVu Sans Mono", 16, true))
 			.stringColor_(colors.cyan);
 
-		yPos = yPos + 40;
+		leftY = leftY + 40;
+
+		// === LEFT COLUMN: TRANSPORT & CONTROLS ===
 
 		// === GLOBAL TRANSPORT ===
-		StaticText(parent, Rect(10, yPos, 400, 25))
+		StaticText(parent, Rect(leftColX, leftY, 400, 25))
 			.string_("TRANSPORT")
 			.font_(Font("DejaVu Sans Mono", 12, true));
 
-		yPos = yPos + 30;
+		leftY = leftY + 30;
 
 		// Play All button (Phase 8: runs both grain + spectral engines)
-		Button(parent, Rect(10, yPos, 100, 40))
+		Button(parent, Rect(leftColX, leftY, 100, 40))
 			.states_([
 				["PLAY ALL", colors.black, colors.green]
 			])
@@ -655,7 +658,7 @@ Phase 7 Features:
 			});
 
 		// Stop All button (Phase 8: stops both engines)
-		Button(parent, Rect(115, yPos, 100, 40))
+		Button(parent, Rect(leftColX + 105, leftY, 100, 40))
 			.states_([
 				["STOP ALL", colors.fg, colors.red]
 			])
@@ -672,50 +675,169 @@ Phase 7 Features:
 				"All tracks STOPPED".postln;
 			});
 
-		yPos = yPos + 50;
+		leftY = leftY + 50;
 
 		// === PHASE 16: KEYSTEP PRO MULTI-TRACK ROUTING ===
-		StaticText(parent, Rect(10, yPos, 400, 25))
+		StaticText(parent, Rect(leftColX, leftY, 400, 25))
 			.string_("KEYSTEP PRO ROUTING")
 			.font_(Font("DejaVu Sans Mono", 12, true))
 			.stringColor_(colors.cyan)
 			.toolTip_("Enable KeyStep control for multiple tracks simultaneously");
 
-		yPos = yPos + 30;
+		leftY = leftY + 30;
 
-		// 4 track enable buttons
-		4.do({ arg i;
-			var button = Button(parent, Rect(10 + (i * 105), yPos, 100, 30))
-				.states_([
-					["T% MIDI OFF".format(i + 1), colors.fg, Color.gray(0.3)],
-					["T% MIDI ON".format(i + 1), colors.black, colors.green]
-				])
-				.font_(Font("DejaVu Sans Mono", 9, true))
-				.value_(if(i == 0, 1, 0))  // Track 1 enabled by default
-				.action_({ arg btn;
-					if(~keyStepProMapping.notNil, {
-						~keyStepProMapping.enableTrackMIDI(i, btn.value == 1);
-					}, {
-						"KeyStep Pro mapping not initialized".warn;
-					});
-				})
-				.toolTip_("Enable KeyStep CC/note messages for Track %".format(i + 1));
+		// 4 track enable buttons (2x2 grid to save vertical space)
+		2.do({ arg row;
+			2.do({ arg col;
+				var i = (row * 2) + col;
+				var button = Button(parent, Rect(leftColX + (col * 105), leftY + (row * 35), 100, 30))
+					.states_([
+						["T% MIDI OFF".format(i + 1), colors.fg, Color.gray(0.3)],
+						["T% MIDI ON".format(i + 1), colors.black, colors.green]
+					])
+					.font_(Font("DejaVu Sans Mono", 9, true))
+					.value_(if(i == 0, 1, 0))  // Track 1 enabled by default
+					.action_({ arg btn;
+						if(~keyStepProMapping.notNil, {
+							~keyStepProMapping.enableTrackMIDI(i, btn.value == 1);
+						}, {
+							"KeyStep Pro mapping not initialized".warn;
+						});
+					})
+					.toolTip_("Enable KeyStep CC/note messages for Track %".format(i + 1));
+			});
 		});
 
-		yPos = yPos + 40;
+		leftY = leftY + 80;
 
-		// === PHASE 15: PRESET SYSTEM ===
-		// Save/Load/Browse buttons for presets
+		// === RIGHT COLUMN: TRACK OVERVIEW ===
+		StaticText(parent, Rect(rightColX, rightY, 400, 25))
+			.string_("TRACK OVERVIEW")
+			.font_(Font("DejaVu Sans Mono", 12, true));
 
-		// Track selector for preset operations
+		rightY = rightY + 30;
+
+		4.do({ arg i;
+			var trackY = rightY + (i * 50);
+
+			StaticText(parent, Rect(rightColX, trackY, 80, 20))
+				.string_("TRACK " ++ (i + 1))
+				.font_(Font("DejaVu Sans Mono", 11, true));
+
+			// VU Meter
+			levelMeters[i] = LevelIndicator(parent, Rect(rightColX, trackY + 20, 80, 12))
+				.warning_(0.7)
+				.critical_(0.9)
+				.style_(\led)
+				.numSteps_(12)
+				.numTicks_(0)
+				.numMajorTicks_(0);
+
+			// Mute
+			Button(parent, Rect(rightColX + 90, trackY, 60, 35))
+				.states_([
+					["MUTE", colors.buttonText, Color.gray(0.5)],
+					["MUTE", colors.buttonTextActive, Color.red(0.7)]
+				])
+				.action_({ arg btn;
+					trackManager.setMute(i, btn.value.asBoolean);
+				});
+
+			// Solo
+			Button(parent, Rect(rightColX + 155, trackY, 60, 35))
+				.states_([
+					["SOLO", colors.buttonText, Color.gray(0.5)],
+					["SOLO", colors.buttonTextActive, Color.yellow(0.8)]
+				])
+				.action_({ arg btn;
+					trackManager.setSolo(i, btn.value.asBoolean);
+				});
+
+			// Volume
+			StaticText(parent, Rect(rightColX + 225, trackY, 50, 20))
+				.string_("Vol")
+				.font_(Font("DejaVu Sans Mono", 9));
+			Slider(parent, Rect(rightColX + 225, trackY + 18, 180, 18))
+				.value_(0.8)
+				.action_({ arg sl;
+					trackManager.setVolume(i, sl.value);
+				});
+
+			// Pan
+			StaticText(parent, Rect(rightColX + 415, trackY, 50, 20))
+				.string_("Pan")
+				.font_(Font("DejaVu Sans Mono", 9));
+			Slider(parent, Rect(rightColX + 415, trackY + 18, 180, 18))
+				.value_(0.5)
+				.action_({ arg sl;
+					trackManager.setPan(i, sl.value.linlin(0, 1, -1, 1));
+				});
+
+			// Viewfinder button (Phase 7)
+			Button(parent, Rect(rightColX + 605, trackY, 50, 35))
+				.states_([["VIEW", colors.fg, colors.blue]])
+				.font_(Font("DejaVu Sans Mono", 8, true))
+				.action_({
+					if(~viewfinder.notNil, {
+						~viewfinder.createWindow(i);
+					}, {
+						"Viewfinder not initialized".warn;
+					});
+				});
+		});
+
+		rightY = rightY + 220;
+
+		// === MASTER OUTPUT (Right column) ===
+		StaticText(parent, Rect(rightColX, rightY, 400, 25))
+			.string_("MASTER OUTPUT")
+			.font_(Font("DejaVu Sans Mono", 12, true));
+
+		rightY = rightY + 30;
+		makeMasterSlider.value(parent, rightColX, rightY, "Master Volume", ControlSpec(0, 1, \lin), \masterVol, 0.8);
+
+		rightY = rightY + 40;
+
+		// === CPU MONITOR (Right column) ===
+		StaticText(parent, Rect(rightColX, rightY, 200, 20))
+			.string_("CPU USAGE")
+			.font_(Font("DejaVu Sans Mono", 12, true));
+
+		rightY = rightY + 25;
+
+		// Average CPU
+		StaticText(parent, Rect(rightColX, rightY, 80, 18))
+			.string_("Average")
+			.font_(Font("DejaVu Sans Mono", 9));
+
+		cpuMeterAvg = LevelIndicator(parent, Rect(rightColX + 85, rightY, 200, 18))
+			.warning_(0.5)
+			.critical_(0.8)
+			.style_(\led)
+			.numSteps_(20);
+
+		rightY = rightY + 25;
+
+		// Peak CPU
+		StaticText(parent, Rect(rightColX, rightY, 80, 18))
+			.string_("Peak")
+			.font_(Font("DejaVu Sans Mono", 9));
+
+		cpuMeterPeak = LevelIndicator(parent, Rect(rightColX + 85, rightY, 200, 18))
+			.warning_(0.7)
+			.critical_(0.9)
+			.style_(\led)
+			.numSteps_(20);
+
+		// === LEFT COLUMN CONTINUED: PRESET SYSTEM ===
 		{
 		// Track selector
-		StaticText(parent, Rect(230, yPos, 80, 20))
+		StaticText(parent, Rect(leftColX, leftY, 80, 20))
 			.string_("Track:")
 			.font_(Font("DejaVu Sans Mono", 10))
 			.stringColor_(colors.fg);
 
-		Button(parent, Rect(280, yPos, 40, 20))
+		Button(parent, Rect(leftColX + 50, leftY, 40, 20))
 			.states_([
 				["1", colors.black, colors.green],
 				["2", colors.black, colors.green],
@@ -729,7 +851,7 @@ Phase 7 Features:
 			});
 
 		// SAVE button
-		Button(parent, Rect(330, yPos, 80, 20))
+		Button(parent, Rect(leftColX + 100, leftY, 80, 20))
 			.states_([["SAVE", colors.black, colors.cyan]])
 			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
@@ -751,7 +873,7 @@ Phase 7 Features:
 			});
 
 		// LOAD button
-		Button(parent, Rect(415, yPos, 80, 20))
+		Button(parent, Rect(leftColX + 185, leftY, 80, 20))
 			.states_([["LOAD", colors.black, Color(1.0, 0.8, 0.2)]])
 			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
@@ -773,7 +895,7 @@ Phase 7 Features:
 			});
 
 		// BROWSE button
-		Button(parent, Rect(500, yPos, 80, 20))
+		Button(parent, Rect(leftColX + 270, leftY, 80, 20))
 			.states_([["BROWSE", colors.black, Color(0.8, 0.6, 1.0)]])
 			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
@@ -800,15 +922,13 @@ Phase 7 Features:
 
 		}.defer(0.01);  // Defer to avoid timing issues
 
-		yPos = yPos + 20;
+		leftY = leftY + 30;
 
 		// === PHASE 15: 128-BAND RESONATOR (DynKlank) ===
-
-		yPos = yPos + 30;
-		makeMasterButton.value(parent, 10, yPos, 150, "Filter", \filterOn);
+		makeMasterButton.value(parent, leftColX, leftY, 150, "Filter", \filterOn);
 
 		// Phase 15: Spectrum Analyzer button (FabFilter-style)
-		Button(parent, Rect(170, yPos, 120, 25))
+		Button(parent, Rect(leftColX + 160, leftY, 120, 25))
 			.states_([["SPECTRUM", colors.fg, colors.blue]])
 			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
@@ -819,8 +939,10 @@ Phase 7 Features:
 				});
 			});
 
+		leftY = leftY + 30;
+
 		// Phase 15: Stereo/Quad toggle button
-		Button(parent, Rect(300, yPos, 120, 25))
+		Button(parent, Rect(leftColX, leftY, 120, 25))
 			.states_([
 				["STEREO MODE", colors.buttonText, colors.green],
 				["QUAD MODE", colors.buttonTextActive, colors.orange]
@@ -835,7 +957,7 @@ Phase 7 Features:
 			});
 
 		// Quad Panner button (next to Stereo/Quad toggle)
-		Button(parent, Rect(425, yPos, 120, 25))
+		Button(parent, Rect(leftColX + 125, leftY, 120, 25))
 			.states_([["QUAD PANNER", colors.black, colors.orange]])
 			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
@@ -846,10 +968,10 @@ Phase 7 Features:
 				});
 			});
 
-		yPos = yPos + 35;
+		leftY = leftY + 35;
 
 		// === KEYSTEP PRO CONNECT/DISCONNECT BUTTON ===
-		Button(parent, Rect(10, yPos, 180, 30))
+		Button(parent, Rect(leftColX, leftY, 180, 30))
 			.states_([
 				["KeyStep: DISCONNECTED", Color.white, Color.gray(0.4)],
 				["KeyStep: CONNECTED", Color.white, Color.new255(0, 170, 170)] // Cyan
@@ -882,21 +1004,21 @@ Phase 7 Features:
 			})
 			.font_(Font("Helvetica", 12, true));
 
-		yPos = yPos + 40;
+		leftY = leftY + 40;
 
 		// === PHASE 16: DISINTEGRATE MACRO ===
-		StaticText(parent, Rect(10, yPos, 400, 25))
+		StaticText(parent, Rect(leftColX, leftY, 400, 25))
 			.string_("DISINTEGRATE")
 			.font_(Font("DejaVu Sans Mono", 12, true))
 			.stringColor_(Color.red(0.8));
 
-		yPos = yPos + 30;
+		leftY = leftY + 30;
 
-		StaticText(parent, Rect(10, yPos, 120, 18))
+		StaticText(parent, Rect(leftColX, leftY, 120, 18))
 			.string_("Entropy →")
 			.font_(Font("DejaVu Sans Mono", 10));
 
-		Slider(parent, Rect(140, yPos, 500, 25))
+		Slider(parent, Rect(leftColX + 80, leftY, 300, 25))
 			.value_(0.0)
 			.action_({ arg sl;
 				var val = sl.value;  // 0.0 to 1.0
@@ -914,33 +1036,33 @@ Phase 7 Features:
 			})
 			.toolTip_("TOTAL DESTRUCTION: Position chaos, 1-bit audio, reverb wash, reverse, pitch chaos, resonance, distortion");
 
-		yPos = yPos + 40;
+		leftY = leftY + 40;
 
-		makeMasterSlider.value(parent, 10, yPos, "Frequency", ControlSpec(20, 2000, \exp), \filterFreq, 200);
-		yPos = yPos + 22;
-		makeMasterSlider.value(parent, 10, yPos, "Morph (LP→BP→HP)", ControlSpec(0, 1, \lin), \filterMorph, 0.5);
-		yPos = yPos + 22;
-		makeMasterSlider.value(parent, 10, yPos, "Resonance", ControlSpec(0, 1, \lin), \filterRes, 0.5);
-		yPos = yPos + 22;
-		makeMasterSlider.value(parent, 10, yPos, "Decay", ControlSpec(0, 1, \lin), \filterDecay, 0.5);
-		yPos = yPos + 22;
-		makeMasterSlider.value(parent, 10, yPos, "Animate", ControlSpec(0, 1, \lin), \filterAnimate, 0);
-		yPos = yPos + 22;
-		makeMasterSlider.value(parent, 10, yPos, "Anim Rate", ControlSpec(0.01, 10, \exp), \filterAnimRate, 0.5);
-		yPos = yPos + 22;
-		makeMasterSlider.value(parent, 10, yPos, "Filter Mix", ControlSpec(0, 1, \lin), \filterMix, 0.5);
+		makeMasterSlider.value(parent, 10, leftY, "Frequency", ControlSpec(20, 2000, \exp), \filterFreq, 200);
+		leftY = leftY + 22;
+		makeMasterSlider.value(parent, 10, leftY, "Morph (LP→BP→HP)", ControlSpec(0, 1, \lin), \filterMorph, 0.5);
+		leftY = leftY + 22;
+		makeMasterSlider.value(parent, 10, leftY, "Resonance", ControlSpec(0, 1, \lin), \filterRes, 0.5);
+		leftY = leftY + 22;
+		makeMasterSlider.value(parent, 10, leftY, "Decay", ControlSpec(0, 1, \lin), \filterDecay, 0.5);
+		leftY = leftY + 22;
+		makeMasterSlider.value(parent, 10, leftY, "Animate", ControlSpec(0, 1, \lin), \filterAnimate, 0);
+		leftY = leftY + 22;
+		makeMasterSlider.value(parent, 10, leftY, "Anim Rate", ControlSpec(0.01, 10, \exp), \filterAnimRate, 0.5);
+		leftY = leftY + 22;
+		makeMasterSlider.value(parent, 10, leftY, "Filter Mix", ControlSpec(0, 1, \lin), \filterMix, 0.5);
 
-		yPos = yPos + 40;
+		leftY = leftY + 40;
 
 		// === TRACK OVERVIEW ===
-		StaticText(parent, Rect(10, yPos, 400, 25))
+		StaticText(parent, Rect(10, leftY, 400, 25))
 			.string_("TRACK OVERVIEW")
 			.font_(Font("DejaVu Sans Mono", 12, true));
 
-		yPos = yPos + 30;
+		leftY = leftY + 30;
 
 		4.do({ arg i;
-			var trackY = yPos + (i * 50);
+			var trackY = leftY + (i * 50);
 
 			StaticText(parent, Rect(10, trackY, 80, 20))
 				.string_("TRACK " ++ (i + 1))
@@ -1008,62 +1130,62 @@ Phase 7 Features:
 				});
 		});
 
-		yPos = yPos + 220;
+		leftY = leftY + 220;
 
 		// === MASTER OUTPUT ===
-		StaticText(parent, Rect(10, yPos, 400, 25))
+		StaticText(parent, Rect(10, leftY, 400, 25))
 			.string_("MASTER OUTPUT")
 			.font_(Font("DejaVu Sans Mono", 12, true));
 
-		yPos = yPos + 30;
-		makeMasterSlider.value(parent, 10, yPos, "Master Volume", ControlSpec(0, 1, \lin), \masterVol, 0.8);
+		leftY = leftY + 30;
+		makeMasterSlider.value(parent, 10, leftY, "Master Volume", ControlSpec(0, 1, \lin), \masterVol, 0.8);
 
-		yPos = yPos + 40;
+		leftY = leftY + 40;
 
 		// === CPU MONITOR ===
-		StaticText(parent, Rect(10, yPos, 200, 20))
+		StaticText(parent, Rect(10, leftY, 200, 20))
 			.string_("CPU USAGE")
 			.font_(Font("DejaVu Sans Mono", 12, true));
 
-		yPos = yPos + 25;
+		leftY = leftY + 25;
 
 		// Average CPU
-		StaticText(parent, Rect(10, yPos, 80, 18))
+		StaticText(parent, Rect(10, leftY, 80, 18))
 			.string_("Average")
 			.font_(Font("DejaVu Sans Mono", 9));
 
-		cpuMeterAvg = LevelIndicator(parent, Rect(95, yPos, 200, 18))
+		cpuMeterAvg = LevelIndicator(parent, Rect(95, leftY, 200, 18))
 			.warning_(0.5)
 			.critical_(0.8)
 			.style_(\led)
 			.numSteps_(20);
 
-		cpuTextAvg = StaticText(parent, Rect(300, yPos, 60, 18))
+		cpuTextAvg = StaticText(parent, Rect(300, leftY, 60, 18))
 			.string_("0%")
 			.font_(Font("DejaVu Sans Mono", 9))
 			.align_(\right);
 
-		yPos = yPos + 22;
+		leftY = leftY + 22;
 
 		// Peak CPU
-		StaticText(parent, Rect(10, yPos, 80, 18))
+		StaticText(parent, Rect(10, leftY, 80, 18))
 			.string_("Peak")
 			.font_(Font("DejaVu Sans Mono", 9));
 
-		cpuMeterPeak = LevelIndicator(parent, Rect(95, yPos, 200, 18))
+		cpuMeterPeak = LevelIndicator(parent, Rect(95, leftY, 200, 18))
 			.warning_(0.7)
 			.critical_(0.9)
 			.style_(\led)
 			.numSteps_(20);
 
-		cpuTextPeak = StaticText(parent, Rect(300, yPos, 60, 18))
+		cpuTextPeak = StaticText(parent, Rect(300, leftY, 60, 18))
 			.string_("0%")
 			.font_(Font("DejaVu Sans Mono", 9))
 			.align_(\right);
 
-		yPos = yPos + 25;
+		leftY = leftY + 25;
 
-		StaticText(parent, Rect(10, yPos, 400, 40))
+		StaticText(parent, Rect(10, leftY, 400, 40))
 			.string_("Target: <50% average, <80% peak\nHigh CPU may cause audio dropouts")
 			.font_(Font("DejaVu Sans Mono", 9))
 			.stringColor_(colors.brightBlack);

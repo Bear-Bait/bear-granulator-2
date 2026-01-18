@@ -24,7 +24,6 @@ QUICK START:
 5. Adjust grain controls to sculpt sound
 ==================================
 */
-
 (
 // ============================================
 // CONFIGURATION
@@ -136,6 +135,11 @@ fork {
 		(~config.corePath +/+ "direct-playback.scd").load;
 		0.2.wait;
 		"  ✓ Direct playback engine loaded".postln;
+
+		// Load spectral capture SynthDef (Phase 17)
+		(~config.corePath +/+ "spectral-capture.scd").load;
+		0.2.wait;
+		"  ✓ Spectral capture SynthDef loaded".postln;
 
 		// Load per-track effects chain (Phase 16)
 		(~config.corePath +/+ "per-track-effects.scd").load;

@@ -97,6 +97,11 @@ Public API:
 				track.filePath = path;  // Set track's filePath for viewfinder
 			};
 
+			// Phase 17: Spectral Photobooth - Capture buffer for spectral snapshots
+			track.spectralCaptureBuffer = Buffer.alloc(server, server.sampleRate * 4, 2);  // 4 sec stereo
+			track.spectralCaptureRecorder = nil;  // RecordBuf synth (created on-demand)
+			track.spectralCaptureStatus = \ready;  // \ready, \capturing, \captured
+
 			// Default parameters for grain synth
 			defaultParams = (
 				// Grain parameters
@@ -235,7 +240,12 @@ Public API:
 				\loopEnd, track.params[\loopEnd],
 				\amp, track.params[\amp],
 				\pan, track.params[\pan],
-				\pitch, track.params[\pitch]
+				\pitch, track.params[\pitch],
+				// Phase 16: Wow & Flutter parameters
+				\wowRate, track.params[\wowRate],
+				\wowDepth, track.params[\wowDepth],
+				\flutterRate, track.params[\flutterRate],
+				\flutterDepth, track.params[\flutterDepth]
 			], track.instrumentGroup);
 
 			// Phase 15: Direct synth starts STOPPED (granular mode is default)
@@ -280,6 +290,17 @@ Public API:
 				track.audioBus = nil;
 			});
 
+			// Phase 17: Free spectral capture buffer and recorder
+			if(track.spectralCaptureBuffer.notNil, {
+				track.spectralCaptureBuffer.free;
+				track.spectralCaptureBuffer = nil;
+			});
+
+			if(track.spectralCaptureRecorder.notNil, {
+				track.spectralCaptureRecorder.free;
+				track.spectralCaptureRecorder = nil;
+			});
+
 			"Track manager: Track % freed".format(trackNum + 1).postln;
 		},
 
@@ -289,7 +310,8 @@ Public API:
 			var spectralParams = [\spectralMix, \spectralPosition, \spectralRate,
 			                       \spectralWindowSize, \spectralOverlaps, \spectralPitch,
 			                       \spectralFreeze, \spectralSmear, \spectralAmp];
-			var directPlaybackParams = [\position, \loopStart, \loopEnd, \amp, \pan, \pitch, \rate, \timeStretch];
+			var directPlaybackParams = [\position, \loopStart, \loopEnd, \amp, \pan, \pitch, \rate, \timeStretch,
+		                             \wowRate, \wowDepth, \flutterRate, \flutterDepth];
 			var synthParam;  // For spectral parameter mapping
 			var wasPlaying;  // For engine mode switching
 
@@ -1032,6 +1054,123 @@ Public API:
 				});
 
 				"✓ Track %: Loaded %".format(trackNum + 1, PathName(absolutePath).fileName).postln;
+			};
+		},
+
+		// Phase 17: Capture spectral engine output
+		captureSpectral: { arg self, trackNum;
+			var track = tracks[trackNum];
+
+			if(track.spectralSynth.isNil, {
+				"Track %: No spectral engine to capture".format(trackNum + 1).warn;
+				^nil;
+			});
+
+			if(track.spectralCaptureStatus == \capturing, {
+				"Track %: Already capturing".format(trackNum + 1).warn;
+				^nil;
+			});
+
+			// Clear previous capture
+			track.spectralCaptureBuffer.zero;
+
+			// Update status
+			track.spectralCaptureStatus = \capturing;
+
+			// Create recorder synth (reads from track's audio bus)
+			track.spectralCaptureRecorder = Synth(\spectralCapture, [
+				\inBus, track.audioBus.index,
+				\captureBuffer, track.spectralCaptureBuffer
+			], track.instrumentGroup, \addAfter);
+
+			// Register completion callback
+			OSCdef(("spectralCaptureDone_" ++ trackNum).asSymbol, { arg msg;
+				{
+					track.spectralCaptureStatus = \captured;
+					"✓ Track %: Spectral capture complete (4 seconds)!".format(trackNum + 1).postln;
+				}.defer;
+			}, '/spectralCaptureDone');
+
+			"Track %: Capturing spectral output (4 seconds)...".format(trackNum + 1).postln;
+			this;
+		},
+
+		// Phase 17: Load captured spectral buffer to target track
+		loadCapturedSpectral: { arg self, sourceTrack, targetTrack;
+			var source = tracks[sourceTrack];
+			var target = tracks[targetTrack];
+			var tempFilePath;
+
+			if(source.spectralCaptureStatus != \captured, {
+				"Track %: No captured spectral data (status: %)".format(
+					sourceTrack + 1,
+					source.spectralCaptureStatus
+				).warn;
+				^nil;
+			});
+
+			fork {
+				// 1. Stop target synths to prevent clicks
+				if(target.grainSynth.notNil, { target.grainSynth.run(false) });
+				if(target.spectralSynth.notNil, { target.spectralSynth.run(false) });
+				if(target.directPlaybackSynth.notNil, { target.directPlaybackSynth.run(false) });
+
+				// 2. Free old buffer
+				target.recorder.buffer.free;
+				server.sync;
+
+				// 3. Allocate new buffer matching capture size
+				target.recorder.buffer = Buffer.alloc(server, source.spectralCaptureBuffer.numFrames, 2);
+				server.sync;
+
+				// 4. Copy RAM data (fast)
+				source.spectralCaptureBuffer.copyData(target.recorder.buffer);
+				server.sync;
+
+				// 5. WRITE TO TEMP FILE (The Fix - enables waveform display)
+				// Consistent with buffer-recorder.scd naming convention
+				tempFilePath = PathName.tmp +/+ "bearulator_spectral_t%_%.wav".format(
+					targetTrack + 1,
+					Date.getDate.stamp
+				);
+
+				target.recorder.buffer.write(tempFilePath, "WAV", "int16");
+				server.sync; // CRITICAL: Wait for file write to finish
+
+				// 6. Update track state
+				target.filePath = tempFilePath;
+				target.recorder.tempFilePath = tempFilePath; // Keep recorder in sync
+
+				// 7. Update synth buffer references
+				if(target.grainSynth.notNil, {
+					target.grainSynth.set(\bufnum, target.recorder.buffer.bufnum);
+					target.grainSynth.run(true);
+				});
+
+				if(target.spectralSynth.notNil, {
+					target.spectralSynth.set(\bufnum, target.recorder.buffer.bufnum);
+					target.spectralSynth.run(true);
+				});
+
+				if(target.directPlaybackSynth.notNil, {
+					target.directPlaybackSynth.set(\bufnum, target.recorder.buffer.bufnum);
+					target.directPlaybackSynth.run(true);
+				});
+
+				// 8. Update GUI (Must be deferred)
+				{
+					if(~viewfinder.notNil, {
+						~viewfinder.updateWaveform(targetTrack);
+					});
+
+					"✓ Track %: Loaded spectral capture from Track % (4 sec)".format(
+						targetTrack + 1,
+						sourceTrack + 1
+					).postln;
+
+					// Reset capture status
+					source.spectralCaptureStatus = \ready;
+				}.defer;
 			};
 		},
 

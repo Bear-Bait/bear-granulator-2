@@ -48,6 +48,7 @@ Usage:
 			var cropButton, applyCropButton; // Phase 15: Crop UI elements
 			var grainEngineButton, spectralEngineButton;  // Phase 15: Engine toggle buttons
 			var uiWidgets = IdentityDictionary.new;  // Store slider widgets for RESET button
+			var snapshotButton, spectralStatusText, targetSelector;  // Phase 17: Spectral Photobooth GUI elements
 
 			// Doom Material colors
 			colors = (
@@ -671,14 +672,22 @@ Usage:
 				var sel = view.selection(0);
 				var currentBuffer = track.recorder.buffer;  // Get buffer from track
 				if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
-					var startFrame = sel[0];
-					var duration = sel[1];
-					var endFrame = startFrame + duration;
-					var numFrames = currentBuffer.numFrames;
-					var sampleRate = currentBuffer.sampleRate;
+				var startFrame, duration, endFrame, numFrames, sampleRate;
+				var loopStart, loopEnd;
 
-					var loopStart = (startFrame / numFrames).clip(0.0, 1.0);
-					var loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
+				startFrame = sel[0];
+				duration = sel[1];
+				endFrame = startFrame + duration;
+				numFrames = currentBuffer.numFrames;
+				sampleRate = currentBuffer.sampleRate;
+
+				// Safety check: skip if buffer not fully initialized
+				if(numFrames.isNil or: { sampleRate.isNil } or: { numFrames <= 0 }, {
+					^this;
+				});
+
+				loopStart = (startFrame / numFrames).clip(0.0, 1.0);
+				loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
 
 					// Ensure minimum window size (1% of buffer)
 					if((loopEnd - loopStart) < 0.01, {
@@ -710,14 +719,21 @@ Usage:
 				var currentBuffer = track.recorder.buffer;
 				// Get buffer from track
 				if(sel.notNil and: { sel[1] > 0 } and: { currentBuffer.notNil }, {
-					var startFrame = sel[0];
-					var duration = sel[1];
-					var endFrame = startFrame + duration;
-					var numFrames = currentBuffer.numFrames;
-					var loopStart, loopEnd, startTime, endTime, loopDur;
+				var startFrame, duration, endFrame, numFrames;
+				var loopStart, loopEnd, startTime, endTime, loopDur;
 
-					loopStart = (startFrame / numFrames).clip(0.0, 1.0);
-					loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
+				startFrame = sel[0];
+				duration = sel[1];
+				endFrame = startFrame + duration;
+				numFrames = currentBuffer.numFrames;
+
+				// Safety check: skip if buffer not fully initialized
+				if(numFrames.isNil or: { currentBuffer.sampleRate.isNil } or: { numFrames <= 0 }, {
+					^this;
+				});
+
+				loopStart = (startFrame / numFrames).clip(0.0, 1.0);
+				loopEnd = (endFrame / numFrames).clip(0.0, 1.0);
 
 					// Ensure minimum window size (SKIP in crop mode)
 					if(cropMode.not and: { (loopEnd - loopStart) < 0.01 }, {
@@ -1342,6 +1358,76 @@ Usage:
 			// Flutter Depth (0.0-1.0)
 			makeSlider.value(win, 450, yPos, "Flutter Depth", ControlSpec(0, 1, \lin), \flutterDepth, track.params[\flutterDepth] ? 0.0);
 			uiWidgets[\flutterDepth] = makeSlider.value(win, 450, yPos, "Flutter Depth", ControlSpec(0, 1, \lin), \flutterDepth, track.params[\flutterDepth] ? 0.0);
+
+			// === SPECTRAL PHOTOBOOTH (Phase 17) ===
+			yPos = yPos + 50;
+			StaticText(win, Rect(450, yPos, 200, 20))
+				.string_("SPECTRAL PHOTOBOOTH")
+				.font_(Font("DejaVu Sans Mono", 10, true))
+				.stringColor_(colors.cyan)
+				.toolTip_("Capture spectral textures to buffers");
+			yPos = yPos + 25;
+
+			// Snapshot button
+			snapshotButton = Button(win, Rect(450, yPos, 140, 30))
+				.states_([
+					["SNAPSHOT", colors.fg, Color.gray(0.3)],
+					["CAPTURING...", colors.black, colors.yellow],
+					["CAPTURED ✓", colors.black, colors.green]
+				])
+				.action_({ arg btn;
+					if(btn.value == 1, {
+						// Start capture
+						trackManager.captureSpectral(trackNum);
+
+						// Auto-reset after 4 seconds
+						AppClock.sched(4.1, {
+							{ btn.value = 2 }.defer;  // Show "CAPTURED" state
+						});
+					}, {
+						if(btn.value == 2, {
+							// Reset to ready
+							btn.value = 0;
+						});
+					});
+				})
+				.toolTip_("Capture 4 seconds of spectral engine output");
+
+			// Status text
+			spectralStatusText = StaticText(win, Rect(600, yPos, 150, 30))
+				.string_("Ready")
+				.font_(Font("DejaVu Sans Mono", 9))
+				.stringColor_(colors.fg);
+
+			yPos = yPos + 35;
+
+			// Target track selector
+			StaticText(win, Rect(450, yPos, 80, 20))
+				.string_("Send to →")
+				.font_(Font("DejaVu Sans Mono", 9));
+
+			targetSelector = PopUpMenu(win, Rect(540, yPos, 100, 20))
+				.items_(["Track 1", "Track 2", "Track 3", "Track 4"])
+				.action_({ arg menu;
+					var sourceTrack = trackNum;
+					var targetTrack = menu.value;
+
+					trackManager.loadCapturedSpectral(sourceTrack, targetTrack);
+				})
+				.toolTip_("Load captured spectral data to target track");
+
+			// Update status text based on capture state
+			AppClock.sched(0, {
+				var currentTrack = trackManager.getTrack(trackNum);
+				if(currentTrack.notNil, {
+					spectralStatusText.string = switch(currentTrack.spectralCaptureStatus,
+						\ready, { "Ready" },
+						\capturing, { "Capturing..." },
+						\captured, { "Captured! ✓" }
+					);
+				});
+				0.2;  // Check every 200ms
+			});
 
 			// Store references
 			windows[trackNum] = win;

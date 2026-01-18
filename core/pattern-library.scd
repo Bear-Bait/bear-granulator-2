@@ -534,6 +534,306 @@ Categories:
 			description: "Accelerando - Increasing density over time, position jumps"
 		);
 
+		// ═════════════════════════════════════════════════════
+		// ARPEGGIO CATEGORY (24 patterns)
+		// ═════════════════════════════════════════════════════
+
+		// MAJOR TRIADS (3 patterns - 1, 2, 3 octaves)
+		// 31. Major Triad - 1 octave
+		self.register(
+			name: \arpMajor1Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7];  // C Major
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Major triad arpeggio - 1 octave (C-E-G)"
+		);
+
+		// 32. Major Triad - 2 octaves
+		self.register(
+			name: \arpMajor2Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 12, 16, 19];  // C Major 2 octaves
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Major triad arpeggio - 2 octaves"
+		);
+
+		// 33. Major Triad - 3 octaves
+		self.register(
+			name: \arpMajor3Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 12, 16, 19, 24, 28, 31];  // 3 octaves
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Major triad arpeggio - 3 octaves"
+		);
+
+		// MINOR TRIADS (3 patterns)
+		// 34. Minor Triad - 1 octave
+		self.register(
+			name: \arpMinor1Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 7];  // C Minor
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Minor triad arpeggio - 1 octave (C-Eb-G)"
+		);
+
+		// 35. Minor Triad - 2 octaves
+		self.register(
+			name: \arpMinor2Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 7, 12, 15, 19];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Minor triad arpeggio - 2 octaves"
+		);
+
+		// 36. Minor Triad - 3 octaves
+		self.register(
+			name: \arpMinor3Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 7, 12, 15, 19, 24, 27, 31];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Minor triad arpeggio - 3 octaves"
+		);
+
+		// MAJOR 7TH (3 patterns) - Your original liveStranger pattern
+		// 37. Major 7th - 1 octave
+		self.register(
+			name: \arpMaj71Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 11];  // Cmaj7
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Major 7th arpeggio - 1 octave (Cmaj7)"
+		);
+
+		// 38. Major 7th - 2 octaves (LIVE STRANGER)
+		self.register(
+			name: \liveStranger,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 11, 14, 11, 7, 4];  // Synthwave classic
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Live Stranger - Classic synthwave arpeggio (Cmaj7, 2 oct)"
+		);
+
+		// 39. Major 7th - 3 octaves
+		self.register(
+			name: \arpMaj73Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 11, 12, 16, 19, 23, 24, 28, 31, 35];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Major 7th arpeggio - 3 octaves"
+		);
+
+		// MINOR 7TH (3 patterns)
+		// 40. Minor 7th - 1 octave
+		self.register(
+			name: \arpMin71Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 7, 10];  // Cm7
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Minor 7th arpeggio - 1 octave (Cm7)"
+		);
+
+		// 41. Minor 7th - 2 octaves
+		self.register(
+			name: \arpMin72Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 7, 10, 12, 15, 19, 22];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Minor 7th arpeggio - 2 octaves"
+		);
+
+		// 42. Minor 7th - 3 octaves
+		self.register(
+			name: \arpMin73Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 7, 10, 12, 15, 19, 22, 24, 27, 31, 34];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Minor 7th arpeggio - 3 octaves"
+		);
+
+		// DOMINANT 7TH (3 patterns)
+		// 43. Dominant 7th - 1 octave
+		self.register(
+			name: \arpDom71Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 10];  // C7
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Dominant 7th arpeggio - 1 octave (C7) - blues/jazz"
+		);
+
+		// 44. Dominant 7th - 2 octaves
+		self.register(
+			name: \arpDom72Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 10, 12, 16, 19, 22];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Dominant 7th arpeggio - 2 octaves"
+		);
+
+		// 45. Dominant 7th - 3 octaves
+		self.register(
+			name: \arpDom73Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 7, 10, 12, 16, 19, 22, 24, 28, 31, 34];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Dominant 7th arpeggio - 3 octaves"
+		);
+
+		// DIMINISHED (3 patterns)
+		// 46. Diminished - 1 octave
+		self.register(
+			name: \arpDim1Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 6, 9];  // C diminished (symmetrical)
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Diminished arpeggio - 1 octave (symmetrical, tense)"
+		);
+
+		// 47. Diminished - 2 octaves
+		self.register(
+			name: \arpDim2Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 6, 9, 12, 15, 18, 21];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Diminished arpeggio - 2 octaves"
+		);
+
+		// 48. Diminished - 3 octaves
+		self.register(
+			name: \arpDim3Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Diminished arpeggio - 3 octaves"
+		);
+
+		// AUGMENTED (3 patterns)
+		// 49. Augmented - 1 octave
+		self.register(
+			name: \arpAug1Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 8];  // C augmented (symmetrical)
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Augmented arpeggio - 1 octave (symmetrical, dreamy)"
+		);
+
+		// 50. Augmented - 2 octaves
+		self.register(
+			name: \arpAug2Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 8, 12, 16, 20];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Augmented arpeggio - 2 octaves"
+		);
+
+		// 51. Augmented - 3 octaves
+		self.register(
+			name: \arpAug3Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 4, 8, 12, 16, 20, 24, 28, 32];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Augmented arpeggio - 3 octaves"
+		);
+
+		// SUS CHORDS (3 patterns)
+		// 52. Sus2 - 1 octave
+		self.register(
+			name: \arpSus21Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 2, 7];  // Csus2
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Sus2 arpeggio - 1 octave (open, ambiguous)"
+		);
+
+		// 53. Sus2 - 2 octaves
+		self.register(
+			name: \arpSus22Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 2, 7, 12, 14, 19];
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Sus2 arpeggio - 2 octaves"
+		);
+
+		// 54. Sus4 - 1 octave
+		self.register(
+			name: \arpSus41Oct,
+			category: \arpeggio,
+			type: \pitch,
+			generator: {
+				var chord = [0, 5, 7];  // Csus4
+				Array.fill(64, { |i| chord.wrapAt(i) });
+			},
+			description: "Sus4 arpeggio - 1 octave (tension, wants resolution)"
+		);
+
 		"Pattern library initialized: % patterns".format(self.patterns.size).postln;
 		self;
 	},
@@ -561,7 +861,7 @@ Categories:
 
 	// Get all category names
 	getCategories: { arg self;
-		[\yoshimura, \eno, \terrestrial, \microtonal, \rhythmic, \mathematical];
+		[\yoshimura, \eno, \terrestrial, \microtonal, \rhythmic, \mathematical, \arpeggio];
 	},
 
 	// Generate pattern array from pattern name
@@ -593,9 +893,9 @@ Categories:
 // Initialize on load
 ~patternLibrary = ~patternLibrary.init;
 
-"✓ Pattern library loaded - 30 patterns available".postln;
-"  Categories: Yoshimura (5), Eno (3), Terrestrial (8), Microtonal (5), Rhythmic (4), Mathematical (5)".postln;
-"  Access via: ~patternLibrary.generate(\\yoshimuraCreek)".postln;
+"✓ Pattern library loaded - 54 patterns available".postln;
+"  Categories: Yoshimura (5), Eno (3), Terrestrial (8), Microtonal (5), Rhythmic (4), Mathematical (5), Arpeggio (24)".postln;
+"  Access via: ~patternLibrary.generate(\\liveStranger)".postln;
 
 /*
 Usage Examples:
