@@ -4,23 +4,9 @@
 
 This is a 4-track granular synthesis sampler!
 
-## Active TODOs
+## Active TODOs 
 
-### Completed 
-- [x] Remove loop buttons from viewfinder (Reset Loop, Select All)
-- [x] Add Play/Stop transport buttons to viewfinder
-- [x] Add spectral amplitude slider to viewfinder
-- [x] Fix volume issues (grain boost at 2.0x, soft limiter using tanh)
-- [x] Move all spectral engine sliders to viewfinder (Mix, Amp, Window Size, Overlaps, Rate, Pitch, Smear, Freeze)
-
-### Phase 12 Completed
-- [x] MIDI integration (KeyStep Pro with 5 encoders + polyphonic notes)
-- [x] Recording viewfinder (live audio capture with region selection)
-- [x] Quad speaker output (4-channel spatial audio)
-- [x] Spatial panning GUI (interactive 2D quad positioning)
-- [x] Shimmer mix modulation target
-- [x] Filter cutoff modulation target
-- [x] Fixed viewfinder Play/Stop buttons
+- [ ] Create a new TODO list. 
 
 ---
 
@@ -531,3 +517,10 @@ Remember: There's no "right" way to use this. Granular synthesis is all about ex
 - Record your output and feed it back in!
 
 Questions? Check `generic-commands.scd.`
+
+<!-- Local Variables: -->
+<!-- gptel-model: claude-haiku-4-5-20251001 -->
+<!-- gptel--backend-name: "Claude-Haiku-4.5" -->
+<!-- gptel-max-tokens: 6000 -->
+<!-- gptel--bounds: nil -->
+<!-- End: -->
