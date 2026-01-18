@@ -216,6 +216,32 @@ Phase 7 Features:
 				});
 			});
 
+		// Resonator button (Phase 17)
+		Button(parent, Rect(750, 10, 70, 40))
+			.states_([
+				["RESO\nNATOR", colors.white, Color(0.2, 0.5, 0.7)],
+				["RESO\nON", colors.black, Color(0.0, 0.8, 0.9)]
+			])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.action_({ |btn|
+				var trackId = ("track" ++ (trackNum + 1)).asSymbol;
+				if(~resonatorManager.notNil and: { ~resonatorWindow.notNil }, {
+					// Create per-track resonator if not exists
+					if(~resonatorManager.instances[trackId].isNil, {
+						// Get track's audio bus for input
+						var trackBus = trackManager.getTrack(trackNum).audioBus;
+						if(trackBus.notNil, {
+							// CRITICAL: Add BEFORE masterBus so resonator processes audio before master reads it
+							~resonatorManager.create(trackId, trackBus.index, trackBus.index, \addBefore, ~masterBus);
+							btn.value_(1);
+						});
+					});
+					~resonatorWindow.open(trackId, "Track " ++ (trackNum + 1));
+				}, {
+					"Resonator module not loaded".warn;
+				});
+			});
+
 		// === SECTION 1: AUDIO SOURCE ===
 		yPos = 60;
 		StaticText(parent, Rect(col1X, yPos, 350, 20))
@@ -829,8 +855,56 @@ Phase 7 Features:
 			.style_(\led)
 			.numSteps_(20);
 
+		rightY = rightY + 40;
+
+		// === MASTER RESONATOR (Right column) ===
+		StaticText(parent, Rect(rightColX, rightY, 200, 20))
+			.string_("48-BAND RESONATOR")
+			.font_(Font("DejaVu Sans Mono", 12, true))
+			.stringColor_(Color(0.2, 0.7, 1.0));
+
+		rightY = rightY + 25;
+
+		// Resonator Open Button
+		Button(parent, Rect(rightColX, rightY, 120, 30))
+			.states_([
+				["OPEN RESONATOR", Color.white, Color(0.2, 0.5, 0.8)],
+				["RESONATOR ON", Color.black, Color(0.0, 0.8, 0.9)]
+			])
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.action_({ |btn|
+				if(~resonatorManager.notNil and: { ~resonatorWindow.notNil }, {
+					// Create master resonator if not exists
+					if(~resonatorManager.instances[\master].isNil, {
+						// Master resonator reads from output and writes back
+						// For now just open the standalone window
+						~resonatorWindow.open(\master, "Master");
+						btn.value_(1);
+					}, {
+						~resonatorWindow.open(\master, "Master");
+					});
+				}, {
+					"Resonator module not loaded".warn;
+				});
+			});
+
+		// Quick controls for master resonator
+		StaticText(parent, Rect(rightColX + 130, rightY, 60, 12))
+			.string_("Mix")
+			.font_(Font("DejaVu Sans Mono", 9))
+			.stringColor_(colors.fg.alpha_(0.7));
+
+		Slider(parent, Rect(rightColX + 130, rightY + 12, 150, 18))
+			.value_(0.5)
+			.action_({ |sl|
+				if(~resonatorManager.notNil, {
+					~resonatorManager.setParam(\master, \mix, sl.value);
+				});
+			});
+
 		// === LEFT COLUMN CONTINUED: PRESET SYSTEM ===
-		{
+		leftY = leftY + 60;  // Add spacing to avoid overlap with filter sliders
+
 		// Track selector
 		StaticText(parent, Rect(leftColX, leftY, 80, 20))
 			.string_("Track:")
@@ -919,8 +993,6 @@ Phase 7 Features:
 					"No presets found in %".format(~presetManager.getPresetPath).postln;
 				});
 			});
-
-		}.defer(0.01);  // Defer to avoid timing issues
 
 		leftY = leftY + 30;
 
@@ -1052,143 +1124,6 @@ Phase 7 Features:
 		leftY = leftY + 22;
 		makeMasterSlider.value(parent, 10, leftY, "Filter Mix", ControlSpec(0, 1, \lin), \filterMix, 0.5);
 
-		leftY = leftY + 40;
-
-		// === TRACK OVERVIEW ===
-		StaticText(parent, Rect(10, leftY, 400, 25))
-			.string_("TRACK OVERVIEW")
-			.font_(Font("DejaVu Sans Mono", 12, true));
-
-		leftY = leftY + 30;
-
-		4.do({ arg i;
-			var trackY = leftY + (i * 50);
-
-			StaticText(parent, Rect(10, trackY, 80, 20))
-				.string_("TRACK " ++ (i + 1))
-				.font_(Font("DejaVu Sans Mono", 11, true));
-
-			// VU Meter
-			levelMeters[i] = LevelIndicator(parent, Rect(10, trackY + 20, 80, 12))
-				.warning_(0.7)
-				.critical_(0.9)
-				.style_(\led)
-				.numSteps_(12)
-				.numTicks_(0)
-				.numMajorTicks_(0);
-
-			// Mute
-			Button(parent, Rect(100, trackY, 60, 35))
-				.states_([
-					["MUTE", colors.buttonText, Color.gray(0.5)],
-					["MUTE", colors.buttonTextActive, Color.red(0.7)]
-				])
-				.action_({ arg btn;
-					trackManager.setMute(i, btn.value.asBoolean);
-				});
-
-			// Solo
-			Button(parent, Rect(165, trackY, 60, 35))
-				.states_([
-					["SOLO", colors.buttonText, Color.gray(0.5)],
-					["SOLO", colors.buttonTextActive, Color.yellow(0.8)]
-				])
-				.action_({ arg btn;
-					trackManager.setSolo(i, btn.value.asBoolean);
-				});
-
-			// Volume
-			StaticText(parent, Rect(235, trackY, 50, 20))
-				.string_("Vol")
-				.font_(Font("DejaVu Sans Mono", 9));
-			Slider(parent, Rect(235, trackY + 18, 180, 18))
-				.value_(0.8)
-				.action_({ arg sl;
-					trackManager.setVolume(i, sl.value);
-				});
-
-			// Pan
-			StaticText(parent, Rect(425, trackY, 50, 20))
-				.string_("Pan")
-				.font_(Font("DejaVu Sans Mono", 9));
-			Slider(parent, Rect(425, trackY + 18, 180, 18))
-				.value_(0.5)
-				.action_({ arg sl;
-					trackManager.setPan(i, sl.value.linlin(0, 1, -1, 1));
-				});
-
-			// Viewfinder button (Phase 7)
-			Button(parent, Rect(615, trackY, 50, 35))
-				.states_([["VIEW", colors.fg, colors.blue]])
-				.font_(Font("DejaVu Sans Mono", 8, true))
-				.action_({
-					if(~viewfinder.notNil, {
-						~viewfinder.createWindow(i);
-					}, {
-						"Viewfinder not initialized".warn;
-					});
-				});
-		});
-
-		leftY = leftY + 220;
-
-		// === MASTER OUTPUT ===
-		StaticText(parent, Rect(10, leftY, 400, 25))
-			.string_("MASTER OUTPUT")
-			.font_(Font("DejaVu Sans Mono", 12, true));
-
-		leftY = leftY + 30;
-		makeMasterSlider.value(parent, 10, leftY, "Master Volume", ControlSpec(0, 1, \lin), \masterVol, 0.8);
-
-		leftY = leftY + 40;
-
-		// === CPU MONITOR ===
-		StaticText(parent, Rect(10, leftY, 200, 20))
-			.string_("CPU USAGE")
-			.font_(Font("DejaVu Sans Mono", 12, true));
-
-		leftY = leftY + 25;
-
-		// Average CPU
-		StaticText(parent, Rect(10, leftY, 80, 18))
-			.string_("Average")
-			.font_(Font("DejaVu Sans Mono", 9));
-
-		cpuMeterAvg = LevelIndicator(parent, Rect(95, leftY, 200, 18))
-			.warning_(0.5)
-			.critical_(0.8)
-			.style_(\led)
-			.numSteps_(20);
-
-		cpuTextAvg = StaticText(parent, Rect(300, leftY, 60, 18))
-			.string_("0%")
-			.font_(Font("DejaVu Sans Mono", 9))
-			.align_(\right);
-
-		leftY = leftY + 22;
-
-		// Peak CPU
-		StaticText(parent, Rect(10, leftY, 80, 18))
-			.string_("Peak")
-			.font_(Font("DejaVu Sans Mono", 9));
-
-		cpuMeterPeak = LevelIndicator(parent, Rect(95, leftY, 200, 18))
-			.warning_(0.7)
-			.critical_(0.9)
-			.style_(\led)
-			.numSteps_(20);
-
-		cpuTextPeak = StaticText(parent, Rect(300, leftY, 60, 18))
-			.string_("0%")
-			.font_(Font("DejaVu Sans Mono", 9))
-			.align_(\right);
-
-		leftY = leftY + 25;
-
-		StaticText(parent, Rect(10, leftY, 400, 40))
-			.string_("Target: <50% average, <80% peak\nHigh CPU may cause audio dropouts")
-			.font_(Font("DejaVu Sans Mono", 9))
-			.stringColor_(colors.brightBlack);
 	};
 
 	// ========================================

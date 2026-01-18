@@ -214,7 +214,14 @@ Opens a dedicated window for modulation control of a single track
 				"M: Filter Res",     // Phase 15: Master filter
 				"M: Filter Decay",   // Phase 15: Master filter
 				"M: Filter Animate", // Phase 15: Master filter
-				"M: Filter Mix"      // Phase 15: Master filter
+				"M: Filter Mix",     // Phase 15: Master filter
+				"─────",             // Separator
+				"Res Freq",          // Phase 17: Per-track resonator
+				"Res Morph",         // Phase 17: Per-track resonator
+				"Res Damp",          // Phase 17: Per-track resonator
+				"Res Decay",         // Phase 17: Per-track resonator
+				"Res Feedback",      // Phase 17: Per-track resonator
+				"Res Mix"            // Phase 17: Per-track resonator
 			])
 			.value_(0)
 			.font_(Font("Monaco", 8));
@@ -248,25 +255,52 @@ Opens a dedicated window for modulation control of a single track
 					\filterFreq, \filterMorph, \filterRes, \filterDecay, \filterMix,  // Per-track filter (5 params)
 					\reverbMix, \delayMix, \shimmerMix,
 					\quadX, \quadY,  // Phase 13: Spatial modulation targets
-					nil,  // Separator
+					nil,  // Separator (index 18)
 					\masterFilterFreq, \masterFilterMorph, \masterFilterRes,    // Phase 15: Master filter
-					\masterFilterDecay, \masterFilterAnimate, \masterFilterMix  // Phase 15: Master filter
+					\masterFilterDecay, \masterFilterAnimate, \masterFilterMix,  // Phase 15: Master filter
+					nil,  // Separator (index 25)
+					\resFreq, \resMorph, \resDamp, \resDecay, \resFeedback, \resMix  // Phase 17: Resonator
 				];
 				var targetIdx = targetMenu.value;
-				if(targetIdx > 0 and: { targetIdx != 18 }, {  // Skip separator (index 18 now)
+				if(targetIdx > 0 and: { (targetIdx != 18) and: { targetIdx != 25 }}, {  // Skip separators
 					var param = paramMap[targetIdx];
 					var min = minNum.value;
 					var max = maxNum.value;
 
-					// Phase 15: Route to master bus if master parameter (index 19+)
-					if(targetIdx >= 19, {
-						trackManager.routeModulatorToMaster(trackNum, modNum, param, min, max);
-					}, {
-						trackManager.routeModulator(trackNum, modNum, param, min, max);
-					});
-
-					statusText.string_("Status: Routed to " ++ targetMenu.items[targetIdx])
-						.stringColor_(Color.cyan);
+					// Route based on target type
+					case
+						{ targetIdx >= 26 } {
+							// Phase 17: Route to resonator
+							var trackId = ("track" ++ (trackNum + 1)).asSymbol;
+							var resParam = switch(param,
+								\resFreq, { \freq },
+								\resMorph, { \morph },
+								\resDamp, { \damp },
+								\resDecay, { \decay },
+								\resFeedback, { \feedback },
+								\resMix, { \mix },
+								{ param }
+							);
+							// Store modulation routing info for resonator
+							if(~resonatorManager.notNil, {
+								"Resonator modulation: % -> % (%..)".format(modNum, resParam, min, max).postln;
+								// For now, print routing - actual audio-rate mod needs bus routing
+							});
+							statusText.string_("Status: Resonator " ++ resParam)
+								.stringColor_(Color(0.2, 0.8, 1.0));
+						}
+						{ targetIdx >= 19 } {
+							// Phase 15: Route to master bus
+							trackManager.routeModulatorToMaster(trackNum, modNum, param, min, max);
+							statusText.string_("Status: Routed to " ++ targetMenu.items[targetIdx])
+								.stringColor_(Color.cyan);
+						}
+						{
+							// Standard per-track routing
+							trackManager.routeModulator(trackNum, modNum, param, min, max);
+							statusText.string_("Status: Routed to " ++ targetMenu.items[targetIdx])
+								.stringColor_(Color.cyan);
+						};
 				});
 			});
 

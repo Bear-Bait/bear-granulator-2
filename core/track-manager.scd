@@ -374,15 +374,15 @@ Public API:
 				if(track.grainSynth.notNil, { track.grainSynth.set(\amp, baseAmp * granAmp) });
 				if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.set(\amp, baseAmp * directAmp) });
 
-				^this;  // Done, don't send to synths again
+				^self;  // Done, don't send to synths again
 			});
 
 			// Phase 16: Handle explicit ON/OFF toggles (grainOn, directOn)
 			// This allows the GUI buttons to trigger the logic above
 			if((param == \grainOn) or: { param == \directOn }, {
 				// Re-trigger the mix logic to apply the new Mute state
-				this.setParam(trackNum, \engineMix, track.params[\engineMix]);
-				^this;
+				self.setParam(trackNum, \engineMix, track.params[\engineMix]);
+				^self;
 			});
 
 			// Phase 16: Handle Spectral ON/OFF
@@ -390,7 +390,7 @@ Public API:
 				if(track.spectralSynth.notNil, {
 					track.spectralSynth.run(value == 1);
 				});
-				^this;
+				^self;
 			});
 
 
@@ -630,7 +630,7 @@ Public API:
 			// Auto-create modulator if it doesn't exist (Phase 15.5 bugfix)
 			if(track.modulators[modNum].isNil, {
 				"Track %: Modulator % not created, creating with defaults...".format(trackNum + 1, modNum + 1).postln;
-				this.createModulator(trackNum, modNum, 0, 1.0, 1.0, 0);  // LFO, 1Hz, full depth, sine
+				self.createModulator(trackNum, modNum, 0, 1.0, 1.0, 0);  // LFO, 1Hz, full depth, sine
 			});
 
 			// Store routing info
@@ -890,7 +890,7 @@ Public API:
 			});
 
 			// Reset all params to defaults
-			this.resetParams(trackNum);
+			self.resetParams(trackNum);
 
 			"✓ Track % cleared (buffer wiped, params reset, synths stopped)".format(trackNum + 1).postln;
 		},

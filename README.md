@@ -454,23 +454,69 @@ The `samples/stock/` folder includes some great starter material:
 
 ## DEVELOPMENT STATUS
 
-**Current Phase:** 15 (Planning Complete)
-**Last Updated:** Phase 14 - Preset System (Jan 4, 2026)
+**Current Phase:** 17 (48-Band Resonator Complete)
+**Last Updated:** Phase 17 - 48-Band Morphing Resonator (Jan 18, 2026)
 
 **Active TODO List:** See `TODO.md` for current tasks
-**Detailed Specs:** See `docs/PHASE-15-TODO.md` for technical details
 
-### Next Up (Phase 15-17):
-- ZDF Filter Integration (zero-delay feedback)
-- 128-Band DynKlank Resonator
-- Musical MIDI Scaling Logic
-- Enhanced KeyStep Pro routing
-- Visual feedback enhancements
+### Phase 17 Features (NEW!)
+
+**48-Band Morphing Resonator (Torso S-4 Style)**
+- DynKlank-based resonant filter bank with 48 harmonic bands
+- Morph algorithm: `Freq[i] = BaseFreq * ((i + 1) ** Morph)`
+- 4 macro knobs: Freq, Morph, Damp, Decay
+- D Minor scale quantization toggle
+- Stereo split mode (odd bands L, even bands R)
+- Karplus-Strong style feedback with safety limiting
+- Available on Master bus AND per-track popup windows
+- Modulation targets for LFO control (resFreq, resMorph, resDamp, resDecay, resFeedback, resMix)
+
+**Usage:**
+```supercollider
+// Open master resonator window
+~resonatorWindow.open(\master, "Master");
+
+// Open per-track resonator (click RESONATOR button in track tab)
+~resonatorWindow.open(\track1, "Track 1");
+
+// Standalone test mode (pink noise input)
+"core/resonator-48band.scd".loadRelative;
+```
+
+**Spectral Photobooth**
+- Snapshot-based spectral freezing effect
+- Capture and hold spectral content for infinite sustain
+
+**Wow & Flutter Tape Degradation**
+- Authentic tape machine pitch wobble
+- Adjustable wow (slow drift) and flutter (fast wobble) amounts
+- Adds vintage character to any track
+
+### Phase 16 Features
+- KeyStep Pro multi-track routing (control multiple tracks from one keyboard)
+- Two Captains engine toggle conflict fix
+- Performance macro sliders in Master tab
+
+### Completed Phases (1-15)
+- Core 4-track granular engine with TGrains
+- Spectral engine with Warp1 time-stretching
+- Per-track dual-topology filters (Ladder/SVF)
+- Color FX chain (distortion, bitcrusher, compression)
+- Space FX chain (reverb, delay, shimmer)
+- 4-modulator system per track (audio-rate @ 48kHz)
+- Interactive viewfinder with FFT spectrogram
+- MIDI integration (KeyStep Pro)
+- Recording viewfinder with region selection
+- Quad speaker output (4-channel spatial)
+- Preset save/load system
+- Master bus glue compressor + brick-wall limiter
 
 ## KNOWN ISSUES
 
 - Waveform display uses temp files for recorded buffers
 - Modulation window is a separate popup (not integrated)
+- **Engine switching in track viewer has visual bugs** (active development)
+- Some GUI elements may overlap in Master tab (layout cleanup in progress)
 
 ---
 

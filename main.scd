@@ -7,11 +7,9 @@ Main boot script
 Phase 1: Core Granular Engine
 Phase 2: Morphing Resonator
 Phase 3: Effects Chain (Color + Space)
+inspired by the 
 
-A SuperCollider-based granular synthesis workstation
-inspired by the Torso Electronics S-4
-
-Author: [Your Name]
+Author: [Forrest Muelrath]
 Version: 0.4 (Phase 4)
 Date: 2025-12-31
 
@@ -186,6 +184,16 @@ fork {
 		0.2.wait;
 		"  ✓ Spectrum analyzer loaded".postln;
 
+		// Phase 17: Load resonator insert module
+		(~config.corePath +/+ "resonator-insert.scd").load;
+		0.2.wait;
+		"  ✓ Resonator insert module loaded".postln;
+
+		// Phase 17: Load resonator window GUI
+		(~config.guiPath +/+ "resonator-window.scd").load;
+		0.2.wait;
+		"  ✓ Resonator window loaded".postln;
+
 		// Load 4-track GUI (Phase 4)
 		(~config.guiPath +/+ "four-track-view.scd").load;
 		0.2.wait;
@@ -268,6 +276,12 @@ fork {
 
 		// Set master bus reference in track manager
 		~trackManager.setMasterBus(~masterBus);
+
+		// Phase 17: Create master resonator insert (runs after masterBus)
+		~resonatorManager.create(\master, 0, 0, \addToTail);
+		~resonatorManager.setParam(\master, \on, 0);  // Start bypassed
+		0.1.wait;
+		"  ✓ Master resonator created".postln;
 
 		// Create 4-track GUI
 		~gui = ~bearulatorFourTrackGUI.value(~trackManager, ~masterBus, s);

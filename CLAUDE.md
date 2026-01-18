@@ -9,6 +9,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Language**: SuperCollider (.scd files)
 **Platform**: macOS (primary), with planned Linux/Raspberry Pi ports
 **Audio Interface**: MOTU UltraLite Mk5 (8 inputs, 4 outputs for quad spatial audio)
+**Editor**: Emacs with sclang-mode (not SuperCollider IDE)
+
+**Reloading workflow**: Full SuperCollider restart often not needed. Try:
+1. `CmdPeriod.run;` (stop all synths)
+2. `s.reboot;` (restart server)
+3. `"main.scd".loadRelative;` (reload modules)
 
 **Current Version:** v2.2 (deployed 2026-01-09)
 - Probability masking (Bernoulli gate for rhythmic fracturing)
