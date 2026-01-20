@@ -2,13 +2,80 @@
 
 ![Bearulator GUI](material/bearulator-gooey.png)
 
-This is a 4-track granular synthesis sampler!
+This is a 4-track granular synthesis sampler. Experimenting with Claude Code and Google Gemini to see how quickly I can progress the codebase while learning very little sclang and achieving what I want. Starting goal was to emulate popular granular synth *Torso S4*. Soon after starting realized the flexibility of SC presents oppurtunity for much more synth than the Torso unit, especially running on a Mac M4 with 24gb of ram. SC flexibility and the computing power of a new mac,  coupled with the speed I was able to work using LLM coding assistants, I decided to create this open ended project with several modular components that already function as a pretty damn good granular synth for my studio. I've been making as the Claude pro subscription allows -- credits re-up on Thursday morning, and I typically run out by Sunday.. 
 
-## Active TODOs 
+## Active TODOs
 
-- [ ] Create a new TODO list. 
+- [ ] Create a new TODO list.
 
 ---
+
+## SYSTEM REQUIREMENTS
+
+### Hardware & IO
+- [x] [cite_start]**Compute Memory:** ~2GB RAM allocation (8192 * 256 KB) for buffers/real-time audio [cite: 182, 185]
+- [x] [cite_start]**Audio Inputs:** 8-channel input configuration (optimized for MOTU Mk5) [cite: 182]
+- [x] [cite_start]**Audio Outputs:** Quad Speaker Output (FL/FR/RL/RR) or Stereo switchable [cite: 202, 246]
+- [x] [cite_start]**MIDI Controller:** Dedicated mapping for Arturia KeyStep Pro (Knobs, Mod Strip, Keyboard) [cite: 206]
+
+### Software Dependency
+- [x] **SuperCollider:** Core execution environment (Version 3.13+ recommended for M4)
+- [x] **SC3 Plugins:** Community extension pack (Required for Analog Filters, Membrames, & Advanced FX)
+  - On Apple Silicon, ensure you download the **signed** release of SC3 Plugins to avoid macOS security gatekeeper issues.
+    1.  Go to the [SC3 Plugins Releases](https://github.com/supercollider/sc3-plugins/releases).
+    2.  Download the latest macOS release (usually `sc3-plugins-Version-macOS.zip`).
+    3.  Place the downloaded `SC3Plugins` folder into:
+    `~/Library/Application Support/SuperCollider/Extensions/`
+    *(You may need to create the `Extensions` folder if it doesn't exist).*
+    4.  Recompile the class library in SuperCollider (`Cmd+Shift+L`).
+- [x] **Directory Structure:** Requires `core/`, `gui/`, `material/`, `io/`, `presets/`, and `samples/` relative to `main.scd`
+## CURRENT FEATURE SET (Phase 1-17)
+
+### Audio Engines (Per Track)
+- [x] [cite_start]**Hybrid Architecture:** Fade between Granular, Spectral, and Direct engines via "Engine Mix" [cite: 96, 298]
+- [x] [cite_start]**Quad Granular Engine:** 128 grains per track (512 total) with size, density, and jitter controls (Phase 1) [cite: 186, 221]
+- [x] [cite_start]**Spectral Engine (Warp1):** Spectral smearing, freezing, and independent pitch shifting (Phase 8) [cite: 188, 284]
+- [x] [cite_start]**Direct Playback Engine:** Standard looping sample player running in parallel (Phase 15) [cite: 188, 289]
+- [x] [cite_start]**Material Modes:** Tape, Poly, and Live input modes (Phase 6) [cite: 273, 281]
+
+### Sampling & Recording
+- [x] [cite_start]**Live Loop Recording:** Always-on 4-second rolling buffer recording from hardware inputs (Phase 1) [cite: 191, 406]
+- [x] [cite_start]**Spectral Photobooth:** Capture 4 seconds of Spectral Engine texture to buffer for reuse (Phase 17) [cite: 189, 394]
+- [x] [cite_start]**Crop Mode:** Non-destructive loop windowing and buffer cropping via GUI (Phase 15) [cite: 9, 88]
+
+### Effects & Processing
+- [x] [cite_start]**Per-Track "Color" FX:** Distortion, Bit Crusher, Compressor, and Noise generation (Phase 3) [cite: 185, 225]
+- [x] [cite_start]**Per-Track "Space" FX:** Reverb (with freeze), Ping-Pong Delay, and Shimmer (Phase 3) [cite: 185, 227]
+- [x] [cite_start]**Tape Degradation:** "Wow & Flutter" emulation for vintage tape pitch drift (Phase 16) [cite: 148, 285]
+- [x] [cite_start]**Master Bus Resonator:** 48-band morphing filter shared across tracks (Phase 4) [cite: 185, 223]
+
+### Modulation
+- [x] [cite_start]**Modulation System:** 4 Modulators per track (LFOs, envelope followers) (Phase 5) [cite: 192, 273]
+- [x] [cite_start]**Mosaic Mode:** Cross-modulation (Track A envelope modulates Track B parameter) (Phase 16) [cite: 335, 354]
+
+### Interface & Visualization
+- [x] [cite_start]**Waveform Viewfinder:** Real-time waveform display with drag-to-select looping (Phase 7) [cite: 1, 241]
+- [x] [cite_start]**Visual Overlays:** Real-time playheads for Grain, Spectral, and Recording engines (Phase 15) [cite: 6, 44]
+- [x] [cite_start]**Quad Panner:** Dedicated GUI for positioning tracks in 4-channel spatial field (Phase 12) [cite: 202, 250]
+- [x] [cite_start]**Spectrum Analyzer:** FabFilter-style frequency analyzer on master output (Phase 15) [cite: 198, 214]
+
+## THE M4 ULTIMATE SPEC (Phase 9+)
+
+### Visual Flash (Doom Material Enhanced)
+- [x] [cite_start]**FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11)** [cite: 33]
+- [x] [cite_start]**Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11)** [cite: 48]
+- [ ] **Neon Glow Rendering:** Hardware-accelerated "glow" effects for the playhead and loop regions
+
+### Overlooked Audio Components
+- [x] **Dual-Topology Analog-Modeled Filter (Per Track):** **(Phase 10)**
+  - ZDF (Zero-Delay Feedback) Ladder Filter - Liquid resonance with self-oscillation
+  - State Variable Filter (SVF) - LP/HP/BP morph capability
+  - Pre-Filter Drive Stage - Nonlinear saturation (.tanh) for filter "grit"
+  - Bass Loss Compensation - Maintains low-end at high resonance
+- [ ] **Audio-Rate Modulation:** Upgrade from 750Hz control-rate to 48kHz audio-rate
+- [ ] **Transient Bypass Logic:** Keeps drum transients sharp during heavy spectral stretching
+- [x] **Phase-Aligned Granulation:** Prevents phase-cancellation in low-frequency textures **(Phase 9)**
+- [x] **Master Bus "Glue" Compressor:** Final stage compressor to bond the 4 tracks together **(Phase 9)**
 
 ## THE M4 ULTIMATE SPEC (Phase 9+)
 
@@ -237,7 +304,7 @@ Each track has 3 material modes:
 
 ---
 
-## 🔧 TROUBLESHOOTING
+##  TROUBLESHOOTING
 
 ### No Sound?
 1. Check server is booted: `s.serverRunning`
@@ -438,7 +505,112 @@ The `samples/stock/` folder includes some great starter material:
 
 ---
 
-## DEVELOPMENT STATUS
+## (
+// --- 1. MIDI SETUP ---
+MIDIClient.init;
+// Output 1: Digitone (Pads/Bass/Rain)
+m = MIDIOut.newByName("Elektron Digitone", "Elektron Digitone");
+m.latency = 0;
+
+// Output 2: KeyStep Pro (Modular Click/Gravel)
+k = MIDIOut.newByName("KeyStep Pro", "KeyStep Pro");
+k.latency = 0;
+
+"--- MIDI LINKED: Digitone + KeyStep Pro ---".postln;
+
+// --- 2. GLOBAL CONSTANTS ---
+Pdefn(\masterRoot, 0); // C Dorian root
+~phrygianPool = [[5, 6], [8], [10, 11], [6, 8, 10], [11]];
+
+// --- 3. SHARED RHYTHM GENERATOR ---
+// FIXED: properly collecting Rests so they don't crash the scheduler
+~gravelTime = Pwrand([
+    Pwhite(2.0, 8.0, 1),           // Sparse
+    Pseq([0.1, 0.15, 0.2], 1),     // Burst
+    // The Fix: Generate number first, THEN wrap in Rest
+    Pwhite(20.0, 60.0, 1).collect { |d| Rest(d) } 
+], [0.6, 0.3, 0.1], inf);
+
+
+// --- 4. LAYER DEFINITIONS ---
+
+// LAYER 1: BASS (Digitone)
+Pdef(\bass_layer,
+    Pbind(
+        \type, \midi, \midiout, m, \chan, 0,
+        \root, Pdefn(\masterRoot), \scale, Scale.dorian, \octave, 2,
+        \degree, Pwrand([0, 4, [1, 2], [0, 1]], [0.3, 0.6, 0.1, 0.1], inf),
+        \sustain, Pwhite(10.0, 25.0, inf),
+        \dur, Pkey(\sustain) + Pwhite(45.0, 90.0, inf),
+        \amp, Pwhite(0.6, 0.9, inf)
+    )
+);
+
+// LAYER 2: GHOST (Digitone)
+Pdef(\ghost_layer,
+    Pbind(
+        \type, \midi, \midiout, m, \chan, 1,
+        \root, Pdefn(\masterRoot), \scale, Scale.dorian,
+        \dur, Pwhite(6.0, 36.0, inf),
+        \legato, Pwrand([0.99, 1.2], [0.95, 0.05], inf),
+        \degree, Pwrand([[-7, 0], [-2, 0], [-7, -5], [-14, -4, 0]], [0.4, 0.3, 0.2, 0.1], inf),
+        \amp, Pwhite(0.3, 0.5, inf)
+    )
+);
+
+// LAYER 3: RAIN (Digitone)
+// FIXED: This was the layer causing the crash
+Pdef(\rain_layer,
+    Pbind(
+        \type, \midi, \midiout, m, \chan, 2,
+        \root, 5, \scale, Scale.phrygian, \octave, Pwrand([5, 6, 7], [0.5, 0.3, 0.2], inf),
+        \degree, Pfunc({ ~phrygianPool.choose }),
+        \dur, Pwrand([
+            Pwhite(3.0, 8.0, 1),
+            Pseq([0.25, 0.5, 0.25], 1),
+            // CRITICAL FIX HERE:
+            Pwhite(30.0, 90.0, 1).collect { |d| Rest(d) } 
+        ], [0.7, 0.2, 0.1], inf),
+        \sustain, Pwhite(0.05, 0.3, inf),
+        \amp, Pwhite(0.3, 0.5, inf)
+    )
+);
+
+// LAYER 4a: DIGITONE TEXTURE (CC Data)
+Pdef(\digitone_glitch,
+    Pbind(
+        \type, \midi, \midiout, m, \chan, 3, 
+        \midicmd, \control,
+        \ctlNum, Pwrand([74, 71, 16], [0.6, 0.3, 0.1], inf),
+        \control, Pwrand([Pwhite(80, 127, 1), Pwhite(30, 60, 1), 0], [0.7, 0.2, 0.1], inf),
+        \dur, ~gravelTime // Uses the shared rhythm logic
+    )
+);
+
+// LAYER 4b: MODULAR GRAVEL (Physical Triggers)
+Pdef(\modular_gravel,
+    Pbind(
+        \type, \midi, 
+        \midiout, k,      // Send to KEYSTEP
+        \chan, 0,         // Track 1
+        \dur, ~gravelTime, 
+        \midinote, Pwrand([36, 48, 84, 96], [0.4, 0.4, 0.1, 0.1], inf),
+        \amp, Pwhite(0.4, 1.0),
+        \legato, 0.1
+    )
+);
+
+// --- 5. EXECUTE ---
+Pdef(\capricornFull, Ppar([
+    Pdef(\bass_layer),
+    Pdef(\ghost_layer),
+    Pdef(\rain_layer),
+    Pdef(\digitone_glitch), 
+    Pdef(\modular_gravel)   
+])).play;
+
+"--- CAPRICORN SYSTEM: HYBRID MODE (FIXED) ---".postln;
+)DEVELOPMENT STATUS
 
 **Current Phase:** 17 (48-Band Resonator Complete)
 **Last Updated:** Phase 17 - 48-Band Morphing Resonator (Jan 18, 2026)
@@ -508,7 +680,7 @@ The `samples/stock/` folder includes some great starter material:
 
 ## YES YES YES!
 
-Remember: There's no "right" way to use this. Granular synthesis is all about exploration.
+Granular synthesis is all about exploration.
 
 - Try tiny grain sizes (0.001s) for frozen textures
 - Try huge grain sizes (10s+) for slow morphing
