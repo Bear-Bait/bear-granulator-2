@@ -13,10 +13,10 @@ This is a 4-track granular synthesis sampler. Experimenting with Claude Code and
 ## SYSTEM REQUIREMENTS
 
 ### Hardware & IO
-- [x] [cite_start]**Compute Memory:** ~2GB RAM allocation (8192 * 256 KB) for buffers/real-time audio [cite: 182, 185]
-- [x] [cite_start]**Audio Inputs:** 8-channel input configuration (optimized for MOTU Mk5) [cite: 182]
-- [x] [cite_start]**Audio Outputs:** Quad Speaker Output (FL/FR/RL/RR) or Stereo switchable [cite: 202, 246]
-- [x] [cite_start]**MIDI Controller:** Dedicated mapping for Arturia KeyStep Pro (Knobs, Mod Strip, Keyboard) [cite: 206]
+- [x] **Compute Memory:** ~2GB RAM allocation (8192 * 256 KB) for buffers/real-time audio
+- [x] **Audio Inputs:** 8-channel input configuration (optimized for MOTU Mk5)
+- [x] **Audio Outputs:** Quad Speaker Output (FL/FR/RL/RR) or Stereo switchable
+- [x] **MIDI Controller:** Dedicated mapping for Arturia KeyStep Pro (Knobs, Mod Strip, Keyboard)
 
 ### Software Dependency
 - [x] **SuperCollider:** Core execution environment (Version 3.13+ recommended for M4)
@@ -32,38 +32,38 @@ This is a 4-track granular synthesis sampler. Experimenting with Claude Code and
 ## CURRENT FEATURE SET (Phase 1-17)
 
 ### Audio Engines (Per Track)
-- [x] [cite_start]**Hybrid Architecture:** Fade between Granular, Spectral, and Direct engines via "Engine Mix" [cite: 96, 298]
-- [x] [cite_start]**Quad Granular Engine:** 128 grains per track (512 total) with size, density, and jitter controls (Phase 1) [cite: 186, 221]
-- [x] [cite_start]**Spectral Engine (Warp1):** Spectral smearing, freezing, and independent pitch shifting (Phase 8) [cite: 188, 284]
-- [x] [cite_start]**Direct Playback Engine:** Standard looping sample player running in parallel (Phase 15) [cite: 188, 289]
-- [x] [cite_start]**Material Modes:** Tape, Poly, and Live input modes (Phase 6) [cite: 273, 281]
+- [x] **Hybrid Architecture:** Fade between Granular, Spectral, and Direct engines via "Engine Mix"
+- [x] **Quad Granular Engine:** 128 grains per track (512 total) with size, density, and jitter controls (Phase 1)
+- [x] **Spectral Engine (Warp1):** Spectral smearing, freezing, and independent pitch shifting (Phase 8)
+- [x] **Direct Playback Engine:** Standard looping sample player running in parallel (Phase 15)
+- [x] **Material Modes:** Tape, Poly, and Live input modes (Phase 6)
 
 ### Sampling & Recording
-- [x] [cite_start]**Live Loop Recording:** Always-on 4-second rolling buffer recording from hardware inputs (Phase 1) [cite: 191, 406]
-- [x] [cite_start]**Spectral Photobooth:** Capture 4 seconds of Spectral Engine texture to buffer for reuse (Phase 17) [cite: 189, 394]
-- [x] [cite_start]**Crop Mode:** Non-destructive loop windowing and buffer cropping via GUI (Phase 15) [cite: 9, 88]
+- [x] **Live Loop Recording:** Always-on 4-second rolling buffer recording from hardware inputs (Phase 1)
+- [x] **Spectral Photobooth:** Capture 4 seconds of Spectral Engine texture to buffer for reuse (Phase 17)
+- [x] **Crop Mode:** Non-destructive loop windowing and buffer cropping via GUI (Phase 15)
 
 ### Effects & Processing
-- [x] [cite_start]**Per-Track "Color" FX:** Distortion, Bit Crusher, Compressor, and Noise generation (Phase 3) [cite: 185, 225]
-- [x] [cite_start]**Per-Track "Space" FX:** Reverb (with freeze), Ping-Pong Delay, and Shimmer (Phase 3) [cite: 185, 227]
-- [x] [cite_start]**Tape Degradation:** "Wow & Flutter" emulation for vintage tape pitch drift (Phase 16) [cite: 148, 285]
-- [x] [cite_start]**Master Bus Resonator:** 48-band morphing filter shared across tracks (Phase 4) [cite: 185, 223]
+- [x] **Per-Track "Color" FX:** Distortion, Bit Crusher, Compressor, and Noise generation (Phase 3)
+- [x] **Per-Track "Space" FX:** Reverb (with freeze), Ping-Pong Delay, and Shimmer (Phase 3)
+- [x] **Tape Degradation:** "Wow & Flutter" emulation for vintage tape pitch drift (Phase 16)
+- [x] **Master Bus Resonator:** 48-band morphing filter shared across tracks (Phase 4)
 
 ### Modulation
-- [x] [cite_start]**Modulation System:** 4 Modulators per track (LFOs, envelope followers) (Phase 5) [cite: 192, 273]
-- [x] [cite_start]**Mosaic Mode:** Cross-modulation (Track A envelope modulates Track B parameter) (Phase 16) [cite: 335, 354]
+- [x] **Modulation System:** 4 Modulators per track (LFOs, envelope followers) (Phase 5)
+- [x] **Mosaic Mode:** Cross-modulation (Track A envelope modulates Track B parameter) (Phase 16)
 
 ### Interface & Visualization
-- [x] [cite_start]**Waveform Viewfinder:** Real-time waveform display with drag-to-select looping (Phase 7) [cite: 1, 241]
-- [x] [cite_start]**Visual Overlays:** Real-time playheads for Grain, Spectral, and Recording engines (Phase 15) [cite: 6, 44]
-- [x] [cite_start]**Quad Panner:** Dedicated GUI for positioning tracks in 4-channel spatial field (Phase 12) [cite: 202, 250]
-- [x] [cite_start]**Spectrum Analyzer:** FabFilter-style frequency analyzer on master output (Phase 15) [cite: 198, 214]
+- [x] **Waveform Viewfinder:** Real-time waveform display with drag-to-select looping (Phase 7)
+- [x] **Visual Overlays:** Real-time playheads for Grain, Spectral, and Recording engines (Phase 15)
+- [x] **Quad Panner:** Dedicated GUI for positioning tracks in 4-channel spatial field (Phase 12)
+- [x] **Spectrum Analyzer:** FabFilter-style frequency analyzer on master output (Phase 15)
 
 ## THE M4 ULTIMATE SPEC (Phase 9+)
 
 ### Visual Flash (Doom Material Enhanced)
-- [x] [cite_start]**FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11)** [cite: 33]
-- [x] [cite_start]**Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11)** [cite: 48]
+- [x] **FFT Spectrogram Overlay:** Real-time frequency heatmap behind the waveform **(Phase 11)**
+- [x] **Grain Pulse Animation:** Visual "pings" on the viewfinder where grains are triggered **(Phase 11)**
 - [ ] **Neon Glow Rendering:** Hardware-accelerated "glow" effects for the playhead and loop regions
 
 ### Overlooked Audio Components
