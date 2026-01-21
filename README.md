@@ -2,7 +2,7 @@
 
 ![Bearulator GUI](material/bearulator-gooey.png)
 
-This is a 4-track granular synthesis sampler. Experimenting with Claude Code and Google Gemini to see how quickly I can progress the codebase while learning very little sclang and achieving what I want. Starting goal was to emulate popular granular synth *Torso S4*. Soon after starting I  realized the flexibility of Supercollider presents opportunity for much more synth than the Torso unit, especially running on a Mac M4 with 24gb of ram. Given the speed and ease I was able to working using LLM coding assistants,  I decided to create this open ended project with several modular components that already function as a pretty damn good granular synth for my studio. I've been making updates as the Claude pro subscription allows -- credits re-up on Thursday morning, and I typically run out by Sunday. 
+This is a 4-track granular synthesis sampler. Experimenting with Claude Code and Google Gemini to see how quickly I can progress the codebase while learning very little sclang and achieving what I want. Starting goal was to emulate popular granular synth *Torso S4*. Soon after starting I  realized the flexibility of Supercollider presents opportunity for much more synth than the Torso unit, especially running on a Mac M4 with 24gb of ram. Given the speed I was able to work using LLM coding assistants,  I decided to create this open ended project with several modular components that already function as a granular synth for my studio. I've been making updates as the Claude pro subscription allows -- credits re-up on Thursday morning, and I typically run out by Sunday. 
 
 ## Active TODOs
 
