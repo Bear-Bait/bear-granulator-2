@@ -310,7 +310,8 @@ Public API:
 		var track = tracks[trackNum];
 		var spectralParams = [\spectralMix, \spectralPosition, \spectralRate,
 		                       \spectralWindowSize, \spectralOverlaps, \spectralPitch,
-		                       \spectralFreeze, \spectralSmear, \spectralAmp];
+		                       \spectralFreeze, \spectralSmear, \spectralAmp,
+		                       \loopStart, \loopEnd]; // BUG FIX: Route loop boundaries to spectral
 		var directPlaybackParams = [\position, \loopStart, \loopEnd, \amp, \pan, \pitch, \rate, \timeStretch,
 	                             \wowRate, \wowDepth, \flutterRate, \flutterDepth];
 		var synthParam;
@@ -379,6 +380,7 @@ Public API:
 		});
 
 		// 4. STANDARD PARAMETER ROUTING (If not handled above)
+		// v2.2.1 FIX: Route to ALL synths that accept the parameter (not mutually exclusive)
 		if(handled.not, {
 			// Spectral Routing
 			if(spectralParams.includes(param), {
@@ -393,17 +395,22 @@ Public API:
 					if(param == \spectralFreeze, { synthParam = \freeze });
 					if(param == \spectralSmear, { synthParam = \smear });
 					if(param == \spectralAmp, { synthParam = \amp });
+					// Route loop boundaries directly (no prefix change)
+					if(param == \loopStart, { synthParam = \loopStart });
+					if(param == \loopEnd, { synthParam = \loopEnd });
 					track.spectralSynth.set(synthParam, value);
 				});
-			}, {
-				// Grain & Direct Routing
-				if(track.grainSynth.notNil, {
-					track.grainSynth.set(param, value);
-				});
-				if(directPlaybackParams.includes(param), {
-					if(track.directPlaybackSynth.notNil, {
-						track.directPlaybackSynth.set(param, value);
-					});
+			});
+
+			// Grain Routing (NOT else - loopStart/loopEnd go to ALL engines)
+			if(track.grainSynth.notNil, {
+				track.grainSynth.set(param, value);
+			});
+
+			// Direct Playback Routing
+			if(directPlaybackParams.includes(param), {
+				if(track.directPlaybackSynth.notNil, {
+					track.directPlaybackSynth.set(param, value);
 				});
 			});
 		});

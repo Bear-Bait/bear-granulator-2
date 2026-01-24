@@ -31,7 +31,7 @@ Args:
   bufnum: Buffer number for grain source
   grainMode: Material mode (0=TAPE loop, 1=POLY sample, 2=LIVE input)
   grainSize: Grain duration in seconds (0.001-60+, unlimited)
-  overlap: Number of simultaneous grains (1-128) - RECOMMENDED
+   overlap: Number of simultaneous grains (1-256) - MAXIMUM DENSITY
   density: Grains per second (1-200) - LEGACY, use overlap instead
   useOverlap: 1=use overlap mode (default), 0=use density mode
   prob: Grain probability/density mask (0.0=silence, 1.0=always trigger) - NEW v2.2
@@ -162,6 +162,10 @@ SynthDef(\bearulatorGrainEngine, {
 
 	bufFrames = BufFrames.kr(bufnum);
 
+	// EDGE CASE PROTECTION: Ensure minimum loop size (0.1% of buffer)
+	// Prevents division by zero and Phasor instability with tiny/inverted loops
+	loopEnd = loopEnd.max(loopStart + 0.001);
+
 	// 1. CALCULATE DECOUPLED RATES (v2.1)
 	grainRate = (pitch + pitchShift).midiratio;
 	scanRate = scanSpeed * BufRateScale.kr(bufnum) * timeStretch;
@@ -199,25 +203,38 @@ SynthDef(\bearulatorGrainEngine, {
 	// 5. PHASOR (TAPE HEAD) - v2.1
 	phasor = Phasor.ar(0, scanRate, loopStart*bufFrames, loopEnd*bufFrames, loopStart*bufFrames) / bufFrames;
 
-	// Smooth scan position (for scrubbing & GUI)
-	scanPos = XFade2.ar(K2A.ar(position), phasor, (scanSpeed.abs > 0.01).lag(0.1).linlin(0, 1, -1, 1));
-
-	// v2.1 FIX: GUI Feedback uses smooth scanPos (Fixes Quantum Jitter Bug)
-	SendReply.ar(Impulse.ar(60), '/grainPlayhead', [scanPos]);
-
-	// 6. APPLY JITTER (v2.1: Updated to use 'grainMode' variable)
-	bufPos = Select.kr(grainMode, [
-		(scanPos.linlin(0, 1, loopStart, loopEnd) + musicalPosJitter).wrap(loopStart, loopEnd), // TAPE
-		scanPos + musicalPosJitter, // POLY
-		(1.0 - scanPos + musicalPosJitter).wrap(0, 1) // LIVE
+	// 6. UNIFIED POSITION LOGIC (v2.2.1 FIX)
+	// Create unified "Absolute Buffer Position" in loop-relative coordinates (loopStart to loopEnd)
+	// This handles both Static (position 0-1) and Scanning (phasor already absolute) modes correctly
+	// Note: Use K2A on selector to ensure audio-rate Select.ar works correctly
+	scanPos = Select.ar(K2A.ar(scanSpeed.abs > 0.01), [
+		// Static Mode: Map normalized position (0-1) to loop range
+		K2A.ar(position.linlin(0, 1, loopStart, loopEnd)),
+		// Scanning Mode: Phasor is already in loop range (loopStart to loopEnd)
+		phasor
 	]);
+
+	// 7. APPLY JITTER & CALCULATE AUDIO POINTER
+	// scanPos is now consistently in absolute coordinates (loopStart to loopEnd)
+	// Note: A2K converts audio-rate scanPos to control rate for Select.kr
+	bufPos = Select.kr(grainMode, [
+		// TAPE: scanPos is absolute, add jitter and wrap within loop
+		(A2K.kr(scanPos) + musicalPosJitter).wrap(loopStart, loopEnd),
+		// POLY: scanPos is absolute
+		A2K.kr(scanPos) + musicalPosJitter,
+		// LIVE: Invert for lookback buffer
+		(1.0 - A2K.kr(scanPos) + musicalPosJitter).wrap(0, 1)
+	]);
+
+	// 8. VISUALIZATION - scanPos is already in absolute coordinates, send directly
+	SendReply.ar(Impulse.ar(60), '/grainPlayhead', [scanPos]);
 
 	pitchRatio = grainRate * musicalPitchJitter;
 
 	// 7. GRAIN GENERATION
 	sig = [
-		GrainBuf.ar(1, trigL, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 64),
-		GrainBuf.ar(1, trigR, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread, -1, 64)
+		GrainBuf.ar(1, trigL, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 256),
+		GrainBuf.ar(1, trigR, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 256)
 	] * 2.0;
 
 	// --- FILTER SECTION (Phase 10) ---

@@ -36,6 +36,8 @@ SynthDef(\bearulatorSpectralEngine, {
 	arg bufnum = 0,
 	    spectralMix = 0.0,      // Wet/dry (0=off, 1=full)
 	    position = 0.5,         // Position in buffer (0-1)
+	    loopStart = 0.0,        // Loop start position (0-1) - BUG FIX
+	    loopEnd = 1.0,          // Loop end position (0-1) - BUG FIX
 	    rate = 1.0,             // Playback rate (0=freeze, 1=normal)
 	    windowSize = 0.2,       // Window size in seconds (0.05-1.0)
 	    overlaps = 4,           // Overlap factor (1-8, M4 can handle 8)
@@ -48,6 +50,7 @@ SynthDef(\bearulatorSpectralEngine, {
 	    out = 0;
 
 	var sig, bufFrames, bufDur, pointer, freezePos, pitchRatio;
+	var startFrame, endFrame, absolutePos;  // v2.2.1: Loop constraint vars
 	var rampTime = 0.05;
 
 	// Get buffer info
@@ -60,12 +63,15 @@ SynthDef(\bearulatorSpectralEngine, {
 	// === WARP1: Spectral Time-Stretching ===
 	// Warp1 pointer: Phasor advances through buffer at specified rate
 	// When freeze=1, rate becomes 0 (locks in place)
+	// BUG FIX: Constrain to loop boundaries like grain engine
+	startFrame = loopStart * bufFrames;
+	endFrame = loopEnd * bufFrames;
 	pointer = Phasor.ar(
 		trig: 0,
 		rate: BufRateScale.kr(bufnum) * rate * (1 - freeze),  // freeze=1 → rate=0
-		start: 0,
-		end: bufFrames,
-		resetPos: 0
+		start: startFrame,
+		end: endFrame,
+		resetPos: startFrame
 	);
 
 	// Warp1.ar(numChannels, bufnum, pointer, freqScale, windowSize, envbufnum, overlaps, windowRandRatio, interp)
@@ -83,9 +89,12 @@ SynthDef(\bearulatorSpectralEngine, {
 	);
 
 	// Phase 15: Send playhead position for GUI visualization @ 60Hz
-	// Broadcasts normalized position (0-1) for viewfinder window
+	// Broadcasts position for viewfinder window
 	// Use '/spectralPlayhead' to distinguish from grain engine
-	SendReply.ar(Impulse.ar(60), '/spectralPlayhead', [pointer / bufFrames.max(1)]);
+	// pointer is in FRAMES [startFrame, endFrame], divide by bufFrames to get [loopStart, loopEnd]
+	// This is already the correct absolute buffer position - send directly!
+	absolutePos = pointer / bufFrames.max(1);
+	SendReply.ar(Impulse.ar(60), '/spectralPlayhead', [absolutePos]);
 
 	// Convert mono to stereo and apply pan
 	sig = Pan2.ar(sig, pan.lag(rampTime));

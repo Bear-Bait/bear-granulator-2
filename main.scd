@@ -33,7 +33,7 @@ var basePath = thisProcess.nowExecutingPath.dirname;
 	// Audio settings
 	sampleRate: 48000,
 	bufferSize: 4, // seconds
-	maxGrains: 128,
+	maxGrains: 256,
 
 	// Paths
 	basePath: basePath,
@@ -333,7 +333,7 @@ fork {
 		"============================================".postln;
 		"".postln;
 		"Phase 1 Features:".postln;
-		"  • 128 grain granular engine".postln;
+		"  • 256 grain granular engine".postln;
 		"  • 4-second rolling buffer".postln;
 		"  • Live input recording".postln;
 		"  • Real-time grain control".postln;
@@ -359,7 +359,7 @@ fork {
 		"".postln;
 		"Phase 4 Features (NEW!):".postln;
 		"  • 4 independent granular tracks".postln;
-		"  • 512 total grains (128 per track)".postln;
+		"  • 1024 total grains (256 per track)".postln;
 		"  • Per-track Color + Space effects".postln;
 		"  • Shared 48-band resonator (master bus)".postln;
 		"  • Per-track volume/pan/mute/solo".postln;

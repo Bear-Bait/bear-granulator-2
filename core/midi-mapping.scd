@@ -104,7 +104,7 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 				mappedValue = case
 					{ param == \filterFreq } { normalized }  // 0-1 (exponential in engine)
 					{ param == \grainSize } { normalized.linexp(0, 1, 0.001, 2.0) }
-					{ param == \overlap } { normalized.linlin(0, 1, 1, 128).round(1) }
+					{ param == \overlap } { normalized.linlin(0, 1, 1, 256).round(1) }
 					{ param == \spectralMix } { normalized }
 					{ param == \filterDecay } { normalized }
 					{ true } { normalized };
@@ -159,7 +159,7 @@ KeyStep Pro → MIDI In → SuperCollider → Track Parameters
 				});
 
 				// Boost overlap for note attack (velocity-sensitive with exponential response)
-				var attackOverlap = (track.noteOverlap * (1 + (velocity * 2))).min(128);
+				var attackOverlap = (track.noteOverlap * (1 + (velocity * 2))).min(256);
 				self.trackManager.setParam(trackNum, \overlap, attackOverlap);
 
 				// Phase 15.5: Map velocity to saturation & resonator (musical dynamics)

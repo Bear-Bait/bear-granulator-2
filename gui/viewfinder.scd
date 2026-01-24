@@ -56,7 +56,9 @@ Usage:
 				fg: Color.fromHexString("#EEFFFF"),
 				cyan: Color.fromHexString("#89DDFF"),
 				yellow: Color.fromHexString("#ffcb6b"),
-				green: Color.fromHexString("#c3e88d")
+				green: Color.fromHexString("#c3e88d"),
+				red: Color.fromHexString("#ff5370"),
+				purple: Color.fromHexString("#7A49A6")  // Darker purple as requested
 			);
 
 			// Validate track number
@@ -152,7 +154,7 @@ Usage:
 
 			// Create SoundFileView
 			sfv = SoundFileView(win, Rect(10, 75, winWidth - 20, 200))
-				.background_(Color.black)
+				.background_(Color.black)  // Dark background
 				.waveColors_([Color.cyan.alpha_(0.8)])
 				.gridOn_(true)
 				.gridColor_(Color.gray(0.3))
@@ -282,12 +284,12 @@ Usage:
 						Pen.line(Point(loopEndPixels, 0), Point(loopEndPixels, viewHeight));
 						Pen.stroke;
 
-						// === LAYER 2: Grain Size Overlay (cyan box) ===
+						// === LAYER 2: Grain Size Overlay (red box) ===
 						grainSizePixels = (grainSize / bufferDuration) * viewWidth;
 						positionPixels = pos * viewWidth;
 
-						// Semi-transparent rectangle showing grain window
-						Pen.fillColor = colors.cyan.alpha_(0.2);
+						// Moderately opaque rectangle showing grain window (40% opacity)
+						Pen.fillColor = colors.red.alpha_(0.4);
 						Pen.fillRect(Rect(
 							positionPixels,
 							0,
@@ -295,8 +297,8 @@ Usage:
 							viewHeight
 						));
 
-						// Grain boundary markers
-						Pen.color = colors.cyan.alpha_(0.6);
+						// Grain boundary markers (solid but thinner)
+						Pen.color = colors.red.alpha_(0.45);
 						Pen.width = 1;
 						Pen.line(Point(positionPixels, 0), Point(positionPixels, viewHeight));
 						Pen.line(
@@ -310,13 +312,14 @@ Usage:
 							"Grain: %ms".format((grainSize * 1000).round(0.1)),
 							Point(positionPixels + 5, 5),
 							Font("DejaVu Sans Mono", 10),
-							colors.cyan
+							colors.red
 						);
 
-						// === LAYER 3: Animated Position Playhead (red line with jitter) ===
+						// === LAYER 3: Animated Position Playhead (red line with purple jitter) ===
 						if(posJitter > 0.01, {
 							jitterPixels = posJitter * viewWidth;
-							Pen.fillColor = Color.red.alpha_(0.15);
+							// Dark purple jitter with 25% more transparency (1.0 * 0.75 = 0.75 opacity)
+							Pen.fillColor = colors.purple.alpha_(0.75);
 							Pen.fillRect(Rect(
 								(positionPixels - (jitterPixels / 2)).max(0),
 								0,
@@ -337,6 +340,9 @@ Usage:
 							grainActive = if(grainEngineButton.notNil, { grainEngineButton.value == 1 }, { false });
 
 							if(grainActive, {
+								// FIX: Map playhead position to screen coordinates
+								// grainPlayheadPos is already constrained to loop by Phasor
+								// Just need to draw it at the correct pixel position
 								var grainPlayheadPixels = grainPlayheadPos * viewWidth;
 
 								// Bright green line for grain engine
