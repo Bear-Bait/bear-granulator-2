@@ -157,11 +157,11 @@ Usage:
 				.gridOn_(true)
 				.gridColor_(Color.gray(0.3))
 				.timeCursorOn_(true)
-				.timeCursorColor_(Color.yellow.alpha_(0.6))
+				.timeCursorColor_(Color.cyan.alpha_(0.6))
 				.drawsWaveForm_(true)
 				.elasticMode_(1) // Elastic resize
 				.gridResolution_(0.1) // Grid every 100ms
-				.setSelectionColor(0, Color.yellow.alpha_(0.3))  // Selection color
+				.setSelectionColor(0, Color.cyan.alpha_(0.3))  // Selection color
 				.setEditableSelectionStart(0, true)   // Enable native zoom
 				.setEditableSelectionSize(0, true);
 				// SHIFT+right-click to zoom
@@ -282,12 +282,12 @@ Usage:
 						Pen.line(Point(loopEndPixels, 0), Point(loopEndPixels, viewHeight));
 						Pen.stroke;
 
-						// === LAYER 2: Grain Size Overlay (yellow box) ===
+						// === LAYER 2: Grain Size Overlay (cyan box) ===
 						grainSizePixels = (grainSize / bufferDuration) * viewWidth;
 						positionPixels = pos * viewWidth;
 
 						// Semi-transparent rectangle showing grain window
-						Pen.fillColor = colors.yellow.alpha_(0.2);
+						Pen.fillColor = colors.cyan.alpha_(0.2);
 						Pen.fillRect(Rect(
 							positionPixels,
 							0,
@@ -296,7 +296,7 @@ Usage:
 						));
 
 						// Grain boundary markers
-						Pen.color = colors.yellow.alpha_(0.6);
+						Pen.color = colors.cyan.alpha_(0.6);
 						Pen.width = 1;
 						Pen.line(Point(positionPixels, 0), Point(positionPixels, viewHeight));
 						Pen.line(
@@ -310,7 +310,7 @@ Usage:
 							"Grain: %ms".format((grainSize * 1000).round(0.1)),
 							Point(positionPixels + 5, 5),
 							Font("DejaVu Sans Mono", 10),
-							colors.yellow
+							colors.cyan
 						);
 
 						// === LAYER 3: Animated Position Playhead (red line with jitter) ===
@@ -486,8 +486,8 @@ Usage:
 							var sel = sfv.selection(0);
 							var cropPulse = (Main.elapsedTime * 1.5).sin.linlin(-1, 1, 0.5, 1.0);
 
-							// Pulsing yellow border
-							Pen.strokeColor = colors.yellow.alpha_(cropPulse);
+							// Pulsing cyan border
+							Pen.strokeColor = colors.cyan.alpha_(cropPulse);
 							Pen.width = 3;
 							Pen.strokeRect(Rect(0, 0, viewWidth, viewHeight));
 
@@ -496,20 +496,20 @@ Usage:
 								"CROP MODE - Select region to keep",
 								Point(viewWidth - 280, 10),
 								Font("DejaVu Sans Mono", 11, true),
-								colors.yellow.alpha_(cropPulse)
+								colors.cyan.alpha_(cropPulse)
 							);
 
-							// Highlight selected region with yellow overlay
+							// Highlight selected region with cyan overlay
 							if(sel.notNil and: { sel[1] > 0 }, {
 								var selStart = (sel[0] / currentBuffer.numFrames) * viewWidth;
 								var selWidth = (sel[1] / currentBuffer.numFrames) * viewWidth;
 
-								// Semi-transparent yellow fill
-								Pen.fillColor = colors.yellow.alpha_(0.2);
+								// Semi-transparent cyan fill
+								Pen.fillColor = colors.cyan.alpha_(0.2);
 								Pen.fillRect(Rect(selStart, 0, selWidth, viewHeight));
 
-								// Bright yellow borders on selection
-								Pen.strokeColor = colors.yellow.alpha_(0.9);
+								// Bright cyan borders on selection
+								Pen.strokeColor = colors.cyan.alpha_(0.9);
 								Pen.width = 2;
 								Pen.strokeRect(Rect(selStart, 0, selWidth, viewHeight));
 							});
@@ -1128,13 +1128,13 @@ Usage:
 
 						if(defaultVal.notNil, {
 							// Update Slider (if exists)
-							if(widgetPair.slider.notNil, {
+							if(widgetPair[\slider].notNil, {
 								// Use .value_ to update visual only (avoiding double DSP trigger)
-								widgetPair.slider.value_(widgetPair.spec.unmap(defaultVal));
+								widgetPair[\slider].value_(widgetPair[\spec].unmap(defaultVal));
 							});
 							// Update NumberBox (if exists)
-							if(widgetPair.numBox.notNil, {
-								widgetPair.numBox.value_(defaultVal);
+							if(widgetPair[\numBox].notNil, {
+								widgetPair[\numBox].value_(defaultVal);
 							});
 						});
 					});

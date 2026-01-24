@@ -305,84 +305,99 @@ Public API:
 		},
 
 		// Set a parameter on a specific track
-		// Set a parameter on a specific track - SAFE VERSION (No Non-Local Returns)
-	setParam: { arg self, trackNum, param, value;
-		var track = tracks[trackNum];
-		var spectralParams = [\spectralMix, \spectralPosition, \spectralRate,
-		                       \spectralWindowSize, \spectralOverlaps, \spectralPitch,
-		                       \spectralFreeze, \spectralSmear, \spectralAmp];
-		var directPlaybackParams = [\position, \loopStart, \loopEnd, \amp, \pan, \pitch, \rate, \timeStretch,
-	                             \wowRate, \wowDepth, \flutterRate, \flutterDepth];
-		var synthParam;
-		var handled = false; // Flow control flag
+		setParam: { arg self, trackNum, param, value;
+			var track = tracks[trackNum];
+			var spectralParams = [\spectralMix, \spectralPosition, \spectralRate,
+			                       \spectralWindowSize, \spectralOverlaps, \spectralPitch,
+			                       \spectralFreeze, \spectralSmear, \spectralAmp];
+			var directPlaybackParams = [\position, \loopStart, \loopEnd, \amp, \pan, \pitch, \rate, \timeStretch,
+		                             \wowRate, \wowDepth, \flutterRate, \flutterDepth];
+			var synthParam;  // For spectral parameter mapping
+			var wasPlaying;  // For engine mode switching
 
-		// Early exit for uninitialized track (no ^ return - breaks try/catch)
-		if(track.grainSynth.isNil, {
-			"Track manager: Track % not initialized".format(trackNum + 1).postln;
-		}, {
-
-		// Phase 16: Pitch quantization logic
-		if((param == \pitch or: { param == \pitchShift or: { param == \spectralPitch }}) and: {
-			track.params[\quantizePitch] == 1
-		}, {
-			var scale = track.params[\scale] ? [0, 2, 4, 5, 7, 9, 11];
-			var roundedPitch = value.round;
-			var octave = (roundedPitch / 12).floor * 12;
-			var degree = roundedPitch % 12;
-			var nearestDegree = scale.minItem({ |deg| (degree - deg).abs });
-			value = octave + nearestDegree;
-			"Track %: Quantized pitch % to scale degree %".format(trackNum + 1, param, value).postln;
-		});
-
-		// Update stored parameter
-		track.params[param] = value;
-
-		// --- SPECIAL PARAMETER HANDLING (Using 'handled' flag instead of ^return) ---
-
-		// 1. ENGINE MIX (Smart Sleep)
-		if(param == \engineMix, {
-			var granAmp, directAmp, baseAmp;
-			var grainEnabled = track.params[\grainOn] ? 1;
-			var directEnabled = track.params[\directOn] ? 1;
-
-			granAmp = if(value > 0.999, { 0.0 }, { (1 - value).sqrt });
-			directAmp = if(value < 0.001, { 0.0 }, { value.sqrt });
-
-			if(track.grainSynth.notNil, {
-				var shouldRun = (value < 0.999) and: { grainEnabled == 1 };
-				track.grainSynth.run(shouldRun);
-			});
-			if(track.directPlaybackSynth.notNil, {
-				var shouldRun = (value > 0.001) and: { directEnabled == 1 };
-				track.directPlaybackSynth.run(shouldRun);
+			if(track.grainSynth.isNil, {
+				"Track manager: Track % not initialized".format(trackNum + 1).postln;
+				^nil;
 			});
 
-			baseAmp = track.params[\amp] ? 0.5;
-			if(track.grainSynth.notNil, { track.grainSynth.set(\amp, baseAmp * granAmp) });
-			if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.set(\amp, baseAmp * directAmp) });
+			// Phase 16: Pitch quantization to musical scales
+			if((param == \pitch or: { param == \pitchShift or: { param == \spectralPitch }}) and: {
+				track.params[\quantizePitch] == 1
+			}, {
+				var scale = track.params[\scale] ? [0, 2, 4, 5, 7, 9, 11];
+				var roundedPitch = value.round;
+				var octave = (roundedPitch / 12).floor * 12;
+				var degree = roundedPitch % 12;
+				var nearestDegree;
 
-			handled = true;
-		});
+				// Find nearest scale degree
+				nearestDegree = scale.minItem({ |deg|
+					(degree - deg).abs
+				});
 
-		// 2. EXPLICIT ON/OFF TOGGLES
-		if(handled.not and: { (param == \grainOn) or: { param == \directOn } }, {
-			self.setParam(trackNum, \engineMix, track.params[\engineMix]);
-			handled = true;
-		});
-
-		// 3. SPECTRAL ON/OFF
-		if(handled.not and: { param == \spectralOn }, {
-			if(track.spectralSynth.notNil, {
-				track.spectralSynth.run(value == 1);
+				// Quantize to nearest scale degree
+				value = octave + nearestDegree;
+				"Track %: Quantized pitch % to scale degree %".format(
+					trackNum + 1, param, value
+				).postln;
 			});
-			handled = true;
-		});
 
-		// 4. STANDARD PARAMETER ROUTING (If not handled above)
-		if(handled.not, {
-			// Spectral Routing
+			// Update stored parameter
+			track.params[param] = value;
+
+			// HYBRID ENGINE: Smart Sleep - Crossfade AND pause unused engines to save CPU
+			// Phase 16: "Two Captains" Fix - Unified engine control with grainOn/directOn flags
+			if(param == \engineMix, {
+				var granAmp, directAmp, baseAmp;  // All vars at top
+				var grainEnabled = track.params[\grainOn] ? 1;
+				var directEnabled = track.params[\directOn] ? 1;
+
+				// 1. Calculate Amplitudes (Equal Power)
+				// Fix Ghosting: Force silence if component is negligible (< 0.001)
+				granAmp = if(value > 0.999, { 0.0 }, { (1 - value).sqrt });
+				directAmp = if(value < 0.001, { 0.0 }, { value.sqrt });
+
+				// 2. Apply "Smart Sleep" Logic
+				// Only run if: (Volume is audible) AND (User hasn't muted it)
+				if(track.grainSynth.notNil, {
+					var shouldRun = (value < 0.999) and: { grainEnabled == 1 };
+					track.grainSynth.run(shouldRun);
+				});
+
+				if(track.directPlaybackSynth.notNil, {
+					var shouldRun = (value > 0.001) and: { directEnabled == 1 };
+					track.directPlaybackSynth.run(shouldRun);
+				});
+
+				// 3. Update Volumes
+				baseAmp = track.params[\amp] ? 0.5;
+				if(track.grainSynth.notNil, { track.grainSynth.set(\amp, baseAmp * granAmp) });
+				if(track.directPlaybackSynth.notNil, { track.directPlaybackSynth.set(\amp, baseAmp * directAmp) });
+
+				^self;  // Done, don't send to synths again
+			});
+
+			// Phase 16: Handle explicit ON/OFF toggles (grainOn, directOn)
+			// This allows the GUI buttons to trigger the logic above
+			if((param == \grainOn) or: { param == \directOn }, {
+				// Re-trigger the mix logic to apply the new Mute state
+				self.setParam(trackNum, \engineMix, track.params[\engineMix]);
+				^self;
+			});
+
+			// Phase 16: Handle Spectral ON/OFF
+			if(param == \spectralOn, {
+				if(track.spectralSynth.notNil, {
+					track.spectralSynth.run(value == 1);
+				});
+				^self;
+			});
+
+
+			// Phase 8: Route spectral parameters to spectral synth
 			if(spectralParams.includes(param), {
 				if(track.spectralSynth.notNil, {
+					// Map spectralMix → spectralMix, spectralPosition → position, etc.
 					synthParam = param.asString.replace("spectral", "").toLower.asSymbol;
 					if(param == \spectralMix, { synthParam = \spectralMix });
 					if(param == \spectralPosition, { synthParam = \position });
@@ -396,22 +411,23 @@ Public API:
 					track.spectralSynth.set(synthParam, value);
 				});
 			}, {
-				// Grain & Direct Routing
+				// Non-spectral parameters: ALWAYS send to ALL engines
+				// This ensures parameters update even when engine is paused
+
+				// Send to grain synth (always update, even if paused)
 				if(track.grainSynth.notNil, {
 					track.grainSynth.set(param, value);
 				});
+
+				// Send to direct playback synth if parameter is compatible
 				if(directPlaybackParams.includes(param), {
 					if(track.directPlaybackSynth.notNil, {
 						track.directPlaybackSynth.set(param, value);
 					});
 				});
 			});
-		});
+		},
 
-		}); // Close the if(track.grainSynth.isNil) else block
-
-		self; // Return self at the end
-	},
 		// Set material mode (Phase 6: 0=TAPE, 1=POLY, 2=LIVE)
 		setMode: { arg self, trackNum, newMode;
 			var track = tracks[trackNum];

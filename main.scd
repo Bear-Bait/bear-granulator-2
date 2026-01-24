@@ -9,7 +9,7 @@ Phase 2: Morphing Resonator
 Phase 3: Effects Chain (Color + Space)
 inspired by the 
 
-Author: [Forrest Muelrath]
+Author: [Your Name]
 Version: 0.4 (Phase 4)
 Date: 2025-12-31
 

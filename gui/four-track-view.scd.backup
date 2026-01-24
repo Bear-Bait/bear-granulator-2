@@ -1224,17 +1224,13 @@ Phase 7 Features:
 
 						if(cpuMeterAvg.notNil, {
 							cpuMeterAvg.value_(avg);
-						if(cpuTextAvg.notNil, {
 							cpuTextAvg.string_((avg * 100).round(0.1).asString ++ "%");
-						});
 						});
 
 						if(cpuMeterPeak.notNil, {
 							cpuMeterPeak.value_(peak);
 							cpuMeterPeak.peakLevel_(peak);
-						if(cpuTextPeak.notNil, {
 							cpuTextPeak.string_((peak * 100).round(0.1).asString ++ "%");
-						});
 						});
 					}.defer;
 					0.5.wait;  // Update every 500ms

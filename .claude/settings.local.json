@@ -17,7 +17,9 @@
       "Bash(timeout 3 /Applications/SuperCollider.app/Contents/MacOS/sclang:*)",
       "Bash(timeout 5 /Applications/SuperCollider.app/Contents/MacOS/sclang:*)",
       "Bash(git checkout:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(git -C /Users/forrestmuelrath/Documents/supercollider/granular log:*)",
+      "Bash(python3:*)"
     ]
   }
 }
