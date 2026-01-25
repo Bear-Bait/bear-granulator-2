@@ -3,7 +3,13 @@ BEARULATOR: KeyStep Pro MIDI Mapping
 Smart Mapper System
 
 Hardware: Arturia KeyStep Pro
-- 5 rotary knobs (CC 74, 75, 76, 77, 78)
+- 6 rotary knobs (CC 74-79)
+  - CC 74: Position
+  - CC 75: Pitch
+  - CC 76: Grain Size
+  - CC 77: Overlap
+  - CC 78: Amplitude
+  - CC 79: LO-FI Grain Density (v2.3 - global)
 - Mod strip (CC 1)
 - Pitch bend (±2 semitones)
 - 37-key keyboard (polyphonic pitch control)
@@ -124,9 +130,10 @@ Features:
 		"  Knob 1 (CC 74) → Position".postln;
 		"  Knob 2 (CC 75) → Pitch (-24 to +24)".postln;
 		"  Knob 3 (CC 76) → Grain Size (exponential)".postln;
-		"  Knob 4 (CC 77) → Overlap/Density".postln;
+		"  Knob 4 (CC 77) → Overlap".postln;
 		"  Knob 5 (CC 78) → Amplitude".postln;
-		"  Mod Strip (CC 1) → Position Jitter".postln;
+		"  Knob 6 (CC 79) → LO-FI Grain Density (GLOBAL)".postln;
+		"  Mod Strip (CC 1) → ENTROPY GRADIENT (T1+T2 disintegration)".postln;
 		"  Pitch Bend → Pitch (±2 semitones)".postln;
 		"".postln;
 		"Keyboard:".postln;
@@ -159,10 +166,60 @@ Features:
 		// Knob 5: Amplitude (0.0 to 1.0, Linear)
 		self.mapKnob(78, \amp, 0.0, 1.0, \lin, trackNum);
 
-		// Mod Strip: Position Jitter (0.0 to 1.0, Linear)
-		self.mapKnob(1, \posJitter, 0.0, 1.0, \lin, trackNum);
+		// Knob 6 / CC 79: LO-FI Grain Switch (0-5, Linear, Global)
+		// v2.3: Global grain density control (affects all tracks)
+		self.mapKnob(79, \loFiGrains, 0, 5, \lin, trackNum);
+
+		// Mod Strip (CC 1): ENTROPY GRADIENT - Disintegrates Tracks 1 & 2
+		// v2.3: Maps to multiple parameters for "evaporation" effect
+		self.setupEntropyGradient;
 
 		"Default mappings loaded (Track 1)".postln;
+	},
+
+	// v2.3: Entropy Gradient - Mod Wheel controls disintegration of T1+T2
+	setupEntropyGradient: { arg self;
+		MIDIdef.cc(\ksp_entropy, { arg val, num, chan, src;
+			var entropy = val / 127;  // Normalize 0.0 to 1.0
+
+			// Store globally for GUI sync
+			~entropyValue = entropy;
+
+			// Apply entropy gradient to Tracks 1 and 2 only
+			[0, 1].do({ |i|
+				// Grain Size: 100ms → 2ms (exponential acceleration in final 20%)
+				self.trackManager.setParam(i, \grainSize, entropy.linexp(0, 1, 0.1, 0.002));
+
+				// Spatial Jitter: 0.1 → 1.0 (buffer-wide scattering)
+				self.trackManager.setParam(i, \posJitter, entropy.linlin(0, 1, 0.1, 1.0));
+
+				// Pitch Chaos: 0 → 48 semitones (4 octaves of shrapnel)
+				self.trackManager.setParam(i, \pitchJitter, entropy.linlin(0, 1, 0, 48));
+
+				// Density/Overlap: 1 → 128 (clean → gaseous wall)
+				self.trackManager.setParam(i, \overlap, entropy.linlin(0, 1, 1, 128));
+
+				// Bit Depth: 16-bit → 1-bit (square wave trash)
+				self.trackManager.setParam(i, \crushBits, entropy.linlin(0, 1, 16, 1));
+			});
+
+			// Update GUI knob and arc if they exist
+			{
+				if(~entropyKnob.notNil, { ~entropyKnob.value_(entropy) });
+				if(~entropyArcView.notNil, { ~entropyArcView.refresh });
+			}.defer;
+
+			// Console feedback at extremes
+			if(entropy > 0.95, {
+				"ENTROPY: DISCONNECTED ATOMS (T1+T2)".postln;
+			});
+			if(entropy < 0.05 and: { val > 0 }, {
+				"ENTROPY: Solid state (T1+T2)".postln;
+			});
+
+		}, 1);  // CC 1 = Mod Wheel / Mod Strip
+
+		"✅ CC 1 (Mod Strip) → Entropy Gradient (T1+T2)".postln;
 	},
 
 	// Set up polyphonic keyboard handlers

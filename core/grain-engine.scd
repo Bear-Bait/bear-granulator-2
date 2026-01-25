@@ -1,5 +1,5 @@
 /*
-BEARULATOR: Core Granular Engine v2.2
+BEARULATOR: Core Granular Engine v2.3
 Phase 1 - Main SynthDef with GrainBuf
 Phase 2 - Integrated 48-band Morphing Resonator
 Phase 6 - Material Modes (TAPE/POLY/LIVE)
@@ -7,11 +7,16 @@ Phase 6b - Overlap Control (musical grain density)
 Phase 15 - Time Stretch (temporal scaling without pitch shift)
 v2.1 - Decoupled Time/Pitch, 64-Step Sequencer, Click-Free Switching
 v2.2 - Probability Masking (Bernoulli Gate)
+v2.3 - LO-FI Grain Switch (6 modes: HD→Pro→Texture→Lo-Fi→Glitch→Broken)
 
-KEY CHANGES IN v2.2:
-- Added 'prob' argument (0.0 - 1.0)
-- Implemented Bernoulli Gate on main triggers and stereo triggers
-- Allows rhythmic fracturing/thinning of the grain stream
+KEY CHANGES IN v2.3:
+- Added 'loFiGrains' parameter (0-5 for density scaling)
+- IMPORTANT: GrainBuf's maxGrains is INIT-ONLY (can't change dynamically!)
+- LO-FI effect achieved via PROBABILITY MASKING on triggers instead
+- Density multipliers: HD(1.0), Pro(0.5), Texture(0.25), Lo-Fi(0.11), Glitch(0.06), Broken(0.06+dropout)
+- 500ms smooth transitions between modes (Lag.kr)
+- "Broken" mode adds irregular 33% dropout using Dust.kr for glitchy character
+- SendReply for /grainCount enables GUI feedback of active grain estimate
 
 Features:
 - Up to 256 grains (dynamic based on overlap setting)
@@ -34,7 +39,8 @@ Args:
    overlap: Number of simultaneous grains (1-256) - MAXIMUM DENSITY
   density: Grains per second (1-200) - LEGACY, use overlap instead
   useOverlap: 1=use overlap mode (default), 0=use density mode
-  prob: Grain probability/density mask (0.0=silence, 1.0=always trigger) - NEW v2.2
+  prob: Grain probability/density mask (0.0=silence, 1.0=always trigger) - v2.2
+  loFiGrains: LO-FI mode (0=HD 256, 1=Pro 128, 2=Texture 64, 3=Lo-Fi 28, 4=Glitch 16, 5=Broken) - v2.3
   position: Playback position in buffer (0-1)
   scanSpeed: Continuous scanning speed (0=static, ±4=fast)
   timeStretch: Master time stretch (0.25-4x, scales grain rate & size, NOT pitch)
@@ -71,6 +77,7 @@ SynthDef(\bearulatorGrainEngine, {
 	    overlap = 4,
 	    useOverlap = 1,
 	    prob = 1.0,        // v2.2: Probability Mask (1.0 = 100% active)
+	    loFiGrains = 0,    // v2.3: LO-FI Switch (0=HD 256, 1=Pro 128, 2=Texture 64, 3=Lo-Fi 28, 4=Glitch 16, 5=Broken)
 	    position = 0.5,
 	    scanSpeed = 1,     // v2.1: Normal playback speed default
 
@@ -159,28 +166,45 @@ SynthDef(\bearulatorGrainEngine, {
 	var scanRate, grainRate;
 	var posPattern, pitchPattern, musicalPosJitter, musicalPitchJitter;
 	var rawTrig, rawTrigL, rawTrigR; // v2.2: Vars for probability masking
+	// v2.3 FIX: LO-FI uses probability masking, not maxGrains (which is init-only in GrainBuf)
+	var loFiDensity, loFiLag, isBroken, brokenDropout, finalProb;
+	var activeGrains; // For GUI feedback
 
 	bufFrames = BufFrames.kr(bufnum);
-
-	// EDGE CASE PROTECTION: Ensure minimum loop size (0.1% of buffer)
-	// Prevents division by zero and Phasor instability with tiny/inverted loops
-	loopEnd = loopEnd.max(loopStart + 0.001);
 
 	// 1. CALCULATE DECOUPLED RATES (v2.1)
 	grainRate = (pitch + pitchShift).midiratio;
 	scanRate = scanSpeed * BufRateScale.kr(bufnum) * timeStretch;
 
-	// 2. DENSITY & TRIGGER
+	// 2. DENSITY & TRIGGER BASE
 	grainDur = (grainSize / timeStretch.clip(0.25, 4)).max(0.001);
 	actualDensity = Select.kr(useOverlap, [
 		density * timeStretch,
 		(overlap / grainDur).max(0.1)
 	]);
 
-	// v2.2: Apply Bernoulli Gate to Main Trigger (Controls Demand Sequencer)
+	// === LO-FI PROBABILITY MASKING (v2.3 FIX) ===
+	// GrainBuf's maxGrains is an INIT-ONLY constant - can't be changed dynamically!
+	// Instead, we "choke" the trigger rate using probability masking.
+	// Map menu index (0-5) to probability multiplier: HD(1.0) → Broken(0.06)
+	loFiDensity = Select.kr(loFiGrains, [1.0, 0.5, 0.25, 0.11, 0.06, 0.06]);
+	loFiLag = Lag.kr(loFiDensity, 0.5); // 500ms smooth transitions between modes
+
+	// Broken mode (index 5): Add irregular 33% dropout using Dust for glitchy character
+	isBroken = (loFiGrains >= 5);
+	brokenDropout = Select.kr(isBroken, [
+		0,                                      // Normal modes: no dropout
+		TRand.kr(0.0, 0.33, Dust.kr(20))       // Broken: irregular 33% dropout
+	]);
+
+	// Combine user prob, LO-FI scaling, and broken dropout
+	finalProb = (prob * loFiLag * (1 - brokenDropout)).clip(0.001, 1);
+
+	// Raw triggers at full density
 	rawTrig = Impulse.ar(actualDensity);
-	// TRand generates a value 0.0-1.0 per tick. If < prob, output is 1 (Active).
-	trig = rawTrig * (TRand.ar(0.0, 1.0, rawTrig) < prob);
+
+	// Apply combined probability mask to main trigger
+	trig = rawTrig * (TRand.ar(0.0, 1.0, rawTrig) < finalProb);
 
 	// 3. MUSICAL JITTER (Demand UGens) - v2.1
 	// Position Sequence
@@ -192,13 +216,16 @@ SynthDef(\bearulatorGrainEngine, {
 	musicalPitchJitter = Demand.ar(trig, 0, pitchPattern);
 	musicalPitchJitter = (musicalPitchJitter * (pitchJitter > 0)).midiratio;
 
-	// 4. STEREO TRIGGERS
-	// v2.2: Apply Bernoulli Gate to Stereo Triggers independently
+	// 4. STEREO TRIGGERS with LO-FI probability mask
 	rawTrigL = Impulse.ar(actualDensity + LFNoise1.kr(3).range(stereoSpread.neg*5, stereoSpread*5));
 	rawTrigR = Impulse.ar(actualDensity + LFNoise1.kr(4).range(stereoSpread.neg*5, stereoSpread*5));
 
-	trigL = rawTrigL * (TRand.ar(0.0, 1.0, rawTrigL) < prob);
-	trigR = rawTrigR * (TRand.ar(0.0, 1.0, rawTrigR) < prob);
+	trigL = rawTrigL * (TRand.ar(0.0, 1.0, rawTrigL) < finalProb);
+	trigR = rawTrigR * (TRand.ar(0.0, 1.0, rawTrigR) < finalProb);
+
+	// === GRAIN COUNT MONITORING (for GUI feedback) ===
+	activeGrains = (actualDensity * grainDur * finalProb).round(1).max(0);
+	SendReply.kr(Impulse.kr(10), '/grainCount', [activeGrains]);
 
 	// 5. PHASOR (TAPE HEAD) - v2.1
 	phasor = Phasor.ar(0, scanRate, loopStart*bufFrames, loopEnd*bufFrames, loopStart*bufFrames) / bufFrames;
@@ -232,6 +259,7 @@ SynthDef(\bearulatorGrainEngine, {
 	pitchRatio = grainRate * musicalPitchJitter;
 
 	// 7. GRAIN GENERATION
+	// NOTE: maxGrains=256 is FIXED at init (GrainBuf limitation). LO-FI effect achieved via trigger probability masking above.
 	sig = [
 		GrainBuf.ar(1, trigL, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 256),
 		GrainBuf.ar(1, trigR, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 256)

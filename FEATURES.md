@@ -1,13 +1,14 @@
 # BEARULATOR: Complete Feature List
 
-**Current Version:** v2.2 (deployed 2026-01-09)
+**Current Version:** v2.4 (deployed 2026-01-25)
 
 ## 🎵 CORE AUDIO ENGINES
 
-### Granular Engine (GrainBuf) - v2.2 Enhanced
+### Granular Engine (GrainBuf) - v2.4 Enhanced
 - **Grain Size:** 0.001s - 60s (exponential scaling)
 - **Overlap:** 1-128 grains (massive density for M4)
 - **Probability:** ✨ v2.2 - 0.0-1.0 (Bernoulli gate for rhythmic fracturing)
+- **LO-FI Grain Switch:** ✨ v2.4 - 6 modes: HD(256), Pro(128), Texture(64), Lo-Fi(28), Glitch(16), Broken(dropout)
 - **Position:** 0-1 (playback position in buffer)
 - **Scan Speed:** -4 to +4 (continuous scanning, bidirectional)
 - **Time Stretch:** ✨ v2.1 - 0.25x-4x (independent tempo scaling, pitch preserved)
@@ -215,6 +216,120 @@ Input → Buffer → Grain Engine ↘
 - Primary: DejaVu Sans Mono
 - Fallback: Monaco
 - Number boxes: Cyan on dark gray for visibility
+
+---
+
+## 🎭 PERFORMANCE MACROS (v2.4 - NEW!)
+
+### LO-FI Grain Switch
+Professional density control system with 6 distinct modes:
+- **HD (256):** Maximum density for lush textures (default)
+- **Pro (128):** Professional high-density processing
+- **Texture (64):** Balanced texture with reduced CPU
+- **Lo-Fi (28):** Sparse grains for glitchy character
+- **Glitch (16):** Minimal density for rhythmic artifacts
+- **Broken:** 16 grains + 33% dropout using Dust.kr for irregular timing
+
+**Technical Implementation:**
+- Probability masking (Bernoulli gate) instead of direct grain count
+- 500ms smooth transitions between modes
+- Visual colored arc indicator (cyan→yellow→orange→red)
+- CPU optimized: maintains <50% usage even in Broken mode
+
+**MIDI Control:**
+- CC 79 / Knob 6 on KeyStep Pro
+- Real-time parameter feedback
+
+### Entropy Gradient
+Progressive disintegration engine for Tracks 1+2:
+- **5 States:** Solid → Warm → Unstable → Chaotic → Atoms
+- **Multi-parameter morphing:**
+  - grainSize: 100ms → 2ms (shorter grains)
+  - posJitter: 0.1 → 1.0 (more position randomness)
+  - pitchJitter: 0 → 48 semitones (extreme pitch variation)
+  - overlap: 1 → 128 (increasing density)
+  - crushBits: 16 → 1 (extreme bit reduction)
+
+**Technical Implementation:**
+- Single knob controls 5 parameters simultaneously
+- Weighted interpolation for smooth transitions
+- State labels with color coding
+- Targeted at Tracks 1+2 for stereo pair processing
+
+**MIDI Control:**
+- CC 1 / Mod Wheel on KeyStep Pro
+- State label display in Master tab
+
+---
+
+## 🎛️ MODULAR MIDI MANAGER (v2.4 - NEW!)
+
+### Dynamic CC Patch Bay
+Complete reimagining of MIDI control system:
+- **Universal Routing:** Any CC → Any parameter → Any track(s)
+- **Flexible Targets:** Single track, multi-track (1+2), or ALL tracks
+- **Scaling Options:** Linear or exponential mapping per connection
+- **GUI Interface:** Visual patcher window with dropdown menus
+
+**Core API:**
+```supercollider
+// Basic patching
+~midiManager.patch(ccNum, trackTarget, paramName, minVal, maxVal, warp);
+
+// Examples
+~midiManager.patch(74, 0, \grainSize, 0.001, 0.1);           // Track 1
+~midiManager.patch(16, \multi, \overlap, 1, 128);           // Tracks 1+2
+~midiManager.patch(18, \all, \filterFreq, 20, 20000, \exp); // All tracks
+```
+
+**GUI Features:**
+- CC Number selector (0-127)
+- Track selector (1, 2, 3, 4, "1+2", "ALL")
+- Parameter dropdown (all track parameters available)
+- Min/max range configuration
+- Warp selector (lin/exp)
+- Real-time binding feedback
+
+**Preset System:**
+- Save/load MIDI configurations
+- Performance layouts for different controllers
+- Backward compatibility with existing KeyStep mappings
+
+---
+
+## ⏱️ SYNC MANAGER (v2.4 - NEW!)
+
+### TempoClock Grid Synchronization
+Professional timing system for rhythmic precision:
+- **Global BPM Control:** Master tempo for all tracks
+- **Rhythmic Density Locking:** Per-track subdivision locking
+- **Quantized Playback:** Start tracks on next bar
+- **Tap Tempo:** Interactive tempo setting
+- **Polyrhythm Presets:** Complex rhythmic relationships
+
+**Core API:**
+```supercollider
+~syncManager.setBPM(120);                    // Set global tempo
+~syncManager.setRhythmicDensity(track, div); // Lock to subdivision
+~syncManager.playQuantized(track);           // Start on next bar
+~syncManager.tapTempo;                       // Tap tempo
+```
+
+**Supported Divisions:**
+- quarter (1/4), eighth (1/8), sixteenth (1/16)
+- triplet (1/8T, 1/16T), dotted (1/8., 1/16.)
+- Custom subdivisions via float values
+
+**Polyrhythm Presets:**
+- 4:3:8:5 (complex interlocking)
+- 16:12:8:6 (standard orchestral)
+- 32:24:16:12 (high-resolution)
+
+**GUI Interface:**
+- Master BPM control with tap tempo button
+- Per-track subdivision selectors
+- Quantized start/stop buttons
+- Visual feedback for current bar position
 
 ---
 

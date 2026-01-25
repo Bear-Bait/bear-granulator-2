@@ -234,6 +234,15 @@ fork {
 		0.2.wait;
 		"  ✓ KeyStep Pro MIDI mapping loaded".postln;
 
+		// v2.3: MIDI Manager (modular patch bay)
+		(~config.corePath +/+ "midi-manager.scd").load;
+		0.2.wait;
+		"  ✓ MIDI Manager loaded".postln;
+
+		// v2.3: Sync Manager (TempoClock grid)
+		(~config.corePath +/+ "sync-manager.scd").load;
+		0.2.wait;
+		"  ✓ Sync Manager loaded".postln;
 
 		0.5.wait;
 
@@ -318,6 +327,23 @@ fork {
 		0.1.wait;
 		">>> KeyStep Pro init completed. Enabled: %".format(~keyStepProMapping.enabled).postln;
 		"".postln;
+
+		// v2.3: Initialize MIDI Manager (modular patch bay)
+		try {
+			~midiManager = ~bearulatorMidiManager.value(~trackManager);
+			~midiManager.initResponder;
+			"  ✓ MIDI Manager initialized".postln;
+		} { |error|
+			"  ✗ MIDI Manager failed: %".format(error.errorString).postln;
+		};
+
+		// v2.3: Initialize Sync Manager (TempoClock grid)
+		try {
+			~syncManager = ~bearulatorSyncManager.value(~trackManager);
+			"  ✓ Sync Manager initialized".postln;
+		} { |error|
+			"  ✗ Sync Manager failed: %".format(error.errorString).postln;
+		};
 
 		// Backward compatibility: expose track 1 as ~grainSynth
 		~grainSynth = ~trackManager.getTracks[0].grainSynth;
@@ -414,13 +440,33 @@ fork {
 		"  • Example: ~trackManager.setQuadPosition(0, -0.5, -0.5)".postln;
 		"  • See examples/quad-spatial-examples.scd for automation".postln;
 		"".postln;
+		"v2.3 Features (NEW!):".postln;
+		"  • LO-FI Grain Switch (HD→Broken density modes)".postln;
+		"  • Entropy Gradient (T1+T2 disintegration)".postln;
+		"  • MIDI Manager (modular patch bay)".postln;
+		"  • Sync Manager (TempoClock grid)".postln;
+		"".postln;
+		"MIDI Manager (v2.3):".postln;
+		"  • ~midiManager.createPatcherWindow  - Open MIDI patch bay".postln;
+		"  • ~midiManager.patch(79, 0, \\loFiGrains, 0, 5)".postln;
+		"  • ~midiManager.patch(1, [0,1], \\posJitter, 0, 1)".postln;
+		"  • ~midiManager.listPatches  - Show all active patches".postln;
+		"".postln;
+		"Sync Manager (v2.3):".postln;
+		"  • ~syncManager.createSyncWindow  - Open tempo/grid GUI".postln;
+		"  • ~syncManager.setBPM(120)".postln;
+		"  • ~syncManager.setRhythmicDensity(0, 16)  - T1 at 1/16 notes".postln;
+		"  • ~syncManager.playQuantized(0)  - Start T1 on next bar".postln;
+		"  • ~syncManager.tapTempo  - Tap to set tempo".postln;
+		"".postln;
 		"KeyStep Pro MIDI Control:".postln;
 		"  • Knob 1 (CC 74) → Position".postln;
 		"  • Knob 2 (CC 75) → Pitch (-24 to +24)".postln;
 		"  • Knob 3 (CC 76) → Grain Size (exponential)".postln;
 		"  • Knob 4 (CC 77) → Overlap/Density".postln;
 		"  • Knob 5 (CC 78) → Amplitude".postln;
-		"  • Mod Strip (CC 1) → Position Jitter".postln;
+		"  • Knob 6 (CC 79) → LO-FI Grain Density".postln;
+		"  • Mod Strip (CC 1) → ENTROPY GRADIENT (T1+T2)".postln;
 		"  • Keyboard (Notes 48-83) → Polyphonic pitch control".postln;
 		"  • Note 84 (High C) → PANIC/RESET all tracks".postln;
 		"  • Smart remap: ~mapKnob.(74, \\spectralMix, 0, 1);".postln;

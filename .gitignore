@@ -36,6 +36,11 @@ Thumbs.db
 # Development archive
 archive/
 
+# Documentation archives
+*.bak
+*.backup
+*-backup.scd
+
 # .claude directory (AI assistant)
 .claude/
 CLAUDE.md

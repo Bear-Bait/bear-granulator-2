@@ -16,12 +16,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. `s.reboot;` (restart server)
 3. `"main.scd".loadRelative;` (reload modules)
 
-**Current Version:** v2.2 (deployed 2026-01-09)
-- Probability masking (Bernoulli gate for rhythmic fracturing)
-- Click-free effect switching (SelectX + lag)
-- Decoupled time/pitch (scanRate vs grainRate)
-- 64-step sequencer arrays (KeyStep Pro/Digitone standard)
-- Parameter collision fixed (mode → grainMode)
+**Current Version:** v2.4 (deployed 2026-01-25)
+- LO-FI Grain Switch (6 density modes with probability masking)
+- Entropy Gradient (progressive disintegration for Tracks 1+2)
+- Modular MIDI Manager (dynamic CC patch bay with GUI)
+- Sync Manager (TempoClock grid synchronization)
+- Master tab reorganization with PERFORMANCE MACROS
+- Updated project save paths and preset dialog fixes
 
 ## Essential Commands
 
@@ -71,11 +72,40 @@ s.avgCPU;        // Check CPU usage
 "examples/preset-examples.scd".loadRelative;
 ```
 
+### Modular MIDI Manager (v2.4)
+```supercollider
+// Open GUI patcher window
+~midiManager.createPatcherWindow;
+
+// Manual CC patching
+~midiManager.patch(ccNum, target, param, min, max, warp);
+
+// Examples
+~midiManager.patch(74, 0, \grainSize, 0.001, 0.1);      // Track 1
+~midiManager.patch(16, \multi, \overlap, 1, 128);        // Tracks 1+2
+~midiManager.patch(18, \all, \filterFreq, 20, 20000, \exp); // All tracks
+```
+
+### Sync Manager (v2.4)
+```supercollider
+// Tempo and rhythmic control
+~syncManager.setBPM(120);                    // Global BPM
+~syncManager.setRhythmicDensity(0, \eighth); // Track 1 → 1/8 notes
+~syncManager.playQuantized(0);               // Start on next bar
+~syncManager.tapTempo;                       // Tap tempo
+~syncManager.createSyncWindow;               // GUI window
+```
+
 ### KeyStep Pro MIDI Control
 ```supercollider
 // MIDI is auto-initialized when main.scd loads
 
-// Smart remapping (on-the-fly, no audio interruption)
+// NEW Modular MIDI Manager (v2.4)
+~midiManager.createPatcherWindow;         // Open GUI
+~midiManager.patch(79, 0, \loFiGrains, 0, 5); // Knob 6 → LO-FI modes
+~midiManager.patch(1, \multi, \entropyGradient, 0, 4); // Mod Wheel → Entropy
+
+// Legacy Smart remapping (still works)
 ~mapKnob.(74, \spectralMix, 0, 1);        // Knob 1 → Spectral Mix
 ~mapKnob.(76, \filterFreq, 0, 1, \exp);  // Knob 3 → Filter (exponential)
 ~mapKnob.(77, \reverbMix, 0, 1, \lin, 1); // Knob 4 → Track 2 Reverb

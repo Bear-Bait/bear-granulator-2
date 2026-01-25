@@ -2,11 +2,16 @@
 
 ![Bearulator GUI](material/bearulator-gooey.png)
 
-A 4-track granular synthesis sampler built in SuperCollider. Originally inspired by the Torso S-4, this project has evolved into a more flexible workstation optimized for Mac M4 with 24GB RAM. Developed using Claude Code and Google Gemini as coding assistants.
+**BEARULATOR** v2.4 - Professional 4-track granular synthesis workstation built in SuperCollider. Originally inspired by the Torso S-4, this project has evolved into a more flexible workstation optimized for Mac M4 with 24GB RAM. Developed using Claude Code and Google Gemini as coding assistants.
 
-## Active TODOs
+## Quick Start
 
-- [ ] Create a new TODO list.
+1. **Boot SuperCollider server:** `s.boot;`
+2. **Load Bearulator:** `"main.scd".loadRelative;`
+3. **Load sample:** Click TRACK 1 → Load Audio File → Choose from `samples/stock/`
+4. **Play:** Click PLAY button and adjust grain size with slider
+
+For detailed setup, see [FEATURES.md](FEATURES.md) for complete feature list.
 
 ---
 
@@ -408,7 +413,27 @@ The `samples/stock/` folder includes some great starter material:
 // 6. Press "Send to Track"
 ```
 
-### MIDI Control (Phase 12)
+### MIDI Control (Phase 12+)
+**Modular MIDI Manager (NEW in v2.3):**
+- Dynamic CC patch bay - route any knob to any parameter
+- GUI patcher window with dropdown menus for track/parameter selection
+- Support for single track, multi-track (1+2), or ALL tracks routing
+- Linear or exponential scaling per mapping
+- Preset system for different performance layouts
+
+**Usage:**
+```supercollider
+// Patch CC 79 to grainSize on Track 1
+~midiManager.patch(79, 0, \grainSize, 0.001, 0.1);
+
+// Open GUI patcher window
+~midiManager.createPatcherWindow;
+
+// Map to multiple tracks
+~midiManager.patch(1, \multi, \overlap, 1, 128);  // Mod Wheel → Tracks 1+2 overlap
+~midiManager.patch(16, \all, \filterFreq, 20, 20000, \exp);  // CC 16 → All tracks filter
+```
+
 **KeyStep Pro Integration:**
 - 5 encoder mappings (customizable CC assignments)
 - Polyphonic note triggering (4 MIDI channels → 4 tracks)
@@ -422,11 +447,8 @@ The `samples/stock/` folder includes some great starter material:
 - CC 76 → Overlap/Density (Track 1)
 - CC 77 → Spectral Mix (Track 1)
 - CC 78 → Filter Drive (Track 1)
-
-**Remap encoders:**
-```supercollider
-~s4MIDIMapping.mapCC(74, \reverbMix, 0);  // CC 74 → Reverb Mix on Track 1
-```
+- CC 79 → LO-FI Grain Switch (v2.3)
+- CC 1 → Entropy Gradient (v2.3)
 
 ### Quad Speaker Output (Phase 12)
 **4-Speaker Spatial Audio System**
@@ -489,8 +511,8 @@ The `samples/stock/` folder includes some great starter material:
 
 ## DEVELOPMENT STATUS
 
-**Current Phase:** 17 (48-Band Resonator Complete)
-**Last Updated:** Phase 17 - 48-Band Morphing Resonator (Jan 18, 2026)
+**Current Phase:** 18 (Performance Macros & Modular MIDI)
+**Last Updated:** Phase 18 - LO-FI Switch, Entropy Gradient, MIDI Manager, Sync Manager (Jan 25, 2026)
 
 **Active TODO List:** See `TODO.md` for current tasks
 
@@ -526,6 +548,36 @@ The `samples/stock/` folder includes some great starter material:
 - Authentic tape machine pitch wobble
 - Adjustable wow (slow drift) and flutter (fast wobble) amounts
 - Adds vintage character to any track
+
+### Phase 18 Features (NEW in v2.3)
+
+**LO-FI Grain Switch:**
+- 6 density modes: HD (256), Pro (128), Texture (64), Lo-Fi (28), Glitch (16), Broken (dropout)
+- Probability masking for smooth density transitions
+- Colored arc indicator (cyan→yellow→orange→red)
+- CC 79 / Knob 6 on KeyStep Pro
+- Broken mode uses Dust.kr for irregular 33% dropout
+
+**Entropy Gradient:**
+- Disintegrates Tracks 1+2 from solid to atoms
+- Controls: grainSize (100ms→2ms), posJitter (0.1→1.0), pitchJitter (0→48), overlap (1→128), crushBits (16→1)
+- Colored arc indicator in Master tab next to LO-FI
+- CC 1 / Mod Wheel on KeyStep Pro
+- State labels: Solid, Warm, Unstable, Chaotic, Atoms
+
+**Modular MIDI Manager:**
+- Dynamic CC patch bay - route any knob to any parameter
+- GUI patcher window with dropdown menus for track/parameter selection
+- Support for single track, multi-track (1+2), or ALL tracks routing
+- Linear or exponential scaling per mapping
+- Preset system for different performance layouts
+
+**Sync Manager:**
+- TempoClock grid synchronization with global BPM control
+- Per-track rhythmic density locking (1/4, 1/8, 1/16, etc.)
+- Quantized playback start on next bar
+- Tap tempo functionality
+- Polyrhythm presets: 4:3:8:5, 16:12:8:6, 32:24:16:12
 
 ### Phase 16 Features
 - KeyStep Pro multi-track routing (control multiple tracks from one keyboard)

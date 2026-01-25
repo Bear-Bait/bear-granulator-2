@@ -649,92 +649,297 @@ Phase 7 Features:
 		var leftColX = 10, rightColX = 460;  // Two-column layout
 		var leftY = 10, rightY = 10;
 
-		StaticText(parent, Rect(10, leftY, 400, 30))
+		StaticText(parent, Rect(10, leftY, 400, 25))
 			.string_("MASTER CONTROLS")
-			.font_(Font("DejaVu Sans Mono", 16, true))
+			.font_(Font("DejaVu Sans Mono", 14, true))
 			.stringColor_(colors.cyan);
 
-		leftY = leftY + 40;
+		leftY = leftY + 30;
 
 		// === LEFT COLUMN: TRANSPORT & CONTROLS ===
 
 		// === GLOBAL TRANSPORT ===
-		StaticText(parent, Rect(leftColX, leftY, 400, 25))
+		StaticText(parent, Rect(leftColX, leftY, 100, 20))
 			.string_("TRANSPORT")
-			.font_(Font("DejaVu Sans Mono", 12, true));
+			.font_(Font("DejaVu Sans Mono", 10, true));
 
-		leftY = leftY + 30;
+		leftY = leftY + 22;
 
-		// Play All button (Phase 8: runs both grain + spectral engines)
-		Button(parent, Rect(leftColX, leftY, 100, 40))
-			.states_([
-				["PLAY ALL", colors.black, colors.green]
-			])
+		// Play All / Stop All buttons (compact)
+		Button(parent, Rect(leftColX, leftY, 90, 30))
+			.states_([["PLAY ALL", colors.black, colors.green]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
 				4.do({ arg i;
 					var track = trackManager.getTrack(i);
-					if(track.grainSynth.notNil, {
-						track.grainSynth.run(true);
-					});
-					if(track.spectralSynth.notNil, {
-						track.spectralSynth.run(true);
-					});
+					if(track.grainSynth.notNil, { track.grainSynth.run(true) });
+					if(track.spectralSynth.notNil, { track.spectralSynth.run(true) });
 				});
-				"All tracks PLAYING (Grain + Spectral)".postln;
+				"All tracks PLAYING".postln;
 			});
 
-		// Stop All button (Phase 8: stops both engines)
-		Button(parent, Rect(leftColX + 105, leftY, 100, 40))
-			.states_([
-				["STOP ALL", colors.fg, colors.red]
-			])
+		Button(parent, Rect(leftColX + 95, leftY, 90, 30))
+			.states_([["STOP ALL", colors.fg, colors.red]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
 				4.do({ arg i;
 					var track = trackManager.getTrack(i);
-					if(track.grainSynth.notNil, {
-						track.grainSynth.run(false);
-					});
-					if(track.spectralSynth.notNil, {
-						track.spectralSynth.run(false);
-					});
+					if(track.grainSynth.notNil, { track.grainSynth.run(false) });
+					if(track.spectralSynth.notNil, { track.spectralSynth.run(false) });
 				});
 				"All tracks STOPPED".postln;
 			});
 
-		leftY = leftY + 50;
-
-		// === PHASE 16: KEYSTEP PRO MULTI-TRACK ROUTING ===
-		StaticText(parent, Rect(leftColX, leftY, 400, 25))
-			.string_("KEYSTEP PRO ROUTING")
-			.font_(Font("DejaVu Sans Mono", 12, true))
-			.stringColor_(colors.cyan)
-			.toolTip_("Enable KeyStep control for multiple tracks simultaneously");
-
-		leftY = leftY + 30;
-
-		// 4 track enable buttons (2x2 grid to save vertical space)
-		2.do({ arg row;
-			2.do({ arg col;
-				var i = (row * 2) + col;
-				var button = Button(parent, Rect(leftColX + (col * 105), leftY + (row * 35), 100, 30))
-					.states_([
-						["T% MIDI OFF".format(i + 1), colors.fg, Color.gray(0.3)],
-						["T% MIDI ON".format(i + 1), colors.black, colors.green]
-					])
-					.font_(Font("DejaVu Sans Mono", 9, true))
-					.value_(if(i == 0, 1, 0))  // Track 1 enabled by default
-					.action_({ arg btn;
-						if(~keyStepProMapping.notNil, {
-							~keyStepProMapping.enableTrackMIDI(i, btn.value == 1);
-						}, {
-							"KeyStep Pro mapping not initialized".warn;
-						});
-					})
-					.toolTip_("Enable KeyStep CC/note messages for Track %".format(i + 1));
+		// v2.3: MIDI PATCHER and SYNC MANAGER buttons (next to transport)
+		Button(parent, Rect(leftColX + 190, leftY, 90, 30))
+			.states_([["MIDI PATCH", colors.black, colors.cyan]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.toolTip_("Open modular MIDI patch bay")
+			.action_({
+				if(~midiManager.notNil, {
+					~midiManager.createPatcherWindow;
+				}, {
+					"MIDI Manager not initialized".warn;
+				});
 			});
+
+		Button(parent, Rect(leftColX + 285, leftY, 90, 30))
+			.states_([["SYNC MGR", colors.black, colors.yellow]])
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.toolTip_("Open tempo/grid sync manager")
+			.action_({
+				if(~syncManager.notNil, {
+					~syncManager.createSyncWindow;
+				}, {
+					"Sync Manager not initialized".warn;
+				});
+			});
+
+		leftY = leftY + 38;
+
+		// === KEYSTEP PRO ROUTING (compact 1-row) ===
+		StaticText(parent, Rect(leftColX, leftY, 120, 18))
+			.string_("KEYSTEP MIDI:")
+			.font_(Font("DejaVu Sans Mono", 9, true))
+			.stringColor_(colors.cyan);
+
+		// 4 track enable buttons (1 row)
+		4.do({ arg i;
+			Button(parent, Rect(leftColX + 95 + (i * 70), leftY - 2, 65, 22))
+				.states_([
+					["T% OFF".format(i + 1), colors.fg, Color.gray(0.3)],
+					["T% ON".format(i + 1), colors.black, colors.green]
+				])
+				.font_(Font("DejaVu Sans Mono", 8, true))
+				.value_(if(i == 0, 1, 0))
+				.action_({ arg btn;
+					if(~keyStepProMapping.notNil, {
+						~keyStepProMapping.enableTrackMIDI(i, btn.value == 1);
+					});
+				})
+				.toolTip_("Enable KeyStep for Track %".format(i + 1));
 		});
 
-		leftY = leftY + 80;
+		leftY = leftY + 28;
+
+		// === v2.3: LO-FI + ENTROPY KNOBS (side by side, compact) ===
+		StaticText(parent, Rect(leftColX, leftY, 200, 18))
+			.string_("PERFORMANCE MACROS")
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.stringColor_(colors.orange);
+
+		leftY = leftY + 20;
+
+		// === LO-FI KNOB ===
+		{
+			var loFiKnobX = leftColX;
+			var loFiKnobY = leftY;
+			var loFiKnobSize = 45;
+			var loFiArcView, loFiKnob;
+			var modeNames = ["HD", "Pro", "Texture", "Lo-Fi", "Glitch", "Broken"];
+
+			// Label above knob
+			StaticText(parent, Rect(loFiKnobX, loFiKnobY, 70, 16))
+				.string_("LO-FI")
+				.font_(Font("DejaVu Sans Mono", 9, true))
+				.stringColor_(colors.yellow)
+				.align_(\center);
+
+			loFiKnobY = loFiKnobY + 16;
+
+			// Arc drawing layer (behind knob) - cyan to red gradient
+			loFiArcView = UserView(parent, Rect(loFiKnobX - 10, loFiKnobY - 10, loFiKnobSize + 20, loFiKnobSize + 20))
+				.background_(Color.clear)
+				.drawFunc_({
+					var val, centerX, centerY, radius, pen, arcColor, startAngle, endAngle, modeIndex, modeName;
+
+					val = (trackManager.getTrack(0).params[\loFiGrains] ? 0) / 5.0;  // Normalize 0-5 to 0-1
+					modeIndex = (val * 5).round.asInteger.clip(0, 5);
+					modeName = modeNames[modeIndex];
+					centerX = (loFiKnobSize + 20) / 2;
+					centerY = (loFiKnobSize + 20) / 2;
+					radius = (loFiKnobSize / 2) + 5;
+					pen = Pen;
+
+					// Color gradient: cyan (HD) → yellow (mid) → red (Broken)
+					arcColor = case
+						{ val <= 0.2 } { colors.cyan }                         // HD - clean
+						{ val <= 0.5 } { Color(0.8, 0.8, 0) }                  // Pro/Texture - yellow
+						{ val <= 0.8 } { Color(1, 0.5, 0) }                    // Lo-Fi/Glitch - orange
+						{ true } { Color.red };                                // Broken - red danger
+
+					// Draw background arc (full range, dimmed)
+					pen.color = Color.gray(0.3);
+					pen.width = 6;
+					pen.addArc(Point(centerX, centerY), radius, -135.degrad, 270.degrad);
+					pen.stroke;
+
+					// Draw active arc from start to current position
+					pen.color = arcColor.alpha_(0.9);
+					pen.width = 6;
+					startAngle = -135.degrad;
+					endAngle = val.linlin(0, 1, 0, 270).degrad;
+					pen.addArc(Point(centerX, centerY), radius, startAngle, endAngle);
+					pen.stroke;
+
+					// Draw mode name below arc
+					pen.stringAtPoint(
+						modeName,
+						Point(centerX - 18, centerY + radius + 5),
+						Font("DejaVu Sans Mono", 9, true),
+						arcColor
+					);
+				});
+
+			// Knob control (on top of arc)
+			loFiKnob = Knob(parent, Rect(loFiKnobX, loFiKnobY, loFiKnobSize, loFiKnobSize))
+				.value_(0)  // Default to HD (0)
+				.color_([Color.gray(0.3), Color.white, Color.gray(0.1), Color.gray(0.5)])
+				.mode_(\vert)
+				.action_({ |knob|
+					var loFiValue = (knob.value * 5).round.asInteger.clip(0, 5);
+
+					// Set loFiGrains parameter on ALL tracks
+					4.do({ arg i;
+						trackManager.setParam(i, \loFiGrains, loFiValue);
+					});
+
+					// Refresh arc display
+					{ loFiArcView.refresh }.defer;
+
+					// Console feedback
+					"LO-FI: % (CC79/Knob6)".format(modeNames[loFiValue]).postln;
+					if(loFiValue == 5, {
+						"  → Broken mode: irregular 33% dropout".postln;
+					});
+				})
+				.toolTip_("LO-FI Grain Density (CC79/Knob6)\nHD=smooth → Broken=glitchy");
+
+		}.value;
+
+		// === ENTROPY KNOB (to the right of LO-FI) ===
+		{
+			var entropyKnobX = leftColX + 85;  // Right of LO-FI knob
+			var entropyKnobY = leftY;
+			var entropyKnobSize = 45;
+			var entropyArcView, entropyKnob;
+			var stateNames = ["Solid", "Warm", "Unstable", "Chaotic", "Atoms"];
+
+			// Label above knob
+			StaticText(parent, Rect(entropyKnobX, entropyKnobY, 85, 16))
+				.string_("ENTROPY")
+				.font_(Font("DejaVu Sans Mono", 9, true))
+				.stringColor_(Color(1, 0.6, 0))  // Orange
+				.align_(\center);
+
+			entropyKnobY = entropyKnobY + 16;
+
+			// Arc drawing layer - cyan (stable) to red (chaos)
+			// Store globally so MIDI handler can refresh it
+			~entropyArcView = entropyArcView = UserView(parent, Rect(entropyKnobX - 10, entropyKnobY - 10, entropyKnobSize + 20, entropyKnobSize + 20))
+				.background_(Color.clear)
+				.drawFunc_({
+					var val, centerX, centerY, radius, pen, arcColor, startAngle, endAngle, stateIndex, stateName;
+
+					val = (~entropyValue ? 0);  // Store globally for readback
+					stateIndex = (val * 4).round.asInteger.clip(0, 4);
+					stateName = stateNames[stateIndex];
+					centerX = (entropyKnobSize + 20) / 2;
+					centerY = (entropyKnobSize + 20) / 2;
+					radius = (entropyKnobSize / 2) + 5;
+					pen = Pen;
+
+					// Color gradient: cyan (stable) → yellow → orange → red (chaos)
+					arcColor = case
+						{ val <= 0.2 } { Color.cyan }                          // Solid - stable
+						{ val <= 0.4 } { Color(0.8, 0.8, 0) }                  // Warm - yellow
+						{ val <= 0.6 } { Color(1, 0.6, 0) }                    // Unstable - orange
+						{ val <= 0.8 } { Color(1, 0.3, 0) }                    // Chaotic - deep orange
+						{ true } { Color.red };                                // Atoms - red danger
+
+					// Draw background arc (full range, dimmed)
+					pen.color = Color.gray(0.3);
+					pen.width = 6;
+					pen.addArc(Point(centerX, centerY), radius, -135.degrad, 270.degrad);
+					pen.stroke;
+
+					// Draw active arc
+					pen.color = arcColor.alpha_(0.9);
+					pen.width = 6;
+					startAngle = -135.degrad;
+					endAngle = val.linlin(0, 1, 0, 270).degrad;
+					pen.addArc(Point(centerX, centerY), radius, startAngle, endAngle);
+					pen.stroke;
+
+					// Draw state name below arc
+					pen.stringAtPoint(
+						stateName,
+						Point(centerX - 18, centerY + radius + 5),
+						Font("DejaVu Sans Mono", 9, true),
+						arcColor
+					);
+				});
+
+			// Knob control - store globally for MIDI sync
+			~entropyKnob = entropyKnob = Knob(parent, Rect(entropyKnobX, entropyKnobY, entropyKnobSize, entropyKnobSize))
+				.value_(0)  // Default to stable
+				.color_([Color.gray(0.3), Color.white, Color.gray(0.1), Color.gray(0.5)])
+				.mode_(\vert)
+				.action_({ |knob|
+					var entropy = knob.value;
+					~entropyValue = entropy;  // Store for arc display
+
+					// Apply entropy gradient to Tracks 1 and 2 only
+					[0, 1].do({ |i|
+						// Grain Size: 100ms → 2ms (exponential acceleration in final 20%)
+						trackManager.setParam(i, \grainSize, entropy.linexp(0, 1, 0.1, 0.002));
+
+						// Spatial Jitter: 0.1 → 1.0 (buffer-wide scattering)
+						trackManager.setParam(i, \posJitter, entropy.linlin(0, 1, 0.1, 1.0));
+
+						// Pitch Chaos: 0 → 48 semitones (4 octaves of shrapnel)
+						trackManager.setParam(i, \pitchJitter, entropy.linlin(0, 1, 0, 48));
+
+						// Density/Overlap: 1 → 128 (clean → gaseous wall)
+						trackManager.setParam(i, \overlap, entropy.linlin(0, 1, 1, 128));
+
+						// Bit Depth: 16-bit → 1-bit (square wave trash)
+						trackManager.setParam(i, \crushBits, entropy.linlin(0, 1, 16, 1));
+					});
+
+					// Refresh arc display
+					{ ~entropyArcView.refresh }.defer;
+
+					// Console feedback at key thresholds
+					if(entropy > 0.95, {
+						"ENTROPY: DISCONNECTED ATOMS (T1+T2)".postln;
+					});
+				})
+				.toolTip_("Entropy Gradient (CC1/ModWheel)\nDisintegrates T1+T2: grains→atoms");
+
+		}.value;
+
+		leftY = leftY + 95;
 
 		// === RIGHT COLUMN: TRACK OVERVIEW ===
 		StaticText(parent, Rect(rightColX, rightY, 400, 25))
@@ -929,21 +1134,31 @@ Phase 7 Features:
 			.states_([["SAVE", colors.black, colors.cyan]])
 			.font_(Font("DejaVu Sans Mono", 9, true))
 			.action_({
-				// Prompt for preset name
-				Dialog.getText(
-					prompt: "Enter preset name for Track %:".format(presetTrackNum + 1),
-					defaultString: "my_preset",
-					accept: { arg name;
+				// Simple text input window for preset name
+				var saveWin, nameField, saveBtn;
+				saveWin = Window("Save Preset", Rect(400, 400, 280, 80))
+					.background_(Color.gray(0.2))
+					.front;
+				StaticText(saveWin, Rect(10, 10, 260, 20))
+					.string_("Preset name for Track %:".format(presetTrackNum + 1))
+					.stringColor_(Color.white);
+				nameField = TextField(saveWin, Rect(10, 35, 180, 24))
+					.string_("my_preset")
+					.font_(Font("DejaVu Sans Mono", 11));
+				saveBtn = Button(saveWin, Rect(200, 35, 60, 24))
+					.states_([["Save", Color.black, Color.cyan]])
+					.action_({
+						var name = nameField.string;
 						if(name.notEmpty, {
 							fork {
 								var path = ~presetManager.savePreset(presetTrackNum, name);
 								if(path.notNil, {
-									"✓ Saved: %".format(PathName(path).fileName).postln;
+									"Saved: %".format(PathName(path).fileName).postln;
 								});
 							};
 						});
-					}
-				);
+						saveWin.close;
+					});
 			});
 
 		// LOAD button
@@ -954,15 +1169,14 @@ Phase 7 Features:
 				var presets = ~presetManager.listPresets(presetTrackNum);
 				if(presets.size > 0, {
 					// Show file dialog to select preset
+					// Dialog.openPanel(okFunc, cancelFunc, multipleSelection)
 					Dialog.openPanel({ arg path;
 						fork {
 							~presetManager.loadPreset(presetTrackNum, path);
 						};
 					}, {
 						"Load cancelled".postln;
-					}, ~presetManager.getPresetPath, [
-						"org.supercollider.preset"
-					]);
+					}, false);  // multipleSelection = false
 				}, {
 					"No presets found for Track %".format(presetTrackNum + 1).warn;
 				});

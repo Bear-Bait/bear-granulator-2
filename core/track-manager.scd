@@ -117,6 +117,7 @@ Public API:
 				overlap: 1,       // Phase 6b: Default overlap count (1 = full sample playback)
 				useOverlap: 1,    // Phase 6b: Use overlap mode by default
 				prob: 1.0,        // v2.2: Probability mask (1.0 = 100% grain density)
+				loFiGrains: 0,    // v2.3: LO-FI Switch (0=HD 256 grains, default)
 				position: 0.0,    // Default to start of buffer
 				scanSpeed: 0,     // Phase 7c: Continuous scanning (0=static)
 				timeStretch: 1.0, // Phase 15: Master time stretch (1.0 = normal)
@@ -850,6 +851,7 @@ Public API:
 			defaults = [
 				[\amp, 0.5], [\pan, 0],
 				[\grainSize, 0.1], [\density, 30], [\overlap, 1], [\useOverlap, 1],
+				[\prob, 1.0], [\loFiGrains, 0],  // v2.2 & v2.3 additions
 				[\pitch, 0], [\pitchShift, 0], [\timeStretch, 1.0],
 				[\scanSpeed, 0], [\position, 0.0],
 				[\posJitter, 0.1], [\pitchJitter, 0.0],
