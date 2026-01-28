@@ -122,12 +122,13 @@ Public API:
 				scanSpeed: 0,     // Phase 7c: Continuous scanning (0=static)
 				timeStretch: 1.0, // Phase 15: Master time stretch (1.0 = normal)
 				pitch: 0,         // Legacy: changes speed+pitch
-				pitchShift: 0,    // Phase 7: True pitch shift (preserves speed)
-				posJitter: 0.1,
-				pitchJitter: 0,
-				// v2.1: 64-step sequencer arrays (KeyStep Pro/Digitone standard)
-				posSeq: Array.fill(64, 0),
-				pitchSeq: Array.fill(64, 0),
+			pitchShift: 0,    // Phase 7: True pitch shift (preserves speed)
+			posJitter: 0.1,
+			pitchJitter: 0,
+			t_reset: 0,       // Phase 18: Sequencer reset trigger (for sync quantization)
+			// v2.1: 64-step sequencer arrays (KeyStep Pro/Digitone standard)
+			posSeq: Array.fill(64, 0),
+			pitchSeq: Array.fill(64, 0),
 				envType: 1,
 				stereoSpread: 0.5,
 				amp: 0.5,
@@ -135,40 +136,51 @@ Public API:
 				loopStart: 0.0,  // Loop region start (0-1)
 				loopEnd: 1.0,    // Loop region end (0-1)
 
-				// Filter parameters (kept for backward compat, but ignored)
-				filterOn: 0,
-				filterFreq: 200,
-				filterMorph: 0.5,
-				filterRes: 0.5,
-				filterDecay: 0.5,
-				filterAnimate: 0,
-				filterAnimRate: 0.5,
-				filterTuning: 0,
-				filterSpread: 1.5,
-				filterMix: 0.5,
+			// Filter parameters (kept for backward compat, but ignored)
+			filterOn: 0,
+			filterType: 0,         // v2.4: 0=Morphing, 1=Diode, 2=Rings
+			filterFreq: 200,
+			filterMorph: 0.5,
+			filterRes: 0.5,
+			filterDecay: 0.5,
+			filterAnimate: 0,
+			filterAnimRate: 0.5,
+			filterTuning: 0,
+			filterSpread: 1.5,
+			filterMix: 0.5,
+			// v2.4: MiRings parameters (filterType 2)
+			ringsBright: 0.5,
+			ringsDamp: 0.7,
+			ringsPos: 0.25,
+			ringsModel: 0,
 
-				// Color effects (default off)
-				colorOn: 0,
-				distCrossover: 500,
-				distLoDrive: 1,
-				distHiDrive: 1,
-				distMix: 0,
-				crushRate: 8000,
-				crushBits: 8,
-				crushMix: 0,
-				compThresh: 0.5,
-				compRatio: 4,
-				compAttack: 0.01,
-				compRelease: 0.1,
-				noiseType: 0,
-				noiseAmount: 0,
+			// Color effects (default off)
+			colorOn: 0,
+			phaserRate: 0.5,       // v2.4: Barberpole phaser (0-1 mapped to -100 to +100 Hz)
+			phaserMix: 0,
+			distCrossover: 500,
+			distLoDrive: 1,
+			distHiDrive: 1,
+			distMix: 0,
+			crushRate: 8000,
+			crushBits: 8,
+			crushMix: 0,
+			squizAmount: 1,        // v2.4: Squiz artifacts (1-10)
+			squizMix: 0,
+			compThresh: 0.5,
+			compRatio: 4,
+			compAttack: 0.01,
+			compRelease: 0.1,
+			noiseType: 0,
+			noiseAmount: 0,
 
-				// Space effects (default off)
-				spaceOn: 0,
-				reverbSize: 0.5,
-				reverbDamp: 0.5,
-				reverbFreeze: 0,
-				reverbMix: 0.3,
+			// Space effects (default off)
+			spaceOn: 0,
+			reverbType: 0,         // v2.4: 0=FreeVerb, 1=Greyhole
+			reverbSize: 0.5,
+			reverbDamp: 0.5,
+			reverbFreeze: 0,
+			reverbMix: 0.3,
 				delayTime: 0.25,
 				delayFeedback: 0.5,
 				delayFilter: 5000,

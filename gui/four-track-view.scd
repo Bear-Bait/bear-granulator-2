@@ -648,6 +648,7 @@ Phase 7 Features:
 	makeMasterTab = { arg parent;
 		var leftColX = 10, rightColX = 460;  // Two-column layout
 		var leftY = 10, rightY = 10;
+		var bpmBox;
 
 		StaticText(parent, Rect(10, leftY, 400, 25))
 			.string_("MASTER CONTROLS")
@@ -716,6 +717,96 @@ Phase 7 Features:
 			});
 
 		leftY = leftY + 38;
+
+		// === TEMPO & SYNC (Phase 18) ===
+		StaticText(parent, Rect(leftColX, leftY, 100, 18))
+			.string_("TEMPO & SYNC")
+			.font_(Font("DejaVu Sans Mono", 10, true))
+			.stringColor_(colors.yellow);
+
+		leftY = leftY + 22;
+
+		// BPM Label
+		StaticText(parent, Rect(leftColX, leftY, 40, 25))
+			.string_("BPM:")
+			.font_(Font("DejaVu Sans Mono", 9))
+			.stringColor_(colors.fg);
+
+		// BPM Number Box
+		bpmBox = NumberBox(parent, Rect(leftColX + 40, leftY, 55, 25))
+			.value_(if(~syncManager.notNil, { ~syncManager.getBPM }, { 120 }))
+			.decimals_(1)
+			.font_(Font("DejaVu Sans Mono", 12, true))
+			.normalColor_(colors.cyan)
+			.typingColor_(colors.yellow)
+			.action_({ |nb|
+				if(~syncManager.notNil, {
+					~syncManager.setBPM(nb.value);
+				}, {
+					"Sync Manager not initialized".warn;
+				});
+			});
+
+		// Tap Tempo Button
+		Button(parent, Rect(leftColX + 100, leftY, 85, 25))
+			.states_([["TAP TEMPO", colors.fg, Color.gray(0.3)]])
+			.font_(Font("DejaVu Sans Mono", 8))
+			.toolTip_("Tap 4 times to set tempo")
+			.action_({
+				if(~syncManager.notNil, {
+					~syncManager.tapTempo;
+				}, {
+					"Sync Manager not initialized".warn;
+				});
+			});
+
+		// Sync to DAW Button (toggle)
+		Button(parent, Rect(leftColX + 190, leftY, 95, 25))
+			.states_([
+				["SYNC: OFF", colors.fg, Color.gray(0.3)],
+				["SYNC: DAW", colors.black, colors.green]
+			])
+			.font_(Font("DejaVu Sans Mono", 8))
+			.toolTip_("Toggle DAW MIDI clock sync")
+			.value_(0)
+			.action_({ |btn|
+				if(~syncManager.notNil, {
+					if(btn.value == 1, {
+						// Enable DAW sync (Phase 19 - to be implemented)
+						"⚠ DAW sync not yet implemented (Phase 19)".postln;
+						"  Manual BPM control active.".postln;
+						btn.value_(0);  // Reset button for now
+					}, {
+						// Disable DAW sync (back to manual)
+						"✓ Manual BPM control active".postln;
+					});
+				}, {
+					"Sync Manager not initialized".warn;
+				});
+			});
+
+		// Quick BPM presets
+		Button(parent, Rect(leftColX + 290, leftY, 40, 25))
+			.states_([["60", colors.fg, Color.gray(0.3)]])
+			.font_(Font("DejaVu Sans Mono", 8))
+			.action_({
+				if(~syncManager.notNil, {
+					bpmBox.value_(60);
+					~syncManager.setBPM(60);
+				});
+			});
+
+		Button(parent, Rect(leftColX + 335, leftY, 40, 25))
+			.states_([["120", colors.fg, Color.gray(0.3)]])
+			.font_(Font("DejaVu Sans Mono", 8))
+			.action_({
+				if(~syncManager.notNil, {
+					bpmBox.value_(120);
+					~syncManager.setBPM(120);
+				});
+			});
+
+		leftY = leftY + 32;
 
 		// === KEYSTEP PRO ROUTING (compact 1-row) ===
 		StaticText(parent, Rect(leftColX, leftY, 120, 18))

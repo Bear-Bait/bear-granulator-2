@@ -70,7 +70,7 @@ fork {
 	// ========================================
 	// ARRAY CALCULATION WITH QUANTIZE + SPLIT
 	// ========================================
-	updateArrays = { |baseFreq = 100, morph = 1.0, damp = 1.0, decayTime = 1.0|
+	updateArrays = { |baseFreq = 100, morph = 1.0, decayTime = 1.0|
 		var nyquist = s.sampleRate * 0.5;
 		var baseAmps;
 
@@ -89,19 +89,8 @@ fork {
 			freq.clip(20, nyquist - 100);
 		});
 
-		// BASE AMPLITUDES: Tilt based on Damp parameter
-		baseAmps = Array.fill(numBands, { |i|
-			var normalized = i / (numBands - 1);
-			var tiltAmt = (damp - 1.0).abs * 4;
-			var result;
-
-			result = case
-				{ damp < 1.0 } { (1 - normalized) ** tiltAmt }
-				{ damp > 1.0 } { (normalized.max(0.01)) ** tiltAmt }
-				{ 1.0 };
-
-			result.max(0.01);
-		});
+		// BASE AMPLITUDES: Get directly from the interactive MultiSliderView
+		baseAmps = multiSlider.value;
 
 		// Normalize
 		baseAmps = baseAmps.normalizeSum * numBands * 0.5;
@@ -135,19 +124,6 @@ fork {
 			synth.setn(\ampsR, currentAmpsR);
 			synth.setn(\rings, currentRings);
 		});
-		nil;
-	};
-
-	updateVisualizer = {
-		{
-			if(multiSlider.notNil and: { window.notNil and: { window.isClosed.not }}, {
-				var displayAmps;
-				// Show combined L+R for visualization
-				displayAmps = (currentAmpsL + currentAmpsR);
-				displayAmps = displayAmps / displayAmps.maxItem.max(0.001);
-				multiSlider.value_(displayAmps);
-			});
-		}.defer;
 		nil;
 	};
 
@@ -202,7 +178,11 @@ fork {
 			.background_(Color.gray(0.18))
 			.strokeColor_(colors.bars)
 			.fillColor_(colors.bars.alpha_(0.6))
-			.enabled_(false);
+			.enabled_(true) // <-- ENABLED FOR GUI CONTROL
+			.action_({
+				updateArrays.value(freqKnob.value, morphKnob.value, decayKnob.value);
+				updateSynth.value;
+			});
 
 		// === TOGGLE BUTTONS ROW ===
 		btnY = 165;
@@ -214,16 +194,14 @@ fork {
 
 		btnQuantize = makeToggle.(window, Rect(margin + 65, btnY, 80, 22), "Quantize", { |b|
 			isQuantized = b.value.asBoolean;
-			updateArrays.value(freqKnob.value, morphKnob.value, dampKnob.value, decayKnob.value);
+			updateArrays.value(freqKnob.value, morphKnob.value, decayKnob.value);
 			updateSynth.value;
-			updateVisualizer.value;
 		});
 
 		btnSplit = makeToggle.(window, Rect(margin + 150, btnY, 80, 22), "Split L/R", { |b|
 			isSplit = b.value.asBoolean;
-			updateArrays.value(freqKnob.value, morphKnob.value, dampKnob.value, decayKnob.value);
+			updateArrays.value(freqKnob.value, morphKnob.value, decayKnob.value);
 			updateSynth.value;
-			updateVisualizer.value;
 		});
 
 		btnFeedback = makeToggle.(window, Rect(margin + 235, btnY, 80, 22), "Feedback", { |b|
@@ -247,9 +225,8 @@ fork {
 			"Freq",
 			ControlSpec(20, 1000, \exp, 1, 100, " Hz"),
 			{ |ez|
-				updateArrays.value(ez.value, morphKnob.value, dampKnob.value, decayKnob.value);
+				updateArrays.value(ez.value, morphKnob.value, decayKnob.value);
 				updateSynth.value;
-				updateVisualizer.value;
 			},
 			100, layout: \vert2
 		);
@@ -260,42 +237,27 @@ fork {
 			"Morph",
 			ControlSpec(0.5, 2.5, \lin, 0.01, 1.0),
 			{ |ez|
-				updateArrays.value(freqKnob.value, ez.value, dampKnob.value, decayKnob.value);
+				updateArrays.value(freqKnob.value, ez.value, decayKnob.value);
 				updateSynth.value;
-				updateVisualizer.value;
 			},
 			1.0, layout: \vert2
 		);
 		morphKnob.knobView.color_([colors.accent, colors.fg, colors.fg.alpha_(0.5), colors.accent]);
 
-		// DAMP Knob
-		dampKnob = EZKnob(window, Rect(margin + 150, knobY, knobWidth, knobHeight),
-			"Damp",
-			ControlSpec(0.0, 2.0, \lin, 0.01, 1.0),
-			{ |ez|
-				updateArrays.value(freqKnob.value, morphKnob.value, ez.value, decayKnob.value);
-				updateSynth.value;
-				updateVisualizer.value;
-			},
-			1.0, layout: \vert2
-		);
-		dampKnob.knobView.color_([colors.accent, colors.fg, colors.fg.alpha_(0.5), colors.accent]);
-
 		// DECAY Knob
-		decayKnob = EZKnob(window, Rect(margin + 225, knobY, knobWidth, knobHeight),
+		decayKnob = EZKnob(window, Rect(margin + 150, knobY, knobWidth, knobHeight),
 			"Decay",
 			ControlSpec(0.1, 4.0, \exp, 0.01, 1.0, " s"),
 			{ |ez|
-				updateArrays.value(freqKnob.value, morphKnob.value, dampKnob.value, ez.value);
+				updateArrays.value(freqKnob.value, morphKnob.value, ez.value);
 				updateSynth.value;
-				updateVisualizer.value;
 			},
 			1.0, layout: \vert2
 		);
 		decayKnob.knobView.color_([colors.accent, colors.fg, colors.fg.alpha_(0.5), colors.accent]);
 
 		// FEEDBACK Amount Knob (only active when button is ON)
-		feedbackKnob = EZKnob(window, Rect(margin + 300, knobY, knobWidth, knobHeight),
+		feedbackKnob = EZKnob(window, Rect(margin + 225, knobY, knobWidth, knobHeight),
 			"FB Amt",
 			ControlSpec(0, 0.95, \lin, 0.01, 0.4),
 			{ |ez|
@@ -316,8 +278,9 @@ fork {
 			.align_(\center);
 
 		// Initialize
-		updateArrays.value(100, 1.0, 1.0, 1.0);
-		updateVisualizer.value;
+		// Set initial slider values to a flat state
+		multiSlider.value_(Array.fill(numBands, 1.0));
+		updateArrays.value(100, 1.0, 1.0);
 
 		// Create synth
 		synth = Synth(\resonator48v2);

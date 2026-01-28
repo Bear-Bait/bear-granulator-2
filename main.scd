@@ -9,9 +9,9 @@ Phase 2: Morphing Resonator
 Phase 3: Effects Chain (Color + Space)
 inspired by the 
 
-Author: [Your Name]
-Version: 0.4 (Phase 4)
-Date: 2025-12-31
+Author: Forrest Muelrath
+Version: 2.4 (Phase 18)
+Date: 2026-01-25
 
 ====================================
 QUICK START:
@@ -51,13 +51,13 @@ var basePath = thisProcess.nowExecutingPath.dirname;
 		sampleRate: 48000,
 		blockSize: 64,
 		numBuffers: 1024 * 16,
-		memSize: 8192 * 256  // Total memory: ~2GB for 4 tracks + delays/pitch-shift
+		memSize: 8192 * 32  // Total memory: ~256MB for 4 tracks + delays/pitch-shift
 	)
 );
 
 "============================================".postln;
-"BEARULATOR - GRANULAR SCULPTING SAMPLER".postln;
-"Phase 4: 4-Track Architecture".postln;
+"BEARULATOR v2.4 - GRANULAR SCULPTING SAMPLER".postln;
+"Phase 18: Enhanced Effects Suite".postln;
 "============================================".postln;
 "".postln;
 
@@ -65,9 +65,7 @@ var basePath = thisProcess.nowExecutingPath.dirname;
 // SERVER CONFIGURATION
 // ============================================
 
-fork {
-	var serverBooted = false;
-
+s.waitForBoot {
 	"Configuring server...".postln;
 
 	// Set server options
@@ -78,14 +76,8 @@ fork {
 	s.options.numBuffers = ~config.serverOptions.numBuffers;
 	s.options.memSize = ~config.serverOptions.memSize;  // ~2GB total for all synth memory
 
-	// Check if server is running
-	if(s.serverRunning.not, {
-		"Server not running. Please boot server first with: s.boot;".postln;
-		"Then run this script again.".postln;
-		nil;
-	}, {
-		"Server is running.".postln;
-		0.5.wait;
+	"Server is running.".postln;
+	0.5.wait;
 
 		// ============================================
 		// LOAD CORE MODULES
@@ -292,7 +284,24 @@ fork {
 		0.1.wait;
 		"  ✓ Master resonator created".postln;
 
-		// Create 4-track GUI
+		// v2.3: Initialize MIDI Manager BEFORE GUI (so buttons work)
+		try {
+			~midiManager = ~bearulatorMidiManager.value(~trackManager);
+			~midiManager.initResponder;
+			"  ✓ MIDI Manager initialized".postln;
+		} { |error|
+			"  ✗ MIDI Manager failed: %".format(error.errorString).postln;
+		};
+
+		// v2.3: Initialize Sync Manager BEFORE GUI (so buttons work)
+		try {
+			~syncManager = ~bearulatorSyncManager.value(~trackManager);
+			"  ✓ Sync Manager initialized".postln;
+		} { |error|
+			"  ✗ Sync Manager failed: %".format(error.errorString).postln;
+		};
+
+		// Create 4-track GUI (AFTER managers are ready)
 		~gui = ~bearulatorFourTrackGUI.value(~trackManager, ~masterBus, s);
 		{ ~gui.create; }.defer;
 		0.2.wait;
@@ -328,22 +337,7 @@ fork {
 		">>> KeyStep Pro init completed. Enabled: %".format(~keyStepProMapping.enabled).postln;
 		"".postln;
 
-		// v2.3: Initialize MIDI Manager (modular patch bay)
-		try {
-			~midiManager = ~bearulatorMidiManager.value(~trackManager);
-			~midiManager.initResponder;
-			"  ✓ MIDI Manager initialized".postln;
-		} { |error|
-			"  ✗ MIDI Manager failed: %".format(error.errorString).postln;
-		};
-
-		// v2.3: Initialize Sync Manager (TempoClock grid)
-		try {
-			~syncManager = ~bearulatorSyncManager.value(~trackManager);
-			"  ✓ Sync Manager initialized".postln;
-		} { |error|
-			"  ✗ Sync Manager failed: %".format(error.errorString).postln;
-		};
+		// NOTE: MIDI Manager and Sync Manager already initialized above (before GUI creation)
 
 		// Backward compatibility: expose track 1 as ~grainSynth
 		~grainSynth = ~trackManager.getTracks[0].grainSynth;
@@ -510,8 +504,7 @@ fork {
 				});
 			};
 		};
-	});
-};
+}
 )
 
 /*

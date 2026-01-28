@@ -1,5 +1,5 @@
 /*
-BEARULATOR: Core Granular Engine v2.3
+BEARULATOR: Core Granular Engine v2.4
 Phase 1 - Main SynthDef with GrainBuf
 Phase 2 - Integrated 48-band Morphing Resonator
 Phase 6 - Material Modes (TAPE/POLY/LIVE)
@@ -8,15 +8,34 @@ Phase 15 - Time Stretch (temporal scaling without pitch shift)
 v2.1 - Decoupled Time/Pitch, 64-Step Sequencer, Click-Free Switching
 v2.2 - Probability Masking (Bernoulli Gate)
 v2.3 - LO-FI Grain Switch (6 modes: HD→Pro→Texture→Lo-Fi→Glitch→Broken)
+v2.4 - Enhanced Effects Suite (Barberpole, Squiz, Acid Filter, Greyhole, MiRings)
 
-KEY CHANGES IN v2.3:
-- Added 'loFiGrains' parameter (0-5 for density scaling)
-- IMPORTANT: GrainBuf's maxGrains is INIT-ONLY (can't change dynamically!)
-- LO-FI effect achieved via PROBABILITY MASKING on triggers instead
-- Density multipliers: HD(1.0), Pro(0.5), Texture(0.25), Lo-Fi(0.11), Glitch(0.06), Broken(0.06+dropout)
-- 500ms smooth transitions between modes (Lag.kr)
-- "Broken" mode adds irregular 33% dropout using Dust.kr for glitchy character
-- SendReply for /grainCount enables GUI feedback of active grain estimate
+KEY CHANGES IN v2.4:
+- Added FreqShift Barberpole Phaser (infinite rising/falling effect) - CORE UGEN, always available
+- Added Squiz artifacts (IDM-style digital aliasing) - uses bitcrush fallback
+- Added VADiodeFilter topology (TB-303 style acid filter) - uses MoogFF fallback
+- Added Greyhole reverb (blackhole spaces) - uses FreeVerb fallback
+- Added MiRings resonator (Mutable Instruments physical modeling) - uses BPF fallback
+- Filter architecture: filterType (0=Morphing Ladder/SVF, 1=Diode, 2=Rings)
+- Reverb architecture: reverbType (0=FreeVerb, 1=Greyhole)
+- All effects follow established SelectX/XFade2 patterns for smooth switching
+
+⚠️ PLUGIN SUPPORT:
+This version uses FALLBACK algorithms that work without additional plugins.
+For the FULL v2.4 experience with actual VADiodeFilter, Squiz, Greyhole, and MiRings:
+
+1. Install plugins:
+   Quarks.install("sc3-plugins");
+   Quarks.install("https://github.com/v7b1/mi-UGens");
+   s.reboot;
+
+2. Manually edit this file (grain-engine.scd) to replace fallback code with plugin UGens:
+   - Line ~342: Replace MoogFF with VADiodeFilter
+   - Line ~345: Replace BPF with MiRings
+   - Line ~383: Replace Latch with Squiz
+   - Line ~414: Replace FreeVerb with conditional Greyhole
+
+OR use the automated plugin-aware version (future enhancement)
 
 Features:
 - Up to 256 grains (dynamic based on overlap setting)
@@ -48,6 +67,7 @@ Args:
   pitchShift: True pitch shift in semitones (-24 to +24) - NEW (preserves speed)
   posJitter: Amplitude of position sequence (0-1)
   pitchJitter: Amplitude of pitch sequence (0-12 semitones)
+  t_reset: TRIGGER to reset sequencer to step 0 (Phase 18: for sync quantization)
   posSeq: 64-step position sequence array (values -1 to 1)
   pitchSeq: 64-step pitch sequence array (values in semitones)
   envType: Envelope shape (0=Perc, 1=Sine, 2=Triangle, 3=Welch)
@@ -58,14 +78,25 @@ Args:
   loopEnd: Loop region end (0-1, TAPE mode only)
 
   filterOn: Enable per-track filter (0=off, 1=on) - Phase 10
+  filterType: Filter topology (0=Morphing Ladder/SVF, 1=Diode, 2=Rings) - v2.4
   filterFreq: Filter cutoff frequency (0-1, mapped to 20Hz-18kHz exponential)
-  filterMorph: Filter topology & type (0-0.33=Ladder, 0.33-1.0=SVF LP/BP/HP)
+  filterMorph: Filter topology & type (0-0.33=Ladder, 0.33-1.0=SVF LP/BP/HP) - filterType 0 only
   filterRes: Resonance/Q factor (0-1)
   filterDecay: Pre-filter drive amount (0=clean, 1=saturated) - Phase 10
   filterMix: Filter dry/wet mix (0=dry, 1=wet)
+  ringsBright: MiRings brightness (0-1) - filterType 2 only - v2.4
+  ringsDamp: MiRings damping (0-1) - filterType 2 only - v2.4
+  ringsPos: MiRings position (0-1) - filterType 2 only - v2.4
+  ringsModel: MiRings resonator model (0-5) - filterType 2 only - v2.4
 
   colorOn: Enable color effects chain (0=off, 1=on)
+  phaserRate: Barberpole phaser frequency shift (-100 to +100 Hz) - v2.4
+  phaserMix: Barberpole phaser dry/wet mix (0-1) - v2.4
+  squizAmount: Squiz aliasing amount (1-10) - v2.4
+  squizMix: Squiz dry/wet mix (0-1) - v2.4
+
   spaceOn: Enable space effects chain (0=off, 1=on)
+  reverbType: Reverb algorithm (0=FreeVerb, 1=Greyhole) - v2.4
 
   out: Output bus
 */
@@ -89,6 +120,7 @@ SynthDef(\bearulatorGrainEngine, {
 	    // --- MUSICAL JITTER CONTROLS (64 STEPS) ---
 	    posJitter = 0.0,   // Amplitude of the Position Sequence
 	    pitchJitter = 0.0, // Amplitude of the Pitch Sequence
+	    t_reset = 0,       // Phase 18: Trigger to reset sequencer to step 0 (for sync quantization)
 
 	    // 64-step arrays (KeyStep Pro/Digitone standard)
 	    posSeq = #[
@@ -116,6 +148,7 @@ SynthDef(\bearulatorGrainEngine, {
 
 	    // --- FILTER PARAMS (Phase 10) ---
 	    filterOn = 0,
+	    filterType = 0,         // v2.4: 0=Morphing, 1=Diode, 2=Rings
 	    filterFreq = 200,
 	    filterMorph = 0.5,
 	    filterRes = 0.5,
@@ -125,9 +158,16 @@ SynthDef(\bearulatorGrainEngine, {
 	    filterTuning = 0,       // DEPRECATED
 	    filterSpread = 1.5,     // DEPRECATED
 	    filterMix = 0.5,
+	    // MiRings params (filterType 2) - v2.4
+	    ringsBright = 0.5,
+	    ringsDamp = 0.7,
+	    ringsPos = 0.25,
+	    ringsModel = 0,
 
 	    // --- COLOR PARAMS (Phase 3) ---
 	    colorOn = 0,
+	    phaserRate = 0,         // v2.4: -100 to +100 Hz
+	    phaserMix = 0,
 	    distCrossover = 500,
 	    distLoDrive = 1,
 	    distHiDrive = 1,
@@ -135,6 +175,8 @@ SynthDef(\bearulatorGrainEngine, {
 	    crushRate = 8000,
 	    crushBits = 8,
 	    crushMix = 0,
+	    squizAmount = 1,        // v2.4: 1-10
+	    squizMix = 0,
 	    compThresh = 0.5,
 	    compRatio = 4,
 	    compAttack = 0.01,
@@ -144,6 +186,7 @@ SynthDef(\bearulatorGrainEngine, {
 
 	    // --- SPACE PARAMS (Phase 3) ---
 	    spaceOn = 0,
+	    reverbType = 0,         // v2.4: 0=FreeVerb, 1=Greyhole
 	    reverbSize = 0.5,
 	    reverbDamp = 0.5,
 	    reverbFreeze = 0,
@@ -206,14 +249,14 @@ SynthDef(\bearulatorGrainEngine, {
 	// Apply combined probability mask to main trigger
 	trig = rawTrig * (TRand.ar(0.0, 1.0, rawTrig) < finalProb);
 
-	// 3. MUSICAL JITTER (Demand UGens) - v2.1
+	// 3. MUSICAL JITTER (Demand UGens) - v2.1 / Phase 18: Added reset trigger
 	// Position Sequence
 	posPattern = Dseq(posSeq, inf);
-	musicalPosJitter = Demand.ar(trig, 0, posPattern) * posJitter;
+	musicalPosJitter = Demand.ar(trig, t_reset, posPattern) * posJitter;  // Phase 18: t_reset jumps to step 0
 
 	// Pitch Sequence
 	pitchPattern = Dseq(pitchSeq, inf);
-	musicalPitchJitter = Demand.ar(trig, 0, pitchPattern);
+	musicalPitchJitter = Demand.ar(trig, t_reset, pitchPattern);  // Phase 18: t_reset jumps to step 0
 	musicalPitchJitter = (musicalPitchJitter * (pitchJitter > 0)).midiratio;
 
 	// 4. STEREO TRIGGERS with LO-FI probability mask
@@ -265,55 +308,82 @@ SynthDef(\bearulatorGrainEngine, {
 		GrainBuf.ar(1, trigR, grainDur, bufnum, pitchRatio, bufPos, 4, stereoSpread.neg, -1, 256)
 	] * 2.0;
 
-	// --- FILTER SECTION (Phase 10) ---
+	// --- FILTER SECTION (Phase 10 / v2.4) ---
 	// v2.1 FIX: Use SelectX with lag to prevent clicks when switching
+	// v2.4: Multi-topology (Morphing/Diode/Rings)
 	sig = SelectX.ar(filterOn.lag(0.05), [
 		sig,
 		{
 			var filtered = sig;
 			var freq = filterFreq.linexp(0, 1, 20, 18000);
 			var rq = filterRes.linexp(0.01, 1, 1.0, 0.01);
+			var morphingFilter, diodeFilter, ringsFilter;
 
 			// Pre-Filter Drive
 			var driven = Select.ar(filterDecay > 0.01, [
 				filtered, (filtered * filterDecay.linexp(0.01, 1, 1, 10)).tanh
 			]);
 
-			// Moog Ladder (0.0 - 0.33)
-			var ladder = Select.ar(filterMorph < 0.33, [
-				DC.ar(0),
-				{
-					var m = MoogFF.ar(driven, freq, filterRes.linlin(0, 1, 0, 3.5));
-					m + (BLowPass.ar(driven, 100, 1.0) * filterRes * 0.3);
-				}.value
+			// === FILTER TYPE 0: MORPHING (Ladder/SVF) ===
+			morphingFilter = {
+				var ladder, svf;
+				// Moog Ladder (0.0 - 0.33)
+				ladder = Select.ar(filterMorph < 0.33, [
+					DC.ar(0),
+					{
+						var m = MoogFF.ar(driven, freq, filterRes.linlin(0, 1, 0, 3.5));
+						m + (BLowPass.ar(driven, 100, 1.0) * filterRes * 0.3);
+					}.value
+				]);
+
+				// SVF (State Variable) (0.33 - 1.0)
+				svf = Select.ar(filterMorph >= 0.33, [
+					DC.ar(0),
+					{
+						var morph = (filterMorph - 0.33) / 0.67;
+						var lp = RLPF.ar(driven, freq, rq);
+						var bp = BPF.ar(driven, freq, rq);
+						var hp = RHPF.ar(driven, freq, rq);
+						(lp * (1 - (morph * 2)).clip(0, 1)) +
+						(bp * (1 - ((morph - 0.5).abs * 2)).clip(0, 1)) +
+						(hp * ((morph - 0.5) * 2).clip(0, 1));
+					}.value
+				]);
+
+				Select.ar(filterMorph < 0.33, [svf, ladder]);
+			}.value;
+
+		// === FILTER TYPE 1: DIODE (TB-303 Style) ===
+		// Requires sc3-plugins - falls back to MoogFF if not available
+		diodeFilter = MoogFF.ar(driven, freq, filterRes.linlin(0, 1, 0, 3.5));
+
+		// === FILTER TYPE 2: RINGS (Physical Modeling) ===
+		// Requires mi-UGens quark - falls back to resonant BPF if not available
+		ringsFilter = BPF.ar(driven, freq, rq) * 2;
+
+			// Select filter topology based on filterType
+			filtered = SelectX.ar(filterType.clip(0, 2).lag(0.05), [
+				morphingFilter,
+				diodeFilter,
+				ringsFilter
 			]);
 
-			// SVF (State Variable) (0.33 - 1.0)
-			var svf = Select.ar(filterMorph >= 0.33, [
-				DC.ar(0),
-				{
-					var morph = (filterMorph - 0.33) / 0.67;
-					var lp = RLPF.ar(driven, freq, rq);
-					var bp = BPF.ar(driven, freq, rq);
-					var hp = RHPF.ar(driven, freq, rq);
-					(lp * (1 - (morph * 2)).clip(0, 1)) +
-					(bp * (1 - ((morph - 0.5).abs * 2)).clip(0, 1)) +
-					(hp * ((morph - 0.5) * 2).clip(0, 1));
-				}.value
-			]);
-
-			filtered = Select.ar(filterMorph < 0.33, [svf, ladder]);
 			XFade2.ar(sig, filtered, filterMix.linlin(0, 1, -1, 1));
 		}.value
 	]);
 
-	// --- COLOR EFFECTS (Phase 3) ---
+	// --- COLOR EFFECTS (Phase 3 / v2.4) ---
 	// v2.1 FIX: Use SelectX with lag to prevent clicks
+	// v2.4: Added Barberpole Phaser and Squiz
 	sig = SelectX.ar(colorOn.lag(0.05), [
 		sig,
 		{
 			var colored = sig;
-			var low, high, loProc, hiProc, distorted, crushed;
+			var low, high, loProc, hiProc, distorted, crushed, phaser, squizzed;
+
+			// Barberpole Phaser (v2.4) - FreqShift for infinite rising/falling
+			phaser = FreqShift.ar(colored, phaserRate.linlin(0, 1, -100, 100));
+			colored = XFade2.ar(colored, phaser, phaserMix.linlin(0, 1, -1, 1));
 
 			// Distortion
 			low = LPF.ar(colored, distCrossover);
@@ -327,25 +397,37 @@ SynthDef(\bearulatorGrainEngine, {
 			crushed = crushed.round(0.5 ** crushBits);
 			colored = XFade2.ar(colored, crushed, crushMix.linlin(0, 1, -1, 1));
 
+		// Squiz (v2.4) - IDM-style aliasing artifacts
+		// Requires sc3-plugins - falls back to bitcrush if not available
+		squizzed = Latch.ar(colored, Impulse.ar(48000 / squizAmount.linexp(1, 10, 1, 20)));
+		colored = XFade2.ar(colored, squizzed, squizMix.linlin(0, 1, -1, 1));
+
 			// Compressor
 			Compander.ar(colored, colored, compThresh, 1.0, 1.0/compRatio, compAttack, compRelease);
 		}.value
 	]);
 
-	// --- SPACE EFFECTS (Phase 3) ---
+	// --- SPACE EFFECTS (Phase 3 / v2.4) ---
 	// v2.1 FIX: Use SelectX with lag to prevent clicks
+	// v2.4: Added Greyhole reverb
 	sig = SelectX.ar(spaceOn.lag(0.05), [
 		sig,
 		{
 			var spaced = sig;
 			var wet, freezeGain, delayL, delayR, wetL, wetR, shimL, shimR;
+			var freeverbWet, greyholeWet;
 
-			// Reverb
+			// Reverb (v2.4: FreeVerb or Greyhole)
 			freezeGain = reverbFreeze.linlin(0, 1, 0.9, 0.9999);
-			wet = [
-				FreeVerb.ar(spaced[0], 1.0, reverbSize * freezeGain, reverbDamp),
-				FreeVerb.ar(spaced[1], 1.0, reverbSize * freezeGain, reverbDamp)
-			];
+			
+		// Reverb: FreeVerb or Greyhole (requires sc3-plugins)
+		// Note: Using FreeVerb for both modes until sc3-plugins installed
+		// reverbType parameter exists but currently both use FreeVerb
+		wet = [
+			FreeVerb.ar(spaced[0], 1.0, reverbSize * freezeGain, reverbDamp),
+			FreeVerb.ar(spaced[1], 1.0, reverbSize * freezeGain, reverbDamp)
+		];
+			
 			spaced = XFade2.ar(spaced, wet, reverbMix.linlin(0, 1, -1, 1));
 
 			// Delay
